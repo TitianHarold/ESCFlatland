@@ -40,8 +40,9 @@
     if(shot.space==='journey'){
       const ease=(a,b)=>{const u=clamp((time-a)/(b-a),0,1);return u*u*(3-2*u);};
       const u=clamp((time-119)/13,0,1)**2,s=1-u,heading=Math.atan2(-3300*(s*s*.30+2*s*u*.35+u*u*.35),5378.207340306721*(s*s*.25+2*s*u*.35+u*u*.40));
-      const turn=ease(119,130),coast=ease(132,138),aligned=-Math.PI/2-heading+1.0664437894592371;
-      view.yaw=(1.0664437894592371+(aligned-1.0664437894592371)*turn)*(1-coast)+.32*coast;
+      const turn=ease(119,130),coast=ease(132,138),streetTurn=ease(134.5,138),aligned=-Math.PI/2-heading+1.0664437894592371;
+      // Keep the travel axis ahead while moving fast; turn toward the street as the child settles.
+      view.yaw=(1.0664437894592371+(aligned-1.0664437894592371)*turn)*(1-streetTurn)+.32*streetTurn;
       view.tilt=1.25*ease(119,138);view.zoom=1.2-.05*coast;view.growth=ease(125,134);
     }
     if(shot.space==='journey'||shot.space==='depth')view.screenY=.5;

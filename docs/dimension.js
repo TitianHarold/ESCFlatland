@@ -335,9 +335,9 @@
     face(list, [[x-48,y-28,.5],[x+82,y-9,.5],[x+100,y+18,.5],[x-12,y+26,.5]], street.sheetShadow, .15);
     for(const m of mesh) {
       const [u,v]=m.center;
-      // The departed center leaves a small irregular opening; no intact core is restored here.
-      if(body.damaged && Math.hypot(u*1.08,(v-5)*.94)<11) continue;
-      if(body.damaged && u>42 && v>23 && v<34) continue;
+      // Shared actor textures already carry damage; keep procedural cuts only as a fallback.
+      if(body.damaged && !journeyTexture && Math.hypot(u*1.08,(v-5)*.94)<11) continue;
+      if(body.damaged && !journeyTexture && u>42 && v>23 && v<34) continue;
       const item={points:m.indices.map(i=>vertices[i]),uv:m.indices.map(i=>uv[i]),alpha:1,material:true};
       if(body.damaged&&journeyTexture){item.texture=journeyTexture;item.texUV=m.indices.map(i=>uv[i].map(v=>(v/(radius/sourceRadius)/journeyTextureExtent+.5)*journeyTexture.width));}
       list.push(item);
@@ -347,7 +347,7 @@
       const a=uv[1+(rings-1)*segments+j],b=uv[1+(rings-1)*segments+(j+1)%segments];
       surface(list,[sheetPoint(...a,body),sheetPoint(...b,body),below(b),below(a)],street.crack,'stone');
     }
-    if(body.damaged) for(const crack of cracks) {
+    if(body.damaged&&!journeyTexture) for(const crack of cracks) {
       for(let i=0;i<crack.length-1;i++) {
         edge(list,[sheetPoint(...crack[i],body,.13),sheetPoint(...crack[i+1],body,.13)],street.crack,2.5);
         edge(list,[sheetPoint(crack[i][0]+.65,crack[i][1],body,.17),sheetPoint(crack[i+1][0]+.65,crack[i+1][1],body,.17)],street.crackEdge,.65,.6);
@@ -428,7 +428,11 @@
   const journeyObjects=[];
   function placeJourneyObject(point,heading,index){
     const normal=[-Math.sin(heading),Math.cos(heading)];
-    for(const side of [-1,1])journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:43+(index%4)*9,h:80+(index%5)*25,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5]});
+    const passTime=index<=32?119+13*Math.sqrt(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
+    for(const side of [-1,1]){
+      const growAt=clamp(passTime-1.35+(side>0?.18:0),125,132.6);
+      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:43+(index%4)*9,h:80+(index%5)*25,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
+    }
   }
   for(let i=0;i<=32;i++){const point=pathPoint(i/32),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
   for(let i=1;i<=14;i++){const d=coastDistance*(1-i/14);placeJourneyObject([-forward[0]*d,-forward[1]*d,0],headAngle,32+i);}
@@ -484,20 +488,27 @@
     face(list,corners,Palette.paper,alpha);edge(list,[...corners,corners[0]],Palette.ink,1.2,alpha);
     edge(list,[point(-6,-6,.4),point(6,6,.4)],Palette.ink,2.6,alpha);edge(list,[point(-6,6,.4),point(6,-6,.4)],Palette.ink,2.6,alpha);
   }
-  function addJourneyObjects(list,hero,growth){
-    for(const item of journeyObjects){const alpha=distanceAlpha([item.x,item.y],hero);if(alpha<.002)continue;if(item.kind===0||item.kind===3)roundedObject(list,item,growth,alpha,item.kind===3);else prism(list,item,growth,alpha,item.kind===4);}
+  function addJourneyObjects(list,hero,time){
+    for(const item of journeyObjects){const alpha=distanceAlpha([item.x,item.y],hero);if(alpha<.002)continue;const growth=ease(finite(time,138),item.growAt,item.growUntil);if(item.kind===0||item.kind===3)roundedObject(list,item,growth,alpha,item.kind===3);else prism(list,item,growth,alpha,item.kind===4);}
   }
   function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const state=journeyPose(time,data),list=[],clock=finite(ambient,time);
-    addJourneyObjects(list,state.center,state.growth);
-    for(const item of environment){const middle=item.points.reduce((sum,p)=>[sum[0]+p[0]/item.points.length,sum[1]+p[1]/item.points.length],[0,0]),alpha=mix(distanceAlpha(middle,state.center),1,ease(time,136.8,138));if(alpha>.002)list.push({...item,alpha:item.alpha*alpha});}
+    addJourneyObjects(list,state.center,time);
+    const cityHeight=ease(time,130,137.8);
+    for(const item of environment){
+      const middle=item.points.reduce((sum,p)=>[sum[0]+p[0]/item.points.length,sum[1]+p[1]/item.points.length],[0,0]),alpha=mix(distanceAlpha(middle,state.center),1,ease(time,136.8,138));
+      if(alpha<=.002)continue;
+      // Grow the existing XYZ in place, preserving facade holes, footprints and material UVs.
+      const points=cityHeight<1&&!item.ground?item.points.map(([x,y,z])=>[x,y,z>0?z*cityHeight:z]):item.points;
+      list.push({...item,points,alpha:item.alpha*alpha});
+    }
     const city=ease(time,134.7,138);if(city>0){const companion=[];addSheet(companion,pose(138).companion);for(const item of companion)list.push({...item,alpha:item.alpha*city});}
     addJourneyHero(list,state,data);addTag(list,data.detachedTag,state.center);
     const turn=ease(time,119,130),pathHeading=(data.chase?.heading??pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
-    const yaw=mix(-bridgeAngle,-Math.PI/2-pathHeading,turn),coast=ease(time,132,138);
-    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,coast)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt:finite(camera.tilt,1.25*ease(time,119,138)),screenY:finite(camera.screenY,.5)};
+    const yaw=mix(-bridgeAngle,-Math.PI/2-pathHeading,turn),coast=ease(time,132,138),streetTurn=ease(time,134.5,138);
+    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,streetTurn)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt:finite(camera.tilt,1.25*ease(time,119,138)),screenY:finite(camera.screenY,.5)};
     const p=render(ctx,list,view,{w,h},sharedMaterial(clock),Palette.outside.background);
     let light;
     if(time<132&&data.light)light=worldToCity([data.light.x,data.light.y,68*ease(time,125,138)]);
@@ -508,7 +519,7 @@
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const clock=finite(ambient,time),texture=sharedMaterial(clock),events=pose(time),primitives=environment.slice();
-    addJourneyObjects(primitives,[events.hero.x,events.hero.y],1);addSheet(primitives,events.hero);addSheet(primitives,events.companion);addTag(primitives,data.detachedTag,[events.hero.x,events.hero.y]);
+    addJourneyObjects(primitives,[events.hero.x,events.hero.y],time);addSheet(primitives,events.hero);addSheet(primitives,events.companion);addTag(primitives,data.detachedTag,[events.hero.x,events.hero.y]);
     const p=render(ctx,primitives,camera,{w,h},texture,Palette.outside.background),forward=ease(time,154.3,157.6);
     paintLight(ctx,p,[112+Math.sin(clock*.73)*3,-78-42*forward,68+Math.sin(clock*1.1)*3]);
   }
