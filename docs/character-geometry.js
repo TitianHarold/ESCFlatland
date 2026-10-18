@@ -40,6 +40,7 @@
   class Character {
     constructor(kind, vertices, headIndex) {
       this.kind = kind; this.vertices = freezePoints(vertices.map(point => [...point])); this.headIndex = headIndex;
+      this.height = 4;
       this.edges = vertices.map(() => ({bend: 0, stretch: 1}));
       this.state = {bend: 0, strain: 0, bounce: 0};
     }

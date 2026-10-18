@@ -65,7 +65,7 @@
   const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,contactTime:7,material:Rules.materials.ordinary})));
   function materialState(program,time,turns,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged};}
   function heroMaterial(t){return materialState(heroProgram,t,3*between(t,80,87),t>=94.5);}
-  function heroBody(t){
+  function baseHeroBody(t){
     if(t<64){const pose=d=>pathPose(heroActor,entryPath,d),planned=entryPath.length*between(t,58,64),safe=Portals.clampTravel(heroActor,pose,0,planned,entryPortal,t);return pose(safe);}
     if(t<70)return lanePose(heroActor,900,130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
@@ -80,6 +80,31 @@
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
     body.speed=p.speed;body.strain=clamp(p.speed/1000);body.bounce=.006*Math.sin((t-119)*12)*clamp(p.speed/200);
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
+  }
+  const tagReleaseTime=127.25;
+  function restraintState(t){
+    const release=between(t,126,128),load=t<94.5?0:between(t,94.5,94.9)*(1-release);
+    return{attached:t>=94.5&&t<tagReleaseTime,load,release,peel:between(t,126,tagReleaseTime),size:1.8,offset:[0,0]};
+  }
+  function heroBody(t){
+    const body=baseHeroBody(t);
+    if(t<94.5||t>=128||t>=98&&t<104)return body;
+    const heading=body.angle+heroActor.headAxis(body).angle,restraint=restraintState(t);
+    // The restraint bends selected edges; it never scales the entire child down.
+    // The escort doorway still uses the exact rigid silhouette approved for that route.
+    const envelope=t<98?1-between(t,97.6,98):between(t,104,104.2);
+    const struggle=t>=104&&t<106.8?Math.pow(Math.sin((t-104)*Math.PI/1.05),2):.22*Math.pow(Math.sin((t-94.5)*Math.PI/1.4),2);
+    const tighten=restraint.load*envelope;
+    body.edgeBends=[.50-.19*struggle,.08+.04*struggle,.11+.06*struggle,.43-.22*struggle,.025].map(v=>v*tighten);
+    if(t>=104&&t<106.8){body.bounce=.004*Math.sin((t-104)*15)*envelope;body.strain=.13*struggle;}
+    body.angle=heading-heroActor.headAxis(body).angle;return body;
+  }
+  // The released cross remains an independent world object, including after the 2D handoff.
+  const releaseBody=heroBody(tagReleaseTime),releaseHeading=chasePoint(tagReleaseTime).heading;
+  function detachedTagState(t){
+    if(t<tagReleaseTime)return undefined;
+    const u=clamp((t-tagReleaseTime)/2.5),travel=740*(1-Math.pow(1-u,3)),side=95*Math.sin(u*Math.PI/2);
+    return{x:releaseBody.x-Math.cos(releaseHeading)*travel-Math.sin(releaseHeading)*side,y:releaseBody.y-Math.sin(releaseHeading)*travel+Math.cos(releaseHeading)*side,angle:releaseBody.angle+3.5*ease(u),z:22*Math.sin(u*Math.PI),opacity:1,scale:1.8};
   }
   function backgroundState(t,row,slot){
     const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot];let x=900,station=-1,turns=0;
@@ -105,12 +130,13 @@
   let memoTime=NaN,memoFrame;
   function frame(time){
     const t=Number.isFinite(time)?Math.max(0,time):0;if(t===memoTime)return memoFrame;memoTime=t;const actors=[];
-    if(t<58||t>=132)return memoFrame={actors,hero:null};
+    if(t<58||t>=132){const detachedTag=detachedTagState(t);return memoFrame={actors,hero:null,...(detachedTag?{detachedTag}:{})};}
     if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(backgroundState(t,row,slot));
-    const hero=heroBody(t),state=heroMaterial(t),entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:t<112?1:0,coreVisible:t<112,coreGlow:0,emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
+    const hero=heroBody(t),state=heroMaterial(t),entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:t<112?1:0,coreVisible:t<112,coreScale:t>=104?lerp(.55,1,between(t,110.5,112)):1,coreEntityId:'hero-seed',coreGlow:0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
     if(t>=97.5&&t<104)[180,-180,-360].forEach((offset,i)=>actors.push({id:'factory-guard-'+i,actor:guards[i],body:escortBody(guards[i],Math.max(98.6,t),offset),color:ink,cavity:false,core:0}));
     const chase=t>=119&&t<132?{x:hero.x,y:hero.y,startX:discard.x,startY:discard.y,speed:hero.speed,heading:chasePoint(t).heading}:undefined;
-    return memoFrame={actors,hero,light:lightState(t,hero),burst:between(t,130,131.8),...(chase?{chase}:{})};
+    const light=lightState(t,hero),detachedTag=detachedTagState(t);if(light)light.entityId='hero-seed';
+    return memoFrame={actors,hero,light,burst:between(t,130,131.8),...(chase?{chase}:{}),...(detachedTag?{detachedTag}:{})};
   }
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}
   function stroke(ctx,points,color,width=1){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}

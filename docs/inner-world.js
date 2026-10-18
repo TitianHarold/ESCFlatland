@@ -1,4 +1,4 @@
-/* Printed pigments fold through depth; the chase field is anchored in world space. */
+/* Printed pigments unfold through the character's cavity, with no opacity transition. */
 (function(root,factory){
   if(typeof module==='object'&&module.exports)module.exports=factory(require('./palette.js'));
   else root.FlatlandInner=factory(root.FlatlandPalette);
@@ -70,13 +70,34 @@
     });
     return faces.sort((a,b)=>b.z-a.z);
   }
-  function amount(t){return ease(t,106.8,107.7)*(1-ease(t,116.05,116.8));}
-  function drawCore(ctx,t,viewport,externalLight){
-    if(t<112)return;
+  const cavityPath='M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z';
+  function cavity(ctx){
+    ctx.beginPath();ctx.moveTo(-49,7);ctx.bezierCurveTo(-57,-17,-33,-44,-9,-48);
+    ctx.bezierCurveTo(15,-57,30,-31,47,-6);ctx.bezierCurveTo(60,16,35,43,7,45);
+    ctx.bezierCurveTo(-24,51,-53,35,-49,7);ctx.closePath();
+  }
+  function amount(t){return t>=106.8&&t<119?1:0;}
+  function portalProgress(t){return t<106.8||t>=119?0:ease(t,106.8,110.5)*(1-ease(t,116,119));}
+  function portalGeometry(t,viewport,portal,externalLight){
+    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760),entry=ease(t,106.8,110.5),exit=ease(t,116,119);
+    const source={x:Number.isFinite(portal?.x)?portal.x:w/2,y:Number.isFinite(portal?.y)?portal.y:h/2};
+    const target=externalLight||{x:w*.76,y:h*.24,r:10*s};
+    const x=source.x*(1-exit)+target.x*exit,y=source.y*(1-exit)+target.y*exit;
+    // The cavity contains a generous central disk; this radius takes its entire rim beyond every corner.
+    const cover=1.8*Math.max(Math.hypot(x,y),Math.hypot(w-x,y),Math.hypot(x,h-y),Math.hypot(w-x,h-y))+40;
+    const start=Math.max(1,Number.isFinite(portal?.radius)?portal.radius:50*s);
+    const expanded=start*Math.pow(Math.max(start,cover)/start,entry);
+    // At the end the remaining opening fits completely inside the same radius-10 light.
+    const finish=Math.max(.1,(target.r??10*s)*.55),radius=expanded*Math.pow(finish/expanded,exit);
+    return{x,y,radius,angle:Number.isFinite(portal?.angle)?portal.angle:0,entry,exit,start,cover};
+  }
+  function drawCore(ctx,t,viewport,externalLight,portal){
+    if(t<106.8)return;
     const s=Math.max(viewport.w/1280,viewport.h/760),flight=ease(t,112,116.8),join=ease(t,115.2,116.8);
     const inner={x:viewport.w/2+s*(90+flight*235),y:viewport.h/2+s*(-65-flight*135)};
-    const x=externalLight?inner.x*(1-join)+externalLight.x*join:inner.x,y=externalLight?inner.y*(1-join)+externalLight.y*join:inner.y;
-    const r=10*s*(1-join)+(externalLight?.r??10*s)*join;
+    const enter=ease(t,106.8,112),source=portal||{x:viewport.w/2,y:viewport.h/2};
+    const x=t<112?source.x*(1-enter)+inner.x*enter:externalLight?inner.x*(1-join)+externalLight.x*join:inner.x,y=t<112?source.y*(1-enter)+inner.y*enter:externalLight?inner.y*(1-join)+externalLight.y*join:inner.y;
+    const r=t<112?10*s*(.55+.45*enter):10*s*(1-join)+(externalLight?.r??10*s)*join;
     ctx.save();
     if(t>=116.8){
       const glow=ease(t,116.8,117.5),halo=ctx.createRadialGradient(x,y,r*.2,x,y,r*5);
@@ -84,46 +105,35 @@
     }
     ctx.fillStyle=P.gold;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.restore();
   }
-  function draw(ctx,t,viewport,clock,externalLight){
-    const a=amount(t),w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760);
-    if(a>0){
-      ctx.save();ctx.globalAlpha*=a;ctx.translate(w/2,h/2);ctx.scale(s,s);
-      const texture=material(ctx);ctx.fillStyle=P.navy;ctx.fillRect(-w/s,-h/s,2*w/s,2*h/s);
-      if(texture){ctx.fillStyle=texture;ctx.fillRect(-w/s,-h/s,2*w/s,2*h/s);}
-      // Every pigment lane belongs to a broad XYZ sheet. Sorting is per surface patch.
+  function draw(ctx,t,viewport,clock,externalLight,portal){
+    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760);
+    if(amount(t)){
+      const g=portalGeometry(t,viewport,portal,externalLight),k=g.radius/50;
+      let supplied=portal?.windowPath;
+      if(typeof supplied==='string')supplied=typeof Path2D!=='undefined'?new Path2D(supplied):null;
+      ctx.save();ctx.globalAlpha=1;ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
+      if(supplied)ctx.clip(supplied);else{cavity(ctx);ctx.clip();}
+      ctx.scale(1/k,1/k);ctx.rotate(-g.angle);ctx.translate(-g.x,-g.y);
+      const texture=material(ctx);ctx.fillStyle=P.navy;ctx.fillRect(0,0,w,h);
+      if(texture){ctx.fillStyle=texture;ctx.fillRect(0,0,w,h);}
+      // The whole printed space grows out of the small window; the aperture alone controls visibility.
+      const contentScale=(g.start/470)*(1-g.entry)+s*g.entry;
+      ctx.translate(g.x*(1-g.entry)+w/2*g.entry,g.y*(1-g.entry)+h/2*g.entry);ctx.scale(contentScale,contentScale);
       const time=(t-106.8)*.9+(Number.isFinite(clock)?clock*.035:0);
       for(const face of foldedFaces(time))polygon(ctx,face.points,face.color,texture);
       ctx.restore();
+      if(g.exit<.9){
+        ctx.save();ctx.globalAlpha=1;ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
+        ctx.strokeStyle=P.navy;ctx.lineWidth=1.1;
+        if(supplied)ctx.stroke(supplied);else{cavity(ctx);ctx.stroke();}ctx.restore();
+      }
     }
     // This is the same intact radius-10 entity; only its screen projection changes.
-    drawCore(ctx,t,viewport,externalLight);
+    drawCore(ctx,t,viewport,externalLight,portal);
   }
-  function hash(x,y,salt){let n=Math.imul(x+137,374761393)^Math.imul(y-257,668265263)^salt;n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;}
   function drawOuter(ctx,t,viewport,heading=0,motion){
-    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760);
-    ctx.save();ctx.fillStyle=P.outside?.background||P.white||P.paper;ctx.fillRect(0,0,w,h);
-    if(t<119||!motion||!Number.isFinite(motion.x)||!Number.isFinite(motion.y)){ctx.restore();return;}
-    ctx.translate(w/2,h/2);const texture=material(ctx),sx=motion.startX??0,sy=motion.startY??0,angle=Number.isFinite(motion.heading)?motion.heading:heading,dx=Math.cos(angle),dy=Math.sin(angle);
-    const baseScale=Number.isFinite(motion.scale)?motion.scale:s*.44;
-    const colors=[P.cyan,P.lavender,P.coral,P.gold,P.navy];
-    for(const depth of[.58,1]){
-      const scale=baseScale*depth,cell=620,rx=Math.ceil(w/(scale*cell)/2)+2,ry=Math.ceil(h/(scale*cell)/2)+2,cx=Math.floor((motion.x-sx)/cell),cy=Math.floor((motion.y-sy)/cell);
-      ctx.save();ctx.scale(scale,scale);ctx.globalAlpha=depth===1?.72:.26;
-      for(let i=cx-rx;i<=cx+rx;i++)for(let j=cy-ry;j<=cy+ry;j++){
-        const px=sx+(i+.2+hash(i,j,12)*.6)*cell,py=sy+(j+.2+hash(i,j,42)*.6)*cell;
-        const cross=-(px-sx)*dy+(py-sy)*dx;if(Math.abs(cross)<190)continue;
-        const x=px-motion.x,y=py-motion.y,r=42+hash(i,j,67)*90,color=colors[Math.floor(hash(i,j,81)*colors.length)];
-        if(hash(i,j,92)>.52){
-          const bend=hash(i,j,31)*1.4-.7;ctx.save();ctx.translate(x,y);ctx.rotate(bend);
-          ctx.beginPath();ctx.moveTo(-r*2,-r*.38);ctx.bezierCurveTo(-r,-r*1.2,r*.3,r*.9,r*2,r*.2);ctx.lineTo(r*2,r*.65);ctx.bezierCurveTo(r*.3,r*1.35,-r,-r*.7,-r*2,r*.05);ctx.closePath();ctx.fillStyle=color;ctx.fill();if(texture){ctx.fillStyle=texture;ctx.fill();}ctx.restore();
-        }else{
-          const points=[],sides=3+Math.floor(hash(i,j,23)*4),rotation=hash(i,j,51)*TAU;
-          for(let k=0;k<sides;k++){const a=k/sides*TAU+rotation;points.push({x:x+Math.cos(a)*r,y:y+Math.sin(a)*r});}polygon(ctx,points,color,texture);
-        }
-      }
-      ctx.restore();
-    }
-    ctx.restore();
+    if(t>=119)return;
+    ctx.save();ctx.globalAlpha=1;ctx.fillStyle=P.outside?.background||P.white||P.paper;ctx.fillRect(0,0,viewport.w,viewport.h);ctx.restore();
   }
-  return{draw,drawOuter,amount};
+  return{draw,drawOuter,amount,portalProgress,portalGeometry,cavityPath};
 });

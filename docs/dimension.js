@@ -1,4 +1,4 @@
-/* Single-layer XYZ sheets. Event time never writes to the caller's camera. */
+/* World-anchored growth and thin XYZ actors share one perspective renderer. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'));
   else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette);
@@ -118,7 +118,7 @@
   }
   function grounded(body) {
     const b = {...body, floor: 0};
-    b.floor = 2 - Math.min(...uv.map(([u, v]) => sheetPoint(u, v, b)[2]));
+    b.floor = 4 - Math.min(...uv.map(([u, v]) => sheetPoint(u, v, b)[2]));
     return b;
   }
   function projection(camera, viewport) {
@@ -134,7 +134,7 @@
       const depth = distance - y * st - z * ct;
       if (depth < 50) return null;
       const q = defaultProjection.focal * scale / depth;
-      return [viewport.w / 2 + x * q, viewport.h * defaultProjection.screenY + (y * ct - z * st) * q, depth, q];
+      return [viewport.w / 2 + x * q, viewport.h * finite(c.screenY,defaultProjection.screenY) + (y * ct - z * st) * q, depth, q];
     };
   }
   function face(list, points, color, alpha = 1) { list.push({points, color, alpha}); }
@@ -281,6 +281,8 @@
     shadow([[x-10,y],[x+10,y],[x+10-height*.5,y+height*.6],[x-10-height*.5,y+height*.6]],.3);
   }
   tree(-650,-185,300,0);tree(580,-170,340,2);tree(-1230,-225,275,3);tree(1230,-230,310,1);
+  // Ground tiles span too far for mean-depth ordering against small raised actors.
+  for(const item of environment){const z=item.points[0][2];if(z<=.6&&item.points.every(point=>Math.abs(point[2]-z)<.001))item.ground=true;}
 
   const textureSize=256,graySurfaces=new Map(),tintedSurfaces=new Map();
   function makeCanvas(){
@@ -322,10 +324,11 @@
   }
   function paintSurface(ctx,item){
     const texture=surfaceMaterial(item.surface,item.color);if(!texture)return false;
-    const texUV=item.points.length===3?[[0,0],[textureSize,0],[textureSize*.5,textureSize]]:[[0,0],[textureSize,0],[textureSize,textureSize],[0,textureSize]];
+    const texUV=item.points.length===3?[[0,0],[textureSize,0],[textureSize*.5,textureSize]]:item.points.length===4?[[0,0],[textureSize,0],[textureSize,textureSize],[0,textureSize]]:item.points.map((_,i)=>[textureSize*(.5+.5*Math.cos(i*Math.PI*2/item.points.length)),textureSize*(.5+.5*Math.sin(i*Math.PI*2/item.points.length))]);
     for(let i=1;i<item.points.length-1;i++)paintTriangle(ctx,{points:[item.points[0],item.points[i],item.points[i+1]],texUV:[texUV[0],texUV[i],texUV[i+1]]},texture);
     return true;
   }
+  let journeyTexture=null,journeyTextureExtent=160;
   function addSheet(list, rawBody) {
     const body = grounded(rawBody), vertices = uv.map(([u,v]) => sheetPoint(u,v,body));
     const x=body.x,y=body.y;
@@ -335,7 +338,14 @@
       // The departed center leaves a small irregular opening; no intact core is restored here.
       if(body.damaged && Math.hypot(u*1.08,(v-5)*.94)<11) continue;
       if(body.damaged && u>42 && v>23 && v<34) continue;
-      list.push({points:m.indices.map(i=>vertices[i]),uv:m.indices.map(i=>uv[i]),alpha:1,material:true});
+      const item={points:m.indices.map(i=>vertices[i]),uv:m.indices.map(i=>uv[i]),alpha:1,material:true};
+      if(body.damaged&&journeyTexture){item.texture=journeyTexture;item.texUV=m.indices.map(i=>uv[i].map(v=>(v/(radius/sourceRadius)/journeyTextureExtent+.5)*journeyTexture.width));}
+      list.push(item);
+    }
+    const below=([u,v])=>{const top=sheetPoint(u,v,body),a=body.curl*(u-minX)-body.lean,s=Math.sin(a),c=Math.cos(a);return[top[0]+4*s*Math.cos(body.angle),top[1]+4*s*Math.sin(body.angle),top[2]-4*c];};
+    for(let j=0;j<segments;j++){
+      const a=uv[1+(rings-1)*segments+j],b=uv[1+(rings-1)*segments+(j+1)%segments];
+      surface(list,[sheetPoint(...a,body),sheetPoint(...b,body),below(b),below(a)],street.crack,'stone');
     }
     if(body.damaged) for(const crack of cracks) {
       for(let i=0;i<crack.length-1;i++) {
@@ -361,12 +371,8 @@
     ctx.transform(a,b,c,d,p0[0]-a*s0[0]-c*s0[1],p0[1]-b*s0[0]-d*s0[1]);
     ctx.drawImage(texture,0,0);ctx.restore();
   }
-  function draw(ctx, time, camera = {}, viewport = {}, ambient = time) {
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760);
-    if(w<=0||h<=0)return;
-    const clock=finite(ambient,finite(time,132)),texture=sharedMaterial(clock);
-    const p=projection(camera,{w,h}), events=pose(time), primitives=environment.slice();
-    addSheet(primitives,events.hero);addSheet(primitives,events.companion);
+  function render(ctx,primitives,camera,viewport,texture,background){
+    const w=viewport.w,h=viewport.h,p=projection(camera,viewport);
     const rendered=[];
     for(const primitive of primitives) {
       const points=primitive.points.map(p);
@@ -375,30 +381,136 @@
       if(right<-2||left>w+2||bottom<-2||top>h+2)continue;
       rendered.push({...primitive,points,pixelArea:(right-left)*(bottom-top),depth:points.reduce((sum,q)=>sum+q[2],0)/points.length});
     }
-    rendered.sort((a,b)=>b.depth-a.depth);
+    rendered.sort((a,b)=>a.ground!==b.ground?(a.ground?-1:1):b.depth-a.depth);
     ctx.save();
-    ctx.fillStyle=colors.paper;ctx.fillRect(0,0,w,h);
+    ctx.fillStyle=background;ctx.fillRect(0,0,w,h);
     ctx.lineJoin='round';ctx.lineCap='round';
     for(const item of rendered) {
       ctx.globalAlpha=item.alpha;
-      if(item.material&&texture){paintTriangle(ctx,item,texture);continue;}
+      if(item.texture||(item.material&&texture)){paintTriangle(ctx,item,item.texture||texture);continue;}
       if(item.surface&&item.pixelArea>64&&paintSurface(ctx,item))continue;
       ctx.beginPath();ctx.moveTo(item.points[0][0],item.points[0][1]);
       for(let i=1;i<item.points.length;i++)ctx.lineTo(item.points[i][0],item.points[i][1]);
       if(item.line){ctx.strokeStyle=item.color;ctx.lineWidth=Math.max(.35,item.width*item.points[0][3]);ctx.stroke();}
       else{ctx.closePath();ctx.fillStyle=item.material?colors.blue:item.color;ctx.fill();}
     }
-    // Exactly one light; it remains in front/right of the same damaged protagonist.
-    const forward=ease(finite(time,132),154.3,157.6);
-    const light=p([112+Math.sin(clock*.73)*3,-78-42*forward,68+Math.sin(clock*1.1)*3]);
+    ctx.restore();return p;
+  }
+  function paintLight(ctx,p,position,radius=7){
+    const light=p(position);
     if(light){
-      const r=Math.max(2,7*light[3]);ctx.globalAlpha=1;
+      ctx.save();
+      const r=Math.max(2,radius*light[3]);ctx.globalAlpha=1;
       const glow=ctx.createRadialGradient(light[0],light[1],0,light[0],light[1],r*3.5);
       glow.addColorStop(0,'rgba(252,226,161,.76)');glow.addColorStop(1,'rgba(252,226,161,0)');
       ctx.fillStyle=glow;ctx.beginPath();ctx.arc(light[0],light[1],r*3.5,0,Math.PI*2);ctx.fill();
       ctx.fillStyle=street.lightCore;ctx.beginPath();ctx.arc(light[0],light[1],r*.62,0,Math.PI*2);ctx.fill();
+      ctx.restore();
     }
-    ctx.restore();
   }
-  return Object.freeze({draw, anchor, defaultProjection});
+  // The fixed world-to-city bridge keeps paused scrubs independent of prior frames.
+  const journeyStart={x:-6178.207340306721,y:-3297.506565417906},journeyEnd={x:-800,y:-6597.506565417906};
+  const journeyDX=journeyEnd.x-journeyStart.x,journeyDY=journeyEnd.y-journeyStart.y;
+  const endHeading=Math.atan2(journeyDY*.35,journeyDX*.40),endSpeed=Math.hypot(journeyDX*.40,journeyDY*.35)*6/13;
+  const headAngle=Characters.actors.child.headAxis({strain:1}).angle,bridgeAngle=headAngle-endHeading;
+  const bridgeCos=Math.cos(bridgeAngle),bridgeSin=Math.sin(bridgeAngle),forward=[Math.cos(headAngle),Math.sin(headAngle)],coastDistance=endSpeed*3;
+  function worldToCity(point){const x=point[0]-journeyEnd.x,y=point[1]-journeyEnd.y;return[x*bridgeCos-y*bridgeSin-forward[0]*coastDistance,x*bridgeSin+y*bridgeCos-forward[1]*coastDistance,point[2]||0];}
+  function pathPoint(q){
+    const a=[journeyStart.x,journeyStart.y],b=[a[0]+journeyDX*.25,a[1]+journeyDY*.30],c=[a[0]+journeyDX*.60,a[1]+journeyDY*.65],d=[journeyEnd.x,journeyEnd.y],s=1-q;
+    return{x:s*s*s*a[0]+3*s*s*q*b[0]+3*s*q*q*c[0]+q*q*q*d[0],y:s*s*s*a[1]+3*s*s*q*b[1]+3*s*q*q*c[1]+q*q*q*d[1],heading:Math.atan2(3*s*s*(b[1]-a[1])+6*s*q*(c[1]-b[1])+3*q*q*(d[1]-c[1]),3*s*s*(b[0]-a[0])+6*s*q*(c[0]-b[0])+3*q*q*(d[0]-c[0]))};
+  }
+  function journeyPose(time,data={}){
+    const t=clamp(time,119,138),u=clamp((t-132)/6,0,1),progress=clamp((t-119)/13,0,1),sample=pathPoint(progress*progress);
+    const raw=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,strain:progress}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,strain:(1-u),bend:0};
+    const center=t<132?worldToCity([raw.x,raw.y,0]):[-forward[0]*coastDistance*(1-u)**2,-forward[1]*coastDistance*(1-u)**2,0];
+    return{raw,center,angle:(raw.angle||0)+bridgeAngle,size:mix(1,radius/sourceRadius,ease(t,132,138)),growth:ease(t,125,134),coast:u};
+  }
+  const journeyObjects=[];
+  function placeJourneyObject(point,heading,index){
+    const normal=[-Math.sin(heading),Math.cos(heading)];
+    for(const side of [-1,1])journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:43+(index%4)*9,h:80+(index%5)*25,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5]});
+  }
+  for(let i=0;i<=32;i++){const point=pathPoint(i/32),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
+  for(let i=1;i<=14;i++){const d=coastDistance*(1-i/14);placeJourneyObject([-forward[0]*d,-forward[1]*d,0],headAngle,32+i);}
+  function distanceAlpha(point,hero){
+    const dx=point[0]-hero[0],dy=point[1]-hero[1],along=dx*forward[0]+dy*forward[1];
+    return ease(along,-950,-550)*(1-ease(along,1500,2300))*(1-ease(Math.hypot(dx,dy),1800,2600));
+  }
+  function prism(list,item,growth,alpha,hole=false){
+    const count=item.kind===1||item.kind===4?4:6,r=item.r,z=item.h*growth;
+    const ring=scale=>Array.from({length:count},(_,i)=>{const a=i*Math.PI*2/count+(count===4?Math.PI/4:0);return[item.x+Math.cos(a)*r*scale,item.y+Math.sin(a)*r*scale];});
+    const outside=ring(1),inside=ring(.48),shade=tint(item.color,Palette.navy,.38);
+    if(!hole)surface(list,outside.map(p=>[...p,z]),item.color,'stone',alpha);
+    for(let i=0;i<count;i++){
+      const j=(i+1)%count,a=outside[i],b=outside[j];surface(list,[[...a,0],[...b,0],[...b,z],[...a,z]],i%2?shade:item.color,'stone',alpha);
+      if(hole){const c=inside[i],d=inside[j];surface(list,[[...a,z],[...b,z],[...d,z],[...c,z]],item.color,'stone',alpha);surface(list,[[...c,0],[...d,0],[...d,z],[...c,z]],shade,'stone',alpha);}
+    }
+  }
+  function roundedObject(list,item,growth,alpha,hole=false){
+    const count=14,r=item.r;
+    if(hole){
+      const z=item.h*.55*growth;
+      for(let i=0;i<count;i++){
+        const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,point=(angle,size,height)=>[item.x+Math.cos(angle)*r*size,item.y+Math.sin(angle)*r*size,height];
+        surface(list,[point(a,1,z),point(b,1,z),point(b,.5,z),point(a,.5,z)],item.color,'stone',alpha);
+        surface(list,[point(a,1,0),point(b,1,0),point(b,1,z),point(a,1,z)],tint(item.color,Palette.navy,.24),'stone',alpha);
+        surface(list,[point(a,.5,z),point(b,.5,z),point(b,.5,0),point(a,.5,0)],tint(item.color,Palette.navy,.5),'stone',alpha);
+      }return;
+    }
+    const vertex=(lat,lon)=>[item.x+r*Math.sin(lat)*Math.cos(lon),item.y+r*Math.sin(lat)*Math.sin(lon),r*(1+Math.cos(lat))*growth];
+    for(let j=0;j<6;j++)for(let i=0;i<count;i++){
+      const a=j*Math.PI/6,b=(j+1)*Math.PI/6,c=i*Math.PI*2/count,d=(i+1)*Math.PI*2/count;
+      surface(list,[vertex(a,c),vertex(a,d),vertex(b,d),vertex(b,c)],tint(item.color,Palette.navy,.08+.25*j/6),'stone',alpha);
+    }
+  }
+  function addJourneyHero(list,state,data){
+    const actor=data.entry?.actor||Characters.actors.child,body=state.raw,points=[];
+    for(const segment of actor.localSegments(body))for(let i=0;i<8;i++){
+      const q=i/8,s=1-q;points.push([s*s*segment.from[0]+2*s*q*segment.control[0]+q*q*segment.to[0],s*s*segment.from[1]+2*s*q*segment.control[1]+q*q*segment.to[1]]);
+    }
+    const ca=Math.cos(state.angle),sa=Math.sin(state.angle),vertex=(p,z)=>{const x=p[0]*(body.sx??1)*state.size,y=p[1]*(body.sy??1)*state.size;return[state.center[0]+x*ca-y*sa,state.center[1]+x*sa+y*ca,z];};
+    const texture=data.heroTexture||journeyTexture,extent=data.textureExtent||journeyTextureExtent,tex=p=>p.map(v=>(v/extent+.5)*(texture?.width||256));
+    for(let i=0;i<points.length;i++){
+      const a=points[i],b=points[(i+1)%points.length];
+      list.push({points:[vertex([0,0],4),vertex(a,4),vertex(b,4)],texUV:[tex([0,0]),tex(a),tex(b)],texture,material:true,alpha:1});
+      surface(list,[vertex(a,0),vertex(b,0),vertex(b,4),vertex(a,4)],tint(Palette.blue,Palette.navy,.48),'stone');
+    }
+  }
+  function addTag(list,tag,hero){
+    if(!tag)return;const center=worldToCity([tag.x,tag.y,tag.z||0]),angle=tag.angle+bridgeAngle,ca=Math.cos(angle),sa=Math.sin(angle),s=tag.scale||1.8;
+    const point=(x,y,z=.2)=>[center[0]+(x*ca-y*sa)*s,center[1]+(x*sa+y*ca)*s,center[2]+z];
+    const alpha=(tag.opacity??1)*distanceAlpha(center,hero);if(alpha<.002)return;
+    const corners=[[-17,-11],[10,-11],[17,0],[10,11],[-17,11]].map(p=>point(...p));
+    face(list,corners,Palette.paper,alpha);edge(list,[...corners,corners[0]],Palette.ink,1.2,alpha);
+    edge(list,[point(-6,-6,.4),point(6,6,.4)],Palette.ink,2.6,alpha);edge(list,[point(-6,6,.4),point(6,-6,.4)],Palette.ink,2.6,alpha);
+  }
+  function addJourneyObjects(list,hero,growth){
+    for(const item of journeyObjects){const alpha=distanceAlpha([item.x,item.y],hero);if(alpha<.002)continue;if(item.kind===0||item.kind===3)roundedObject(list,item,growth,alpha,item.kind===3);else prism(list,item,growth,alpha,item.kind===4);}
+  }
+  function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
+    if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
+    const state=journeyPose(time,data),list=[],clock=finite(ambient,time);
+    addJourneyObjects(list,state.center,state.growth);
+    for(const item of environment){const middle=item.points.reduce((sum,p)=>[sum[0]+p[0]/item.points.length,sum[1]+p[1]/item.points.length],[0,0]),alpha=mix(distanceAlpha(middle,state.center),1,ease(time,136.8,138));if(alpha>.002)list.push({...item,alpha:item.alpha*alpha});}
+    const city=ease(time,134.7,138);if(city>0){const companion=[];addSheet(companion,pose(138).companion);for(const item of companion)list.push({...item,alpha:item.alpha*city});}
+    addJourneyHero(list,state,data);addTag(list,data.detachedTag,state.center);
+    const turn=ease(time,119,130),pathHeading=(data.chase?.heading??pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
+    const yaw=mix(-bridgeAngle,-Math.PI/2-pathHeading,turn),coast=ease(time,132,138);
+    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,coast)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt:finite(camera.tilt,1.25*ease(time,119,138)),screenY:finite(camera.screenY,.5)};
+    const p=render(ctx,list,view,{w,h},sharedMaterial(clock),Palette.outside.background);
+    let light;
+    if(time<132&&data.light)light=worldToCity([data.light.x,data.light.y,68*ease(time,125,138)]);
+    else light=[state.center[0]+mix(forward[0]*100,112+Math.sin(clock*.73)*3,coast),state.center[1]+mix(forward[1]*100,-78,coast),68*ease(time,125,138)+Math.sin(clock*1.1)*3*coast];
+    paintLight(ctx,p,light,mix(data.light?.r||10,7,coast));
+  }
+  function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
+    if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
+    const clock=finite(ambient,time),texture=sharedMaterial(clock),events=pose(time),primitives=environment.slice();
+    addJourneyObjects(primitives,[events.hero.x,events.hero.y],1);addSheet(primitives,events.hero);addSheet(primitives,events.companion);addTag(primitives,data.detachedTag,[events.hero.x,events.hero.y]);
+    const p=render(ctx,primitives,camera,{w,h},texture,Palette.outside.background),forward=ease(time,154.3,157.6);
+    paintLight(ctx,p,[112+Math.sin(clock*.73)*3,-78-42*forward,68+Math.sin(clock*1.1)*3]);
+  }
+  return Object.freeze({draw,drawJourney,anchor,defaultProjection,journeyPose});
 });

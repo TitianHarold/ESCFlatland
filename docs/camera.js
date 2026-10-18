@@ -23,9 +23,9 @@
     {id:'discard',label:'011 · 左墙出口 · 扔出',start:98,end:104,frames:[frame(98,exitView.x,exitView.y,.55),{...frame(102.8,discard.x,discard.y,.7),cut:true}]},
     {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(106.8,discard.x,discard.y,1.35),frame(109,discard.x,discard.y,2.8),frame(112,discard.x,discard.y,2.8)]},
     {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(116.8,discard.x,discard.y,2.8),frame(119,discard.x+100,discard.y-50,1.25)]},
-    {id:'chase',label:'014 · 跟随主角向右上追光',start:119,end:132,follow:'hero',frames:[frame(119,discard.x,discard.y,1.2)]},
-    {id:'dimension',label:'015 · 新的维度',start:132,end:138,space:'depth',frames:[frame(132,0,0,1.25,0),frame(138,65,-35,1.15,1.16,.32)]},
-    {id:'curl',label:'016 · 两次卷曲',start:138,end:146,space:'depth',frames:[frame(138,65,-35,1.15,1.16,.32),frame(146,75,-20,1.8,1.16,.28)]},
+    {id:'chase',label:'014 · 追光 · 图形长出体积',start:119,end:132,space:'journey',follow:'hero',frames:[frame(119,discard.x,discard.y,1.2,0,1.0664437894592371),frame(132,0,0,1.2,.955,-.011631098618334113)]},
+    {id:'dimension',label:'015 · 连续进入街景',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]},
+    {id:'curl',label:'016 · 两次卷曲',start:138,end:146,space:'depth',frames:[frame(138,0,0,1.15,1.25,.32),frame(146,75,-20,1.8,1.16,.28)]},
     {id:'meet',label:'017 · 相遇',start:146,end:154,space:'depth',frames:[frame(146,75,-20,1.8,1.16,.28),frame(154,100,-25,1.85,1.16,.28)]},
     {id:'ending',label:'018 · 一起向前',start:154,end:158,space:'depth',frames:[frame(154,100,-25,1.85,1.16,.28),frame(158,100,-100,.6,1.2,.32)]}
   ];
@@ -37,6 +37,14 @@
     const view={space:shot.space||'flat',shotId:shot.id};
     if(shot.follow)view.follow=shot.follow;
     for(const key of ['x','y','zoom','tilt','yaw'])view[key]=a[key]+(b[key]-a[key])*q;
+    if(shot.space==='journey'){
+      const ease=(a,b)=>{const u=clamp((time-a)/(b-a),0,1);return u*u*(3-2*u);};
+      const u=clamp((time-119)/13,0,1)**2,s=1-u,heading=Math.atan2(-3300*(s*s*.30+2*s*u*.35+u*u*.35),5378.207340306721*(s*s*.25+2*s*u*.35+u*u*.40));
+      const turn=ease(119,130),coast=ease(132,138),aligned=-Math.PI/2-heading+1.0664437894592371;
+      view.yaw=(1.0664437894592371+(aligned-1.0664437894592371)*turn)*(1-coast)+.32*coast;
+      view.tilt=1.25*ease(119,138);view.zoom=1.2-.05*coast;view.growth=ease(125,134);
+    }
+    if(shot.space==='journey'||shot.space==='depth')view.screenY=.5;
     return view;
   }
   return {duration,shots,shotAt,pose};
