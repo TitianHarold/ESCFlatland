@@ -152,7 +152,14 @@
     }
     // Boundary contact is allowed; only interior overlap stops the child.
     const inside = (point, poly) => contains(point, poly) && Math.min(...poly.map((edge, i) => pointSegmentDistance(point, edge, poly[(i + 1) % poly.length]))) > 1e-6;
-    return a.some(point => inside(point, b)) || b.some(point => inside(point, a));
+    if(a.some(point => inside(point, b)) || b.some(point => inside(point, a)))return true;
+    // Coincident outlines and collinear partial overlaps have no strictly interior vertex.
+    for(const [first,second] of [[a,b],[b,a]]){
+      if(first.some((point,i)=>inside(midpoint(point,first[(i+1)%first.length]),second)))return true;
+      const center=centroid(first),point=[center.x,center.y];
+      if(inside(point,first)&&inside(point,second))return true;
+    }
+    return false;
   }
   function distance(a, b) {
     if (intersects(a, b)) return 0;

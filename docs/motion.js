@@ -32,7 +32,7 @@
     return {segments, length: segments.reduce((sum, segment) => sum + segment.length, 0)};
   }
   const fatherRoute = route([[[800, 550], [800, 500], [710, 470], [632, 470]]]);
-  let motherRoute;
+  let motherRoute, motherDeparture;
   function travel(path, fraction) {
     let distance = clamp(fraction) * path.length, segment = path.segments[path.segments.length - 1];
     for (const current of path.segments) {segment = current; if (distance <= current.length) break; distance -= current.length;}
@@ -49,6 +49,19 @@
     const elapsed = p - time;
     return elapsed < .006 ? 1 - (1 - elapsed / .006) ** 3 : 1 - ease((elapsed - .012) / .035);
   }
+  function departureTravel(p) {
+    const route = motherDeparture.route, total = (motherDeparture.end - .34) * duration;
+    const t = Math.max(0, Math.min(total, (p - .34) * duration)), rise = .26, settle = .36, endSpeed = motherDeparture.endSpeed;
+    const cruise = (route.length - endSpeed * settle / 2) / (total - (rise + settle) / 2);
+    if (t < rise) {
+      const u = t / rise;
+      return {distance: cruise * rise * (u ** 3 - u ** 4 / 2), speed: cruise * u * u * (3 - 2 * u)};
+    }
+    const distance = cruise * (t - rise / 2);
+    if (t <= total - settle) return {distance, speed: cruise};
+    const u = (t - total + settle) / settle;
+    return {distance: distance + (endSpeed - cruise) * settle * (u ** 3 - u ** 4 / 2), speed: cruise + (endSpeed - cruise) * u * u * (3 - 2 * u)};
+  }
   function parent(kind, p) {
     const isFather = kind === 'father', time = events[kind], elapsed = time === null ? -1 : p - time, t = clamp(elapsed / .008), retreat = 1 - (1 - t) ** 3, fear = pulse(p, time);
     const speed = elapsed <= 0 || t >= 1 ? 0 : Math.hypot(isFather ? 44 : 46, isFather ? -18 : 28) * 3 * (1 - t) ** 2 / (.008 * duration);
@@ -58,9 +71,15 @@
   }
   function childAt(p, fear) {
     const second = p > .34, kind = second ? 'mother' : 'father', path = second ? motherRoute : fatherRoute, impact = impacts[kind], stopped = impact && p >= impact.time;
-    const span = second ? .37 : .18, travelTime = stopped ? impact.travelTime : p, t = (travelTime - (second ? .34 : .06)) / span, point = travel(path, ease(t));
+    const span = second ? .37 : .18, travelTime = stopped ? impact.travelTime : p;
+    const t = (travelTime + (second && motherDeparture ? motherDeparture.advance : 0) - (second ? .34 : .06)) / span;
+    let point = travel(path, ease(t)), speed = stopped ? 0 : path.length * easeSpeed(t) / (span * duration);
+    if (second && motherDeparture && travelTime < motherDeparture.end) {
+      const departure = departureTravel(travelTime);
+      point = travel(motherDeparture.route, departure.distance / motherDeparture.route.length);
+      speed = stopped ? 0 : departure.speed;
+    }
     const heading = point.heading;
-    const speed = stopped ? 0 : path.length * easeSpeed(t) / (span * duration);
     // Keep the chosen contact silhouettes while playing the same motion faster.
     const strain = stopped ? impact.strain * (1 - ease((p - impact.time) / .008)) : clamp(speed * duration / contactTempo / 80);
     const body = {x: point.x, y: point.y, angle: 0, sx: 1, sy: 1, fear, bend: fear * .2, speed, strain, bounce: impact ? bounce(p, impact.time) : 0};
@@ -96,6 +115,18 @@
     [[start.x, bottom], [start.x + 65, bottom], [935, 470], [1031, 470]]
   ]);
   impacts.mother = findContact('mother', .34, .71); events.mother = impacts.mother.time;
+  // Keep the approved contact's final approach and silhouette; enliven only the departure.
+  const advance = .6 / duration, joinTime = 12.9 / duration, joinT = (joinTime - .34) / .37;
+  const join = travel(motherRoute, ease(joinT)), lowTurn = start.y + 112, turn = [start.x + 18, lowTurn];
+  motherDeparture = {
+    advance, end: joinTime - advance,
+    endSpeed: motherRoute.length * easeSpeed(joinT) / (.37 * duration),
+    route: route([
+      [[start.x, start.y], [start.x + Math.cos(heading) * 42, start.y + Math.sin(heading) * 42], [start.x - 45, lowTurn], turn],
+      [turn, [start.x + 145, lowTurn], [join.x - Math.cos(join.heading) * 85, join.y - Math.sin(join.heading) * 85], [join.x, join.y]]
+    ])
+  };
+  impacts.mother.time -= advance; impacts.mother.travelTime -= advance; events.mother = impacts.mother.time;
 
   function guardedChild(p, father, mother, fear) {
     const parents = [characters.outline('father', father), characters.outline('mother', mother)];

@@ -9,6 +9,7 @@
   const factoryPoint=(x,y)=>({x:-4000+x*Math.cos(.4)-y*Math.sin(.4),y:-2800+x*Math.sin(.4)+y*Math.cos(.4)});
   const medium=factoryPoint(-120,130),exitView=factoryPoint(-1200,260),discard=factoryPoint(-2200,390);
   const factoryMedium=time=>frame(time,medium.x,medium.y,.6);
+  const chaseScreenHeading=-Math.PI/5,bridgeYaw=1.0664437894592371;
   const shots=[
     {id:'family',label:'001 · 家庭',start:0,end:15,frames:[frame(0,800,500,1.4),frame(15,800,500,1.4)]},
     {id:'district',label:'002 · 包围后带走 · 拉远',start:15,end:24,frames:[frame(15,800,500,1.4),frame(24,100,-50,.9)]},
@@ -21,8 +22,8 @@
     {id:'mix',label:'009 · 送入判定',start:87,end:90,frames:[factoryMedium(87)]},
     {id:'failure',label:'010 · 第三关 · 检查失败',start:90,end:98,frames:[factoryMedium(90)]},
     {id:'discard',label:'011 · 左墙出口 · 扔出',start:98,end:104,frames:[frame(98,exitView.x,exitView.y,.55),{...frame(102.8,discard.x,discard.y,.7),cut:true}]},
-    {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(106.8,discard.x,discard.y,1.35),frame(109,discard.x,discard.y,2.8),frame(112,discard.x,discard.y,2.8)]},
-    {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(116.8,discard.x,discard.y,2.8),frame(119,discard.x+100,discard.y-50,1.25)]},
+    {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(105.7,discard.x,discard.y,1.25),frame(108.3,discard.x,discard.y,1.4),frame(110,discard.x,discard.y,1.5),frame(112,discard.x,discard.y,2.8)]},
+    {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(118,discard.x,discard.y,2.8),frame(119,discard.x+100,discard.y-50,1.2)]},
     {id:'chase',label:'014 · 追光 · 图形长出体积',start:119,end:132,space:'journey',follow:'hero',frames:[frame(119,discard.x,discard.y,1.2,0,1.0664437894592371),frame(132,0,0,1.2,.955,-.011631098618334113)]},
     {id:'dimension',label:'015 · 连续进入街景',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]},
     {id:'curl',label:'016 · 两次卷曲',start:138,end:146,space:'depth',frames:[frame(138,0,0,1.15,1.25,.32),frame(146,75,-20,1.8,1.16,.28)]},
@@ -37,13 +38,21 @@
     const view={space:shot.space||'flat',shotId:shot.id};
     if(shot.follow)view.follow=shot.follow;
     for(const key of ['x','y','zoom','tilt','yaw'])view[key]=a[key]+(b[key]-a[key])*q;
+    // One continuous dolly crosses the overview/press edit without restarting its easing at 70s.
+    if(time>=68.3&&time<=70.8){
+      let u=clamp((time-68.3)/2.5,0,1);u=u*u*(3-2*u);
+      view.x=-4255+(medium.x+4255)*u;view.y=-2300+(medium.y+2300)*u;view.zoom=.22+.38*u;
+    }
     if(shot.space==='journey'){
       const ease=(a,b)=>{const u=clamp((time-a)/(b-a),0,1);return u*u*(3-2*u);};
       const u=clamp((time-119)/13,0,1)**2,s=1-u,heading=Math.atan2(-3300*(s*s*.30+2*s*u*.35+u*u*.35),5378.207340306721*(s*s*.25+2*s*u*.35+u*u*.40));
-      const turn=ease(119,130),coast=ease(132,138),streetTurn=ease(134.5,138),aligned=-Math.PI/2-heading+1.0664437894592371;
-      // Keep the travel axis ahead while moving fast; turn toward the street as the child settles.
-      view.yaw=(1.0664437894592371+(aligned-1.0664437894592371)*turn)*(1-streetTurn)+.32*streetTurn;
-      view.tilt=1.25*ease(119,138);view.zoom=1.2-.05*coast;view.growth=ease(125,134);
+      const turn=ease(119,130),coast=ease(132,138),streetTurn=ease(134.5,138);
+      view.tilt=1.25*ease(119,138);
+      // Compensate for the vertical foreshortening so the travel reads diagonally on screen.
+      const groundHeading=Math.atan2(Math.sin(chaseScreenHeading)/Math.cos(view.tilt),Math.cos(chaseScreenHeading));
+      const aligned=groundHeading-heading+bridgeYaw;
+      view.yaw=(bridgeYaw+(aligned-bridgeYaw)*turn)*(1-streetTurn)+.32*streetTurn;
+      view.zoom=1.2-.05*coast;view.growth=ease(125,134);view.screenHeading=chaseScreenHeading;
     }
     if(shot.space==='journey'||shot.space==='depth')view.screenY=.5;
     return view;

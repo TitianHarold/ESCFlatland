@@ -1,7 +1,7 @@
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'), require('./motion.js'), require('./city-map.js'), require('./palette.js'), require('./portals.js'));
-  else root.FlatlandDistrict = factory(root.FlatlandCharacters, root.FlatlandMotion, root.FlatlandCityMap, root.FlatlandPalette, root.FlatlandPortals);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (C, Motion, CityMap, Palette, Portals) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'), require('./motion.js'), require('./city-map.js'), require('./palette.js'), require('./portals.js'), require('./collision-world.js'));
+  else root.FlatlandDistrict = factory(root.FlatlandCharacters, root.FlatlandMotion, root.FlatlandCityMap, root.FlatlandPalette, root.FlatlandPortals,root.FlatlandCollisionWorld);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (C, Motion, CityMap, Palette, Portals, CollisionWorld) {
   'use strict';
   if (!C || !Motion || !CityMap || !Palette || !Portals) throw new Error('Load characters, motion, portals, city-map and palette before district.js.');
   const {ink,blue,teal,coral,lavender}=Palette;
@@ -100,7 +100,7 @@
   function householdChild(kid,time){
     const home=households.find(h=>h.id===kid.home.id),{cycle}=familyState(home,time);
     let body;
-    if(kid.secondary){const a=time*.16+home.offset;const x=kid.cx+230+Math.cos(a)*16,y=kid.cy+140+Math.sin(a)*16;body=still(kid.actor,x,y,a+Math.PI/2);body.strain=.08;}
+    if(kid.secondary){const a=time*.16+home.offset;const x=kid.cx+190+Math.cos(a)*8,y=kid.cy+160+Math.sin(a)*8;body=still(kid.actor,x,y,a+Math.PI/2);body.strain=.08;}
     else {
       const segments=home.childRoute.segments,lengths=segments.map(s=>s.length);let d,u=0;
       if(cycle<.18){u=cycle/.18;d=ease(u)*lengths[0];}
@@ -142,10 +142,6 @@
   function entrance(person,index,time){
     if(time<=entryEnds[index])return interpolateWalk(person.actor,person.approach,time,entryStarts[index],entryEnds[index]);
     return interpolateWalk(person.actor,person.fan,time,entryEnds[index],entryFinish[index]);
-  }
-  function timedTravel(actor,route,time,start,end){
-    const speed=route.length/(end-start-.25),elapsed=time-start,wanted=Math.min(route.length,walking(elapsed,speed)),velocity=wanted<route.length?walkSpeed(elapsed,speed):0,d=gatedDistance(actor,route,wanted,time,velocity);
-    return poseOn(actor,route,d,d<wanted?0:velocity);
   }
   function gatedDistance(actor,route,distance,time,speed=0){
     const from=Math.max(0,route.length-1400);
@@ -205,7 +201,7 @@
     if(start<0)throw new Error('A household access path must meet the shared escort road.');
     return [...road.slice(start,-1),[last[0],last[1],[end[0]-Math.cos(heading)*90,end[1]-Math.sin(heading)*90],end]];
   }
-  const policeStarts=[24.1,24.7,27.3,28.1].map(t=>t*ratio),policeArrivals=[54.8,55.8,60.2,62.7];
+  const policeStarts=[24.1,24.7,27.3,28.1].map(t=>t*ratio);
   function escortLane(curves,offset){
     return curves.map((curve,i)=>{
       const a=Math.atan2(curve[1][1]-curve[0][1],curve[1][0]-curve[0][0]),b=Math.atan2(curve[3][1]-curve[2][1],curve[3][0]-curve[2][0]);
@@ -222,16 +218,23 @@
     // Rear escorts flank the children instead of occupying their shared center line.
     person.exit=path([...departure,...(i>=2?escortLane(street,i===2?70:-70):street)],h);
     person.roadOffset=path(departure,h).length;
-    person.speed=person.exit.length/(policeArrivals[i]-policeStarts[i]-.25);
   });
+  const escortGaps=[360,180,-140,-280];
+  function policeDistance(person,time,index){
+    const wanted=person.roadOffset+heroDistance(time)-heroDoorDistance+escortGaps[index];
+    return Math.min(person.exit.length,Math.max(0,wanted)*ease((time-policeStarts[index])/1.2));
+  }
   function policeBody(person,time,index){
     if(time<takeAway)return entrance(person,index,time);
     if(index===2&&time<policeStarts[index])return threatBody(time);
     if(time<policeStarts[index])return {...person.body};
-    return timedTravel(person.actor,person.exit,time,policeStarts[index],policeArrivals[index]);
+    // Everyone shares the child's route distance, rather than catching up on independent clocks.
+    const wanted=policeDistance(person,time,index),speed=Math.max(0,(policeDistance(person,time+.005,index)-policeDistance(person,time-.005,index))/.01);
+    const d=gatedDistance(person.actor,person.exit,wanted,time,speed);
+    return poseOn(person.actor,person.exit,d,d<wanted?0:speed);
   }
   const westKid=households.find(h=>h.id==='west').kids[0],nwKids=households.find(h=>h.id==='northwest').kids;
-  const detainees=[{kid:westKid,lag:180},{kid:nwKids[0],lag:360},{kid:nwKids[1],lag:540}];
+  const detainees=[{kid:westKid,lag:640},{kid:nwKids[0],lag:1140},{kid:nwKids[1],lag:1460}];
   detainees.forEach((item,index)=>{
     const home=households.find(h=>h.id===item.kid.home.id),access=home.accessCurves,join=home.roadJoin;
     const segmentIndex=road.findIndex(curve=>Math.hypot(curve[0][0]-join[0],curve[0][1]-join[1])<.01);
@@ -240,50 +243,70 @@
     // Join behind the child already being taken away, before the distant gate shot.
     item.joinTime=cruiseStart+.25+(heroDoorDistance+item.joinDistance+item.lag-firstStep)/heroCruise;
     item.start=item.joinTime-3.1;
-    const body=householdChild(item.kid,item.start),h=headingOf(item.kid.actor,body);
-    const homeDoor=home.door||[home.cx,home.y];
-    const roadStart=access.length?access[0][0]:homeDoor;
-    const departure=joinAt(item.kid.actor,body,roadStart,-Math.PI/2,18);
-    item.departure=path([...departure,...access],h);
-    item.route=path(courtyardCurves('detainee-'+(index+1),index+4,join),sample(item.departure,item.departure.length).heading);
+
+  });
+  function lineCurve(a,b){return[a,[a[0]+(b[0]-a[0])/3,a[1]+(b[1]-a[1])/3],[a[0]+(b[0]-a[0])*2/3,a[1]+(b[1]-a[1])*2/3],b];}
+  function roundedRoute(points,radius=24){
+    const curves=[];let current=points[0];
+    for(let i=1;i<points.length-1;i++){
+      const a=points[i-1],corner=points[i],b=points[i+1],first=Math.hypot(corner[0]-a[0],corner[1]-a[1]),last=Math.hypot(b[0]-corner[0],b[1]-corner[1]),cut=Math.min(radius,first*.3,last*.3);
+      const enter=[corner[0]+(a[0]-corner[0])*cut/first,corner[1]+(a[1]-corner[1])*cut/first],leave=[corner[0]+(b[0]-corner[0])*cut/last,corner[1]+(b[1]-corner[1])*cut/last];
+      if(Math.hypot(enter[0]-current[0],enter[1]-current[1])>.001)curves.push(lineCurve(current,enter));
+      curves.push([enter,[enter[0]+(corner[0]-enter[0])*2/3,enter[1]+(corner[1]-enter[1])*2/3],[leave[0]+(corner[0]-leave[0])*2/3,leave[1]+(corner[1]-leave[1])*2/3],leave]);current=leave;
+    }
+    curves.push(lineCurve(current,points.at(-1)));return curves;
+  }
+  const teams=['west','northwest'].map((homeId,teamIndex)=>{
+    const group=detainees.filter(item=>item.kid.home.id===homeId),lead=group[0],home=households.find(h=>h.id===homeId),enterStart=lead.start-4.6;
+    // Pause at a naturally reached, spacious rest pose before the arrest team arrives.
+    const freezeAt=(Math.floor((enterStart/ratio+home.offset)/26)*26-home.offset)*ratio;
+    group.forEach(item=>{item.freezeAt=freezeAt;item.captured=householdChild(item.kid,freezeAt);});
+    const back=[home.cx,home.cy+210],homeDoor=home.door;
+    // The whole outbound group shares this center aisle, door and street: no crossing exit fans.
+    const inside=[lineCurve(back,homeDoor)],outside=courtyardCurves('detainee-'+(detainees.indexOf(lead)+1),detainees.indexOf(lead)+4,home.roadJoin);
+    const spine=path([...inside,...home.accessCurves,...outside]),joinDistance=path([...inside,...home.accessCurves]).length,childOrigin=105,joinTravel=joinDistance-childOrigin;
+    // Let the original rear guard clear its forecourt turn before the West column follows.
+    const holdDistance=spine.length-spine.segments.at(-1).length-150-315;
+    const speed=joinTravel/(lead.joinTime-lead.start-.25),reverse=home.accessCurves.slice().reverse().map(curve=>curve.slice().reverse());
+    const second=group[1],secondDelay=160;
+    const sideExit=second?roundedRoute([[second.captured.x,second.captured.y],[home.cx+65,home.cy+135],[home.cx-70,home.cy+85],[home.cx-70,homeDoor[1]+75],[home.cx-70,homeDoor[1]-105],home.roadJoin],20):null;
+    const merge=second?path([...sideExit,...courtyardCurves('detainee-3',6,home.roadJoin)]):null;
+    function travel(time){
+      if(time<lead.start)return 0;
+      if(time<lead.joinTime)return Math.min(joinTravel,walking(time-lead.start,speed));
+      const street=heroDistance(Math.min(time,58))-heroDoorDistance-lead.lag-lead.joinDistance;
+      const desired=joinTravel+Math.max(0,street)+(time>58?(time-58)*heroCruise:0);
+      if(teamIndex)return desired;
+      return time<59?Math.min(desired,Math.max(joinTravel,holdDistance)):Math.min(desired,Math.max(joinTravel,holdDistance)+walking(time-59,heroCruise));
+    }
+    function velocity(time){return Math.max(0,(travel(time+.005)-travel(time-.005))/.01);}
+    function onSpine(actor,d,time){const wanted=Math.max(0,Math.min(spine.length,d)),v=velocity(time),safe=gatedDistance(actor,spine,wanted,time,v);return poseOn(actor,spine,safe,safe<wanted?0:v);}
+    const members=[C.create({sides:7,regular:true,radius:25,headIndex:0}),new C.Character('local-triangle',[[0,-30],[10,19],[-10,19]],0),new C.Character('local-triangle',[[0,-30],[10,19],[-10,19]],0)].map((actor,i)=>{
+      const origin=i===0?205:i===1?315:15,slot=sample(spine,origin),inner=i===2?roundedRoute([homeDoor,[home.cx-90,homeDoor[1]+100],[home.cx-90,home.cy+185],[home.cx,home.cy+210],[slot.x,slot.y]],18):[lineCurve(homeDoor,[slot.x,slot.y])],incoming=path([...reverse,...inner]);
+      let jab=null,jabEnd=origin;
+      if(i===2){const child=lead.kid.actor.outline(lead.captured);let low=origin,high=childOrigin;for(let n=0;n<20;n++){const mid=(low+high)/2;if(C.distance(actor.outline(poseOn(actor,spine,mid)),child)>.001)low=mid;else high=mid;}jab={from:origin,to:low};jabEnd=low;}
+      return{id:homeId+'-escort-'+i,actor,incoming,origin,jab,jabEnd,start:lead.start,entryStart:enterStart+i*.75,entryEnd:lead.start-1.15+i*.25};
+    });
+    const team={homeId,home,enterStart,freezeAt,members,lead,group,spine,travel,velocity,onSpine,childOrigin,merge,secondDelay};
+    group.forEach((item,i)=>{item.team=team;item.memberIndex=i;if(i){item.start=lead.start+.25+secondDelay/speed;item.joinTime=lead.start+.25+(secondDelay+path(sideExit).length)/speed;}});
+    return team;
   });
   function detainedBody(item,time){
     if(time<item.freezeAt)return householdChild(item.kid,time);
-    if(time<item.start)return {...item.captured};
-    if(time<item.joinTime)return interpolateWalk(item.kid.actor,item.departure,time,item.start,item.joinTime);
-    const distance=heroDistance(time)-heroDoorDistance-item.lag-item.joinDistance;
-    const wanted=Math.min(item.route.length,Math.max(0,distance)),speed=wanted<item.route.length?heroSpeed(time):0,d=gatedDistance(item.kid.actor,item.route,wanted,time,speed);
-    return poseOn(item.kid.actor,item.route,d,d<wanted?0:speed);
+    const team=item.team,g=team.travel(time);
+    if(!item.memberIndex){if(time<team.lead.start)return {...item.captured};return team.onSpine(item.kid.actor,team.childOrigin+g,time);}
+    if(g<=team.secondDelay)return {...item.captured};
+    const d=g-team.secondDelay;
+    const distance=Math.min(team.merge.length,d),v=team.velocity(time),safe=gatedDistance(item.kid.actor,team.merge,distance,time,v);return poseOn(item.kid.actor,team.merge,safe,safe<distance?0:v);
   }
-  const teams=['west','northwest'].map((homeId,teamIndex)=>{
-    const group=detainees.filter(item=>item.kid.home.id===homeId),lead=group[0],home=households.find(h=>h.id===homeId),enterStart=lead.start-3.8;
-    group.forEach(item=>{item.freezeAt=enterStart;item.captured=householdChild(item.kid,enterStart);const h=headingOf(item.kid.actor,item.captured),departure=joinAt(item.kid.actor,item.captured,home.door,-Math.PI/2,18);item.departure=path([...departure,...home.accessCurves],h);});
-    const target=lead.captured,door=home.door,dx=door[0]-target.x,dy=door[1]-target.y,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
-    const reverse=home.accessCurves.slice().reverse().map(curve=>curve.slice().reverse());
-    const members=[C.create({sides:7,regular:true,radius:25,headIndex:0}),new C.Character('local-triangle',[[0,-30],[10,19],[-10,19]],0),new C.Character('local-triangle',[[0,-30],[10,19],[-10,19]],0)].map((actor,i)=>{
-      const blockers=[...home.adults.map((person,j)=>person.actor.outline(householdAdult(person,j,home,familyState(home,enterStart).cycle))),...group.slice(1).map(item=>item.kid.actor.outline(item.captured))];
-      const base=Math.atan2(uy,ux)+(i===0?0:i===1?Math.PI/2:Math.PI);let end,h;
-      for(let attempt=0;attempt<19;attempt++){const turn=attempt?Math.ceil(attempt/2)*.24*(attempt%2?1:-1):0,a=base+turn;end=[target.x+Math.cos(a)*112,target.y+Math.sin(a)*112];h=a+Math.PI;const body=still(actor,end[0],end[1],h),outline=actor.outline(body);let clear=blockers.every(points=>C.distance(outline,points)>12);
-        if(clear&&i===2){for(const amount of [.25,.5,.7]){const near=still(actor,target.x+(end[0]-target.x)*amount,target.y+(end[1]-target.y)*amount,h);if(blockers.some(points=>C.penetrates(actor.outline(near),points))){clear=false;break;}}}
-        if(clear&&end[0]>home.x+45&&end[0]<home.x+home.w-45&&end[1]>home.y+45&&end[1]<home.y+home.h-45)break;
-      }
-      const last=reverse.at(-1)[3],inside=[last,[last[0],last[1]+60],[end[0]-Math.cos(h)*35,end[1]-Math.sin(h)*35],end],incoming=path([...reverse,inside]),body=poseOn(actor,incoming,incoming.length);
-      let jab=null,jabEnd=body;
-      if(i===2){const route=connection(actor,body,[target.x,target.y],Math.atan2(target.y-body.y,target.x-body.x),20),outline=lead.kid.actor.outline(target);let low=0,high=route.length;for(let j=0;j<20;j++){const mid=(low+high)/2;if(C.distance(actor.outline(poseOn(actor,route,mid)),outline)>.001)low=mid;else high=mid;}jab={route,distance:low};jabEnd=poseOn(actor,route,low);}
-      const exitBody=i===2?poseOn(actor,jab.route,Math.max(0,jab.distance-45)):body,departure=joinAt(actor,exitBody,door,-Math.PI/2,30),street=courtyardCurves('detainee-'+(detainees.indexOf(lead)+1),detainees.indexOf(lead)+4,home.roadJoin).map(curve=>curve.map(p=>[...p]));
-      const finish=street.at(-1),sideOffset=(teamIndex?1:-1)*(420+i*130),hEnd=CityMap.gate.heading;finish[2][0]-=Math.sin(hEnd)*sideOffset;finish[2][1]+=Math.cos(hEnd)*sideOffset;finish[3][0]-=Math.sin(hEnd)*sideOffset;finish[3][1]+=Math.cos(hEnd)*sideOffset;
-      const exit=path([...departure,...home.accessCurves,...street]),start=(i===2?group.at(-1).start:lead.start)+(i===0?-.3:i===1?.45:.8),arrival=lead.joinTime+(exit.length-path([...departure,...home.accessCurves]).length)/heroCruise+(i*.4);
-      return{id:homeId+'-escort-'+i,actor,incoming,body,jab,jabEnd,exit,start,arrival,entryStart:enterStart+i*.65+(teamIndex===1&&i===2?.8:0),entryEnd:lead.start-.9+i*.25};
-    });
-    return{homeId,enterStart,members,lead,group};
-  });
   function localPoliceBody(member,team,time){
-    const index=team.members.indexOf(member),roadTime=team.lead.joinTime+(index===0?-.5:index===1?.45:2.3),street=member.exit.segments.slice(-team.lead.route.segments.length),roadLength=street.reduce((n,s)=>n+s.length,0),prefixLength=member.exit.length-roadLength;
-    if(time>=roadTime){const offset=index===0?135:index===1?-115:-(team.group.length>1?420:255),wanted=Math.max(0,heroDistance(time)-heroDoorDistance-team.lead.lag-team.lead.joinDistance+offset),route=team.lead.route,body=poseOn(member.actor,route,Math.min(route.length,wanted),heroSpeed(time)),heading=headingOf(member.actor,body),spread=ease((wanted-(route.length-600))/600),side=(team.homeId==='northwest'?-1:1)*(95+index*130*spread);body.x-=Math.sin(heading)*side;body.y+=Math.cos(heading)*side;return body;}
     if(time<member.entryEnd)return interpolateWalk(member.actor,member.incoming,time,member.entryStart,member.entryEnd);
-    if(member.jab&&time<member.start){const u=ease((time-(team.lead.start-.4))/.28),retract=45*ease((time-team.lead.start)/.25);return poseOn(member.actor,member.jab.route,Math.max(0,member.jab.distance*u-retract));}
-    if(time<member.start)return {...member.body};
-    const u=clamp((time-member.start)/(roadTime-member.start));return poseOn(member.actor,member.exit,prefixLength*ease(u),prefixLength*6*u*(1-u)/(roadTime-member.start));
+    const g=team.travel(time);
+    if(member.jab){
+      if(time<team.lead.start){const u=ease((time-(team.lead.start-.55))/.4);return poseOn(member.actor,team.spine,member.jab.from+(member.jab.to-member.jab.from)*u);}
+      return team.onSpine(member.actor,member.jabEnd+Math.max(0,g-(team.group.length>1?400:40)),time);
+    }
+    return team.onSpine(member.actor,member.origin+g,time);
   }
   const yieldStart=21.5*ratio,yieldSources=Motion.pose(yieldStart/duration),yieldPaths={
     father:connection(C.actors.father,yieldSources.father,[435,620],Math.PI,65),
@@ -296,7 +319,7 @@
     body.fear=yieldSources[kind].fear*fade;body.bounce=yieldSources[kind].bounce*fade;body.edgeBends=yieldSources[kind].edgeBends.map(value=>value*fade);body.angle=heading-actor.headAxis(body).angle+(kind==='mother'?Math.PI:0);return body;
   }
   function curiosity(entry,time,contact){return emotion(entry,'curiosity',time-(contact-2.4),2.2,1);}
-  function frame(value){
+  function plannedFrame(value){
     const time=Number.isFinite(value)?Math.max(0,value):0,actors=[],opening=Motion.pose(Math.min(time/duration,1));
     for(const kind of ['father','mother']){
       const actor=C.actors[kind],body=mainParent(kind,time,opening),entry=record(kind,actor,body);
@@ -330,6 +353,28 @@
     police.forEach((person,i)=>{if(time>=entryStarts[i])actors.push(record(person.id,person.actor,policeBody(person,time,i)));});
     return{actors,hero:{...hero,id:'hero',actor:heroActor,body:hero,active:time<58},phase:time<20.55*ratio?'families':time<takeAway?'arrival':time<58?'escort':'handoff',handoff:time>=58};
   }
+  const collisionWorld=new CollisionWorld(CityMap.houseBoundaries),collisionStep=.05,resolvedFrames=[];
+  const routeStarts=new Map([...detainees.map(item=>[item.kid.id,item.start]),...teams.flatMap(team=>team.members.map(member=>[member.id,member.start]))]);
+  function resolvedAt(time,previous){
+    const plan=plannedFrame(time),before=new Map((previous?.actors||[]).map(actor=>[actor.id,actor])),sampled=new Map([[time,plan]]),dt=time-(previous?.time??time);
+    const intents=plan.actors.map(entry=>{
+      const last=before.get(entry.id),routeControlled=time>=(routeStarts.get(entry.id)??Infinity),motionTime=last&&routeControlled?Math.min(time,last.motionTime+dt*1.2):time;
+      if(!sampled.has(motionTime))sampled.set(motionTime,plannedFrame(motionTime));
+      const pose=sampled.get(motionTime).actors.find(actor=>actor.id===entry.id);
+      return{...entry,body:pose?.body||last?.body||entry.body,motionTime,routeControlled};
+    });
+    const actors=collisionWorld.resolve(previous?.actors||[],intents).map(entry=>{
+      const last=before.get(entry.id);
+      return{...entry,motionTime:last&&entry.routeControlled?last.motionTime+(entry.motionTime-last.motionTime)*(entry.collision.fraction??1):time};
+    }),entry=actors.find(actor=>actor.id==='hero');
+    return{...plan,time,actors,hero:entry?{...entry.body,id:'hero',actor:heroActor,body:entry.body,active:time<58}:plan.hero};
+  }
+  function frame(value){
+    const time=Number.isFinite(value)?Math.max(0,Math.min(64,value)):0,index=Math.floor(time/collisionStep+1e-8);
+    if(!resolvedFrames.length)resolvedFrames.push(resolvedAt(0));
+    while(resolvedFrames.length<=index){const i=resolvedFrames.length;resolvedFrames.push(resolvedAt(i*collisionStep,resolvedFrames[i-1]));}
+    return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
+  }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,timing:{duration,takeAway,firstMove,firstStop,cruiseStart,detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,timing:{duration,takeAway,firstMove,firstStop,cruiseStart,detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

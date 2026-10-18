@@ -5,7 +5,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
   // Stop after a complete reaction or episode, never at first contact or mid-transition.
-  const beats=[6.8,16.0667,24,37.5,51.7,58,70,77,87,98,104,119,132,138,142.3,146,154,158];
+  const beats=[6.8,16.0667,24,37.5,51.7,58,70,77,87,98,104,110,119,132,138,142.3,146,154,158];
   class StoryPlayer{
     constructor({duration=158,mode='interactive',playing=false}={}){
       this.duration=duration;this.time=0;this.target=0;this.mode=mode;

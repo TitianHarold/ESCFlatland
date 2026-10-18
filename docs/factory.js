@@ -76,15 +76,22 @@
     if(t<98.6)return lanePose(heroActor,-750,130);
     if(t<102.8)return escortBody(heroActor,t);
     if(t<104)return pathPose(heroActor,throwPath,throwPath.length*between(t,102.8,104));
-    if(t<119){const attempt=Math.max(0,Math.sin(Math.PI*clamp((t-105)/1.3)))*3*(t<106.3?1:0);return hardPose(heroActor,discard.x+attempt,discard.y-attempt*.3,0);}
+    if(t<119){
+      const u=clamp((t-104.8)/.9),attempt=t>=104.8&&t<105.7?Math.sin(Math.PI*u)**2:0;
+      const withdraw=between(t,105.7,107.1),notice=between(t,108.3,110),ready=between(t,118.2,119);
+      const retreat=withdraw*(1-notice),head=(.25*withdraw-.67*notice)*(1-ready)+chasePoint(119).heading*ready;
+      return hardPose(heroActor,discard.x+12*attempt-5*retreat,discard.y-4*attempt+3*retreat,head-.08*attempt);
+    }
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
     body.speed=p.speed;body.strain=clamp(p.speed/1000);body.bounce=.006*Math.sin((t-119)*12)*clamp(p.speed/200);
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
   }
   const tagReleaseTime=127.25;
   function restraintState(t){
-    const release=between(t,126,128),load=t<94.5?0:between(t,94.5,94.9)*(1-release);
-    return{attached:t>=94.5&&t<tagReleaseTime,load,release,peel:between(t,126,tagReleaseTime),size:1.8,offset:[0,0]};
+    const fracture=between(t,126,tagReleaseTime),release=fracture,load=t<94.5?0:between(t,94.5,94.9)*(1-release);
+    const stress=between(t,125,125.45)*(1-between(t,127,tagReleaseTime));
+    const shiver=t>=125&&t<tagReleaseTime?.38*stress*(1-.65*fracture)*Math.sin((t-125)*24):0;
+    return{attached:t>=94.5&&t<tagReleaseTime,load,release,peel:fracture,stress,fracture,shiver,size:1.8,offset:[0,0]};
   }
   function heroBody(t){
     const body=baseHeroBody(t);
@@ -93,10 +100,11 @@
     // The restraint bends selected edges; it never scales the entire child down.
     // The escort doorway still uses the exact rigid silhouette approved for that route.
     const envelope=t<98?1-between(t,97.6,98):between(t,104,104.2);
-    const struggle=t>=104&&t<106.8?Math.pow(Math.sin((t-104)*Math.PI/1.05),2):.22*Math.pow(Math.sin((t-94.5)*Math.PI/1.4),2);
+    const u=clamp((t-104.8)/.9),struggle=t<104?.22*Math.sin((t-94.5)*Math.PI/1.4)**2:t>=104.8&&t<105.7?Math.sin(Math.PI*u)**2:0;
+    const cower=between(t,105.7,107.1),notice=between(t,108.3,110);
     const tighten=restraint.load*envelope;
-    body.edgeBends=[.50-.19*struggle,.08+.04*struggle,.11+.06*struggle,.43-.22*struggle,.025].map(v=>v*tighten);
-    if(t>=104&&t<106.8){body.bounce=.004*Math.sin((t-104)*15)*envelope;body.strain=.13*struggle;}
+    body.edgeBends=[.50-.19*struggle+.14*cower-.04*notice,.08+.04*struggle+.06*cower,.11+.06*struggle+.04*cower,.43-.22*struggle+.17*cower-.04*notice,.025+.04*cower].map(v=>v*tighten);
+    if(t>=104&&t<119){body.bounce=0;body.strain=.13*struggle;}
     body.angle=heading-heroActor.headAxis(body).angle;return body;
   }
   // The released cross remains an independent world object, including after the 2D handoff.
@@ -104,7 +112,7 @@
   function detachedTagState(t){
     if(t<tagReleaseTime)return undefined;
     const u=clamp((t-tagReleaseTime)/2.5),travel=740*(1-Math.pow(1-u,3)),side=95*Math.sin(u*Math.PI/2);
-    return{x:releaseBody.x-Math.cos(releaseHeading)*travel-Math.sin(releaseHeading)*side,y:releaseBody.y-Math.sin(releaseHeading)*travel+Math.cos(releaseHeading)*side,angle:releaseBody.angle+3.5*ease(u),z:22*Math.sin(u*Math.PI),opacity:1,scale:1.8};
+    return{x:releaseBody.x-Math.cos(releaseHeading)*travel-Math.sin(releaseHeading)*side,y:releaseBody.y-Math.sin(releaseHeading)*travel+Math.cos(releaseHeading)*side,angle:releaseBody.angle+3.5*ease(u),z:22*Math.sin(u*Math.PI),opacity:1,scale:1.8,geometryState:{peel:1,stress:0,fracture:1,shiver:0}};
   }
   function backgroundState(t,row,slot){
     const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot];let x=900,station=-1,turns=0;
@@ -122,20 +130,25 @@
   // Successful ordinary shells become wholly opaque; failure alone receives a visible label.
   function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
   function lightState(t,hero){
-    if(t<112)return undefined;
-    if(t<116.8){const u=between(t,112,116.8);return{x:hero.x+103*u,y:hero.y-80*u,r:10,glow:0,complete:false};}
-    if(t<119){const u=between(t,116.8,119),ahead=chasePoint(119,.022),sway=Math.sin(u*Math.PI*2)*(1-u);return{x:hero.x+lerp(103,ahead.x-discard.x,u)+30*sway,y:hero.y+lerp(-80,ahead.y-discard.y,u)+22*sway,r:10,glow:.55*between(t,116.8,117.5),complete:true};}
-    const ahead=chasePoint(t,.022);return{x:ahead.x,y:ahead.y,r:lerp(10,8.5,between(t,119,119.8)),glow:.55,complete:true};
+    if(t<108.3)return undefined;
+    if(t<116){
+      const notice=between(t,108.3,110),slit=between(t,113.2,116),reveal=lerp(.04,.18,notice)+.82*slit;
+      return{x:hero.x,y:hero.y,r:10,glow:.08*notice+.18*slit,reveal,complete:true,inside:true,phase:t<110?'notice':t<113.2?'enclosed':'slit'};
+    }
+    if(t<118.2){const u=between(t,116,118.2);return{x:hero.x+103*u,y:hero.y-80*u,r:10,glow:lerp(.26,.45,u),reveal:1,complete:true,inside:false,phase:'emerge'};}
+    if(t<119){const u=between(t,118.2,119),ahead=chasePoint(119,.022);return{x:hero.x+lerp(103,ahead.x-discard.x,u),y:hero.y+lerp(-80,ahead.y-discard.y,u),r:10,glow:lerp(.45,.55,u),reveal:1,complete:true,inside:false,phase:'lead'};}
+    const ahead=chasePoint(t,.022);return{x:ahead.x,y:ahead.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'chase'};
   }
   let memoTime=NaN,memoFrame;
   function frame(time){
     const t=Number.isFinite(time)?Math.max(0,time):0;if(t===memoTime)return memoFrame;memoTime=t;const actors=[];
     if(t<58||t>=132){const detachedTag=detachedTagState(t);return memoFrame={actors,hero:null,...(detachedTag?{detachedTag}:{})};}
     if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(backgroundState(t,row,slot));
-    const hero=heroBody(t),state=heroMaterial(t),entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:t<112?1:0,coreVisible:t<112,coreScale:t>=104?lerp(.55,1,between(t,110.5,112)):1,coreEntityId:'hero-seed',coreGlow:0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
+    const hero=heroBody(t),state=heroMaterial(t),light=lightState(t,hero),coreVisible=t<104||t>=108.3&&t<116;
+    const entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:coreVisible?1:0,coreVisible,coreScale:1,coreReveal:t<104?1:light?.reveal||0,coreEntityId:'hero-seed',coreGlow:light?.glow||0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
     if(t>=97.5&&t<104)[180,-180,-360].forEach((offset,i)=>actors.push({id:'factory-guard-'+i,actor:guards[i],body:escortBody(guards[i],Math.max(98.6,t),offset),color:ink,cavity:false,core:0}));
     const chase=t>=119&&t<132?{x:hero.x,y:hero.y,startX:discard.x,startY:discard.y,speed:hero.speed,heading:chasePoint(t).heading}:undefined;
-    const light=lightState(t,hero),detachedTag=detachedTagState(t);if(light)light.entityId='hero-seed';
+    const detachedTag=detachedTagState(t);if(light)light.entityId='hero-seed';
     return memoFrame={actors,hero,light,burst:between(t,130,131.8),...(chase?{chase}:{}),...(detachedTag?{detachedTag}:{})};
   }
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}

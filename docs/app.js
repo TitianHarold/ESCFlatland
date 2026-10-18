@@ -50,10 +50,6 @@
   function drawActor(entry,context){
     const top=context&&typeof context.save==='function'?context:mainTop;
     let b=entry.body;const actor=entry.actor;if(!b||!actor)return;
-    if(entry.id==='hero'&&!player.playing&&!reduced.matches&&(player.time<1.2||(player.time>=6.8&&player.time<13)||(player.time>=104&&player.time<106.8))){
-      // A small inward breath only at rest; contact silhouettes and machine forces stay on story time.
-      b={...b,bend:(b.bend||0)+.025*(.5+.5*Math.sin(state.ambient*2.4))};
-    }
     if(entry.id==='hero'&&player.time>=119&&player.time<132){const age=(performance.now()-state.inputAt)/1000,k=age>=0&&age<.22?Math.sin(Math.PI*age/.22):0;b={...b,sx:b.sx*(1+.035*k),sy:b.sy*(1-.035*k)};}
     const outline=actor.localPath(b);top.save();transform(top,b);
     top.fillStyle=entry.color||palette.ink;top.fill(outline);
@@ -64,7 +60,7 @@
       fracture(entry,damage,top);
       if(entry.blacken){top.globalAlpha=clamp(entry.blacken);top.fillStyle=palette.ink;top.fillRect(-100,-100,200,200);top.globalAlpha=1;}
       top.restore();
-      if(entry.core){top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();}
+      if(entry.core){top.save();top.globalAlpha=entry.coreReveal??1;top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();top.restore();}
     }
     if(entry.label==='reject'&&entry.restraint?.attached!==false)drawFailureMark(top,entry.restraint);
     top.restore();
@@ -73,26 +69,31 @@
     }
   }
   function drawFailureMark(ctx,restraint={}){
-    const size=restraint.size??1,peel=restraint.peel??0;
-    ctx.save();ctx.translate(-17*size,10);ctx.rotate(-peel*.42);ctx.scale(size,size);
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(27,0);ctx.lineTo(34,11);ctx.lineTo(27,22);ctx.lineTo(0,22);ctx.closePath();
-    ctx.fillStyle=palette.paper;ctx.fill();ctx.strokeStyle=palette.ink;ctx.lineWidth=1.2;ctx.stroke();
-    ctx.lineWidth=3.2;ctx.lineCap='square';ctx.beginPath();ctx.moveTo(10,5);ctx.lineTo(22,17);ctx.moveTo(22,5);ctx.lineTo(10,17);ctx.stroke();ctx.restore();
+    window.FlatlandRestraint.draw(ctx,restraint,palette);
   }
+
   const heroTexture=document.createElement('canvas');heroTexture.width=heroTexture.height=256;
   const heroTextureContext=heroTexture.getContext('2d'),textureExtent=160;
   const heroMaterial=document.createElement('canvas');heroMaterial.width=heroMaterial.height=256;
   const heroMaterialContext=heroMaterial.getContext('2d');
   function journeyData(time){
     const sample=factory.frame(Math.min(time,131.999999)),entry=sample.actors.find(a=>a.id==='hero');
+    const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
-    if(entry){const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:(entry.blacken||0)*(1-.85*(entry.restraint?.release||0)),body:{...entry.body,x:0,y:0,angle:0}},ctx);heroMaterialContext.setTransform(a,0,0,a,128-800*a,128-550*a);window.FlatlandPossibility.draw(heroMaterialContext,state.ambient);ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation='destination-over';ctx.drawImage(heroMaterial,0,0);ctx.globalCompositeOperation='source-over';}
-    return{...sample,entry,heroTexture,textureExtent,detachedTag:factory.frame(time).detachedTag};
+    if(entry){
+      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:0,body:{...entry.body,x:0,y:0,angle:0}},ctx);
+      heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.clearRect(0,0,256,256);
+      heroMaterialContext.setTransform(a,0,0,a,128-800*a,128-550*a);window.FlatlandPossibility.draw(heroMaterialContext,state.ambient);
+      heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.globalAlpha=darkness;heroMaterialContext.fillStyle=palette.night;heroMaterialContext.fillRect(0,0,256,256);heroMaterialContext.globalAlpha=1;
+      ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation='destination-over';ctx.drawImage(heroMaterial,0,0);ctx.globalCompositeOperation='source-over';
+    }
+    return{...sample,entry,heroTexture,textureExtent,darkness,detachedTag:factory.frame(time).detachedTag};
   }
   function drawLight(light){
     if(!light)return;const glow=clamp(light.glow||0),r=light.r||10;
+    top.save();top.globalAlpha=clamp(light.reveal??1);
     if(glow){const gradient=top.createRadialGradient(light.x,light.y,r*.2,light.x,light.y,r*5);gradient.addColorStop(0,palette.gold+'88');gradient.addColorStop(1,palette.gold+'00');top.fillStyle=gradient;top.beginPath();top.arc(light.x,light.y,r*5*glow,0,Math.PI*2);top.fill();}
-    top.fillStyle=glow?palette.cream:palette.gold;top.beginPath();top.arc(light.x,light.y,r,0,Math.PI*2);top.fill();
+    top.fillStyle=light.phase==='notice'||light.phase==='enclosed'||light.phase==='slit'?palette.gold:glow?palette.cream:palette.gold;top.beginPath();top.arc(light.x,light.y,r,0,Math.PI*2);top.fill();top.restore();
   }
   function draw(time,v){
     world(low,v);window.FlatlandPossibility.draw(low,state.ambient);
@@ -117,16 +118,16 @@
       top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawOverlay(top,time);top.restore();
     }else{
       screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);
-      plant.actors.filter(actor=>actor.id==='hero').forEach(drawActor);if(time<106.8||time>=119)drawLight(plant.light);factory.drawOverlay(top,time);
+      plant.actors.filter(actor=>actor.id==='hero').forEach(entry=>drawActor(plant.light?{...entry,core:0}:entry));if(time<110)drawLight(plant.light);factory.drawOverlay(top,time);
     }
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
-    if(time>=106.8&&time<119){
-      screenOverlay();const light=plant.light,portal={x:(plant.hero.x-v.x)*s+state.w/2,y:(plant.hero.y-v.y)*s+state.h/2,radius:50*s*motion.geometry.childScale,angle:plant.hero.angle};
-      const screenLight=light?{x:(light.x-v.x)*s+state.w/2,y:(light.y-v.y)*s+state.h/2,r:(light.r||10)*s}:null;
+    if(time>=110&&time<119){
+      screenOverlay();const light=plant.light,portal={x:(plant.hero.x-v.x)*s+state.w/2,y:(plant.hero.y-v.y)*s+state.h/2,radius:50*s*motion.geometry.childScale,seedRadius:(light?.r||10)*s,angle:plant.hero.angle};
+      const screenLight=light?{...light,x:(light.x-v.x)*s+state.w/2,y:(light.y-v.y)*s+state.h/2,r:(light.r||10)*s}:null;
       window.FlatlandInner.draw(top,time,viewport,state.ambient,screenLight,portal);
-      if(time<110.5){const g=window.FlatlandInner.portalGeometry(time,viewport,portal,screenLight),entry=plant.actors.find(a=>a.id==='hero');top.save();top.translate(g.x,g.y);top.rotate(g.angle);top.scale(g.radius/(50*motion.geometry.childScale),g.radius/(50*motion.geometry.childScale));drawFailureMark(top,entry.restraint);top.restore();}
+      if(time<112&&plant.actors.find(a=>a.id==='hero')?.restraint?.attached){const g=window.FlatlandInner.portalGeometry(time,viewport,portal,screenLight),entry=plant.actors.find(a=>a.id==='hero');top.save();top.globalAlpha=1-clamp((time-110)/2);top.translate(g.x,g.y);top.rotate(g.angle);top.scale(g.radius/(50*motion.geometry.childScale),g.radius/(50*motion.geometry.childScale));drawFailureMark(top,entry.restraint);top.restore();}
     }
   }
   function screenOverlay(){top.setTransform(state.dpr,0,0,state.dpr,0,0);}

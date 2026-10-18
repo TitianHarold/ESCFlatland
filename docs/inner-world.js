@@ -1,4 +1,4 @@
-/* Printed pigments unfold through the character's cavity, with no opacity transition. */
+/* The cavity opens into moving pigments; one seed is handed between the same views. */
 (function(root,factory){
   if(typeof module==='object'&&module.exports)module.exports=factory(require('./palette.js'));
   else root.FlatlandInner=factory(root.FlatlandPalette);
@@ -76,10 +76,11 @@
     ctx.bezierCurveTo(15,-57,30,-31,47,-6);ctx.bezierCurveTo(60,16,35,43,7,45);
     ctx.bezierCurveTo(-24,51,-53,35,-49,7);ctx.closePath();
   }
-  function amount(t){return t>=106.8&&t<119?1:0;}
-  function portalProgress(t){return t<106.8||t>=119?0:ease(t,106.8,110.5)*(1-ease(t,116,119));}
+  function amount(t){return t>=110&&t<119?ease(t,110,110.18)*(1-ease(t,118.88,119)):0;}
+  function portalProgress(t){return t<110||t>=119?0:ease(t,110,112)*(1-ease(t,118,119));}
+  function darkness(t){return(.82-.37*ease(t,113.2,116))*(1-ease(t,119,130));}
   function portalGeometry(t,viewport,portal,externalLight){
-    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760),entry=ease(t,106.8,110.5),exit=ease(t,116,119);
+    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760),entry=ease(t,110,112),exit=ease(t,118,119);
     const source={x:Number.isFinite(portal?.x)?portal.x:w/2,y:Number.isFinite(portal?.y)?portal.y:h/2};
     const target=externalLight||{x:w*.76,y:h*.24,r:10*s};
     const x=source.x*(1-exit)+target.x*exit,y=source.y*(1-exit)+target.y*exit;
@@ -92,18 +93,52 @@
     return{x,y,radius,angle:Number.isFinite(portal?.angle)?portal.angle:0,entry,exit,start,cover};
   }
   function drawCore(ctx,t,viewport,externalLight,portal){
-    if(t<106.8)return;
-    const s=Math.max(viewport.w/1280,viewport.h/760),flight=ease(t,112,116.8),join=ease(t,115.2,116.8);
-    const inner={x:viewport.w/2+s*(90+flight*235),y:viewport.h/2+s*(-65-flight*135)};
-    const enter=ease(t,106.8,112),source=portal||{x:viewport.w/2,y:viewport.h/2};
-    const x=t<112?source.x*(1-enter)+inner.x*enter:externalLight?inner.x*(1-join)+externalLight.x*join:inner.x,y=t<112?source.y*(1-enter)+inner.y*enter:externalLight?inner.y*(1-join)+externalLight.y*join:inner.y;
-    const r=t<112?10*s*(.55+.45*enter):10*s*(1-join)+(externalLight?.r??10*s)*join;
+    if(t<110||t>=119)return;
+    const s=Math.max(viewport.w/1280,viewport.h/760),flight=ease(t,116,118.2),enter=ease(t,110,112);
+    const inner={x:viewport.w/2,y:viewport.h/2},source=portal||inner,target=externalLight||{x:inner.x+103*s,y:inner.y-80*s};
+    const x=t<112?source.x*(1-enter)+inner.x*enter:inner.x*(1-flight)+target.x*flight,y=t<112?source.y*(1-enter)+inner.y*enter:inner.y*(1-flight)+target.y*flight;
+    const r=t<112?(portal?.seedRadius??10*s)*(1-enter)+10*s*enter:10*s*(1-flight)+(externalLight?.r??10*s)*flight;
     ctx.save();
-    if(t>=116.8){
-      const glow=ease(t,116.8,117.5),halo=ctx.createRadialGradient(x,y,r*.2,x,y,r*5);
-      halo.addColorStop(0,P.gold+'66');halo.addColorStop(1,P.gold+'00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(x,y,r*5*glow,0,TAU);ctx.fill();
-    }
+    const reveal=externalLight?.reveal??(.18+.82*ease(t,113.2,116)),glow=.1+.9*reveal,halo=ctx.createRadialGradient(x,y,r*.2,x,y,r*5);ctx.globalAlpha=reveal;
+    halo.addColorStop(0,P.gold+'66');halo.addColorStop(1,P.gold+'00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(x,y,r*5*glow,0,TAU);ctx.fill();
     ctx.fillStyle=P.gold;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.restore();
+  }
+  let veilCanvas,veilContext;
+  function drawVeil(ctx,t,viewport,clock){
+    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760);
+    if(!veilCanvas){veilCanvas=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(w,h):typeof document!=='undefined'?document.createElement('canvas'):null;if(!veilCanvas)return;veilContext=veilCanvas.getContext('2d');}
+    if(veilCanvas.width!==Math.ceil(w)||veilCanvas.height!==Math.ceil(h)){veilCanvas.width=Math.ceil(w);veilCanvas.height=Math.ceil(h);}
+    const c=veilContext,phase=Number.isFinite(clock)?clock:0,opening=ease(t,113.2,116),strength=darkness(t);
+    c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);c.globalCompositeOperation='source-over';c.globalAlpha=strength;c.fillStyle=P.night;c.fillRect(0,0,w,h);
+    for(let i=0;i<7;i++){
+      const x=w*(.12+(i%4)*.25)+Math.sin(phase*.09+i)*24*s,y=h*(.2+(i%3)*.3)+Math.cos(phase*.1+i)*18*s,r=(180+(i%3)*55)*s,g=c.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,(i%2?P.quiet:P.night)+'99');g.addColorStop(1,P.night+'00');c.globalAlpha=strength*.36;c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+    }
+    const texture=material(c);if(texture){c.globalAlpha=.3;c.fillStyle=texture;c.fillRect(0,0,w,h);}
+    c.lineCap='round';c.lineJoin='round';
+    for(let i=0;i<22;i++){
+      const angle=i*2.399+phase*.025,rx=(95+(i%7)*34)*s,ry=(65+(i%5)*28)*s,cx=w/2+Math.cos(i*3.1+phase*.12)*34*s,cy=h/2+Math.sin(i*2.7+phase*.10)*26*s;
+      c.beginPath();
+      for(let j=0;j<=44;j++){const a=j/44*TAU,warp=1+.13*Math.sin(a*3+i+phase*.23),x=Math.cos(a)*rx*warp,y=Math.sin(a)*ry*warp,px=cx+x*Math.cos(angle)-y*Math.sin(angle),py=cy+x*Math.sin(angle)+y*Math.cos(angle);j?c.lineTo(px,py):c.moveTo(px,py);}
+      c.closePath();c.globalAlpha=.58+.18*Math.sin(i+phase*.14)**2;c.strokeStyle=i%3?P.ink:P.quiet;c.lineWidth=(i%4===0?5:2.2)*s;c.stroke();
+    }
+    for(let i=0;i<7;i++){
+      const y=h*(.12+i*.13),drift=18*s*Math.sin(phase*.19+i);c.beginPath();c.moveTo(-40,y);c.bezierCurveTo(w*.34,y+100*s+drift,w*.65,y-130*s-drift,w+40,y+25*s);c.globalAlpha=.35;c.strokeStyle=P.ink;c.lineWidth=3*s;c.stroke();
+    }
+    if(opening>0){
+      c.save();c.translate(w/2,h/2);c.rotate(-.48);c.globalCompositeOperation='destination-out';c.globalAlpha=1;c.fillStyle=P.ink;
+      const length=Math.hypot(w,h)*.85,width=(1+Math.pow(opening,1.35)*Math.max(w,h)*.74)/2,edge=(i,side)=>{const u=i/18;return[(u-.5)*length*2,side*width+(7*s*Math.sin(i*1.73)+4*s*Math.sin(i*3.31+phase*.12))*Math.sin(Math.PI*u)];};
+      c.beginPath();for(let i=0;i<=18;i++){const p=edge(i,-1);i?c.lineTo(...p):c.moveTo(...p);}for(let i=18;i>=0;i--)c.lineTo(...edge(i,1));c.closePath();c.fill();
+      const beam=ease(t,113.2,113.55)*(1-ease(t,115.8,116.25));
+      c.globalCompositeOperation='source-over';c.strokeStyle=P.gold;
+      for(const side of [-1,1]){
+        c.beginPath();for(let i=0;i<=18;i++){const p=edge(i,side);i?c.lineTo(...p):c.moveTo(...p);}
+        c.globalAlpha=beam*(side<0?.2:.08);c.lineWidth=14*s;c.stroke();
+        c.globalAlpha=beam*(side<0?.95:.45);c.lineWidth=(side<0?3.2:1.8)*s;c.stroke();
+      }
+      c.restore();
+    }
+    c.globalAlpha=1;c.globalCompositeOperation='source-over';ctx.drawImage(veilCanvas,0,0);
   }
   function draw(ctx,t,viewport,clock,externalLight,portal){
     const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760);
@@ -111,7 +146,7 @@
       const g=portalGeometry(t,viewport,portal,externalLight),k=g.radius/50;
       let supplied=portal?.windowPath;
       if(typeof supplied==='string')supplied=typeof Path2D!=='undefined'?new Path2D(supplied):null;
-      ctx.save();ctx.globalAlpha=1;ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
+      ctx.save();ctx.globalAlpha=amount(t);ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
       if(supplied)ctx.clip(supplied);else{cavity(ctx);ctx.clip();}
       ctx.scale(1/k,1/k);ctx.rotate(-g.angle);ctx.translate(-g.x,-g.y);
       const texture=material(ctx);ctx.fillStyle=P.navy;ctx.fillRect(0,0,w,h);
@@ -119,8 +154,10 @@
       // The whole printed space grows out of the small window; the aperture alone controls visibility.
       const contentScale=(g.start/470)*(1-g.entry)+s*g.entry;
       ctx.translate(g.x*(1-g.entry)+w/2*g.entry,g.y*(1-g.entry)+h/2*g.entry);ctx.scale(contentScale,contentScale);
-      const time=(t-106.8)*.9+(Number.isFinite(clock)?clock*.035:0);
+      const time=(t-110)*.9+(Number.isFinite(clock)?clock*.035:0);
       for(const face of foldedFaces(time))polygon(ctx,face.points,face.color,texture);
+      ctx.scale(1/contentScale,1/contentScale);ctx.translate(-(g.x*(1-g.entry)+w/2*g.entry),-(g.y*(1-g.entry)+h/2*g.entry));
+      drawVeil(ctx,t,viewport,clock);
       ctx.restore();
       if(g.exit<.9){
         ctx.save();ctx.globalAlpha=1;ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
@@ -135,5 +172,5 @@
     if(t>=119)return;
     ctx.save();ctx.globalAlpha=1;ctx.fillStyle=P.outside?.background||P.white||P.paper;ctx.fillRect(0,0,viewport.w,viewport.h);ctx.restore();
   }
-  return{draw,drawOuter,amount,portalProgress,portalGeometry,cavityPath};
+  return{draw,drawOuter,amount,portalProgress,portalGeometry,darkness,cavityPath};
 });

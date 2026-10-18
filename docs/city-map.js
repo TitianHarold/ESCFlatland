@@ -30,7 +30,23 @@
   ];
   function pentagon(h){return[[h.x+h.w*.10,h.y],[h.x+h.w*.90,h.y],[h.x+h.w,h.y+h.h*.65],[h.x+h.w*.5,h.y+h.h],[h.x,h.y+h.h*.65]];}
   function straight(a,b){return[a,[a[0]+(b[0]-a[0])/3,a[1]+(b[1]-a[1])/3],[a[0]+(b[0]-a[0])*2/3,a[1]+(b[1]-a[1])*2/3],b];}
-  homes.forEach(h=>{h.polygon=pentagon(h);h.door=[h.x+h.w/2,h.y];h.doorWidth=220;});
+  function houseAsset(h){
+    h.boundary=Portals.houseBoundary({id:h.id,polygon:h.polygon||pentagon(h),door:h.door||[h.x+h.w/2,h.y],doorWidth:h.doorWidth??220,cornerRadius:Math.min(42,Math.min(h.w,h.h)*.065),thickness:8});
+    h.polygon=h.boundary.polygon;h.door=h.boundary.door.point;h.doorWidth=h.boundary.door.width;return h;
+  }
+  houseAsset(mainHouse);homes.forEach(h=>houseAsset(h));
+  const backgroundHomes=[
+    [-2520,-240,170,150],[-2220,-250,180,160],[-1920,-240,170,155],
+    [-1450,100,285,245],[-1410,440,280,240],
+    [-3440,-400,260,250],[-3390,20,265,250],[-3330,450,280,260],
+    [-1450,-2550,200,240],[380,-2500,320,330],[390,-2050,300,300],
+    [-1160,-3420,240,240],[-640,-3380,235,235],[-90,-3500,260,245],[490,-3510,255,245],[1080,-3400,260,250],
+    [3330,-2250,260,260],[3390,-1760,260,250],[3390,-1260,270,250],
+    [3330,500,300,310],[3750,700,340,350],[3320,1080,310,330],
+    [-370,1460,160,185],[-180,1720,165,190],
+    [-2420,1250,250,240],[-2360,1680,255,240]
+  ].map(([x,y,w,h],i)=>houseAsset({id:'background-'+i,x,y,w,h,doorWidth:Math.min(110,w*.38)}));
+  const houseBoundaries=[mainHouse,...homes,...backgroundHomes].map(h=>h.boundary),walls=houseBoundaries.flatMap(h=>h.walls);
   const west=homes.find(h=>h.id==='west'),northwest=homes.find(h=>h.id==='northwest');
   west.roadJoin=[-1140,-920];west.accessCurves=[[[...west.door],[-1140,-780],[-1030,-873],west.roadJoin]];
   northwest.roadJoin=[-2080,-1200];northwest.accessCurves=[[[...northwest.door],[-2080,-1100],[-1980,-1179],northwest.roadJoin]];
@@ -103,11 +119,32 @@
   const road={main:escortCurves,mainWidth:240,ring,ringWidth:140,upper:upperStreet,east:easternStreet,south:southernStreet,eastCurves,southCurves,neighborhoodCurves,northernCurves,westernCurves};
   function palette(value){const p=value||defaultPalette;if(!p)throw new Error('Pass FlatlandPalette to CityMap.drawBase/drawGate.');return p;}
   function shape(ctx,points,fill,stroke,width=1){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
-  function polyline(ctx,points,color,width){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='butt';ctx.stroke();}
-  function curves(ctx,list,color,width){ctx.beginPath();ctx.moveTo(...list[0][0]);list.forEach(c=>ctx.bezierCurveTo(...c[1],...c[2],...c[3]));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='butt';ctx.stroke();}
+  function softShape(ctx,points,fill,radius=32){shape(ctx,Portals.roundedPolygon(points,radius),fill);}
+  function polyline(ctx,points,color,width){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();}
+  function curves(ctx,list,color,width){ctx.beginPath();ctx.moveTo(...list[0][0]);list.forEach(c=>ctx.bezierCurveTo(...c[1],...c[2],...c[3]));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();}
   function lerpPoint(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];}
   function bezier(c,t){const s=1-t;return[0,1].map(i=>s*s*s*c[0][i]+3*s*s*t*c[1][i]+3*s*t*t*c[2][i]+t*t*t*c[3][i]);}
   const artery=escortCurves.flatMap((c,i)=>Array.from({length:25},(_,j)=>({point:bezier(c,j/24),width:[210,260,230,240,250,310][i]+([260,230,240,250,310,300][i]-[210,260,230,240,250,310][i])*ease(j/24)})).filter((_,j)=>j%25!==0||j===0));
+  const junctions=[
+    {point:[-600,-600],radius:225,arms:[{curve:escortCurves[2],until:.45,width:235},{curve:neighborhoodCurves[0],until:.45,width:140}]},
+    {point:west.roadJoin,radius:190,arms:[{curve:westernCurves[0],until:.7,width:120},{curve:escortCurves[3],until:.4,width:245}]},
+    {point:northwest.roadJoin,radius:185,arms:[{curve:[...westernCurves[4]].reverse(),until:.65,width:120},{curve:escortCurves[4],until:.4,width:272}]},
+    {point:[-650,-1640],radius:185,arms:[{curve:northernCurves[0],until:.5,width:180},{curve:[...neighborhoodCurves[0]].reverse(),until:.28,width:140}]},
+    {point:[1450,-1020],radius:175},{point:[1500,350],radius:165},
+    {point:[1300,1220],radius:170},{point:[1520,1470],radius:155},
+    {point:southernStreet[0],radius:175},{point:[650,-160],radius:145}
+  ];
+  road.junctions=junctions;
+  function paveJunctions(ctx,color){
+    for(const junction of junctions){
+      ctx.beginPath();ctx.arc(...junction.point,junction.radius,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      // Taper back into each street instead of leaving a round cap at the apron edge.
+      for(const arm of junction.arms||[]){
+        const samples=Array.from({length:25},(_,i)=>{const q=i/24;return{point:bezier(arm.curve,q*arm.until),width:arm.width+(junction.radius*2-arm.width)*(1-ease(q))};});
+        ribbon(ctx,samples,color);
+      }
+    }
+  }
   function ribbon(ctx,samples,color,extra=0){
     const left=[],right=[];
     samples.forEach((s,i)=>{const a=samples[Math.max(0,i-1)].point,b=samples[Math.min(samples.length-1,i+1)].point,dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,w=(s.width+extra)/2;left.push([s.point[0]-dy/l*w,s.point[1]+dx/l*w]);right.push([s.point[0]+dy/l*w,s.point[1]-dx/l*w]);});
@@ -126,16 +163,12 @@
     const pattern=ctx.createPattern(grainTile,'repeat');if(pattern){ctx.fillStyle=pattern;ctx.fillRect(-8000,-6500,14000,11500);}
   }
   function house(ctx,h,p){
-    shape(ctx,h.polygon,p.paper);
-    // A plan cut exposes the family, with one real opening in the flat north wall.
-    const a=h.polygon[0],b=h.polygon[1],half=h.doorWidth/2;
-    const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy),tx=dx/length,ty=dy/length;
-    const left=[h.door[0]-tx*half,h.door[1]-ty*half],right=[h.door[0]+tx*half,h.door[1]+ty*half];
-    polyline(ctx,[right,...h.polygon.slice(1),a,left],p.ink,8);
+    shape(ctx,h.boundary.polygon,p.paper);
+    h.boundary.walls.forEach(wall=>shape(ctx,wall,p.ink));
   }
   function localRect(ctx,s0,t0,s1,t1,color){shape(ctx,[at(s0,t0),at(s0,t1),at(s1,t1),at(s1,t0)],color);}
   function institution(ctx,p){
-    shape(ctx,[at(-120,-1150),at(1350,-1400),at(2050,0),at(1350,1400),at(-120,1150)],p.outside.wall);
+    softShape(ctx,[at(-120,-1150),at(1350,-1400),at(2050,0),at(1350,1400),at(-120,1150)],p.outside.wall,80);
     // A single recessed frontage joins the gatehouses to the institution itself.
     shape(ctx,[at(-150,-480),at(-150,480),at(0,480),at(0,150),at(210,150),at(210,-150),at(0,-150),at(0,-480)],p.paper);
     polyline(ctx,[at(-120,-1150),at(-120,-480),at(0,-480),at(0,-150)],p.blue,14);
@@ -153,7 +186,7 @@
       [3780,-2860],[3830,-1030],[4520,380],[4190,2200],[1660,2230],
       [970,3100],[-2200,2980],[-2770,2040],[-2650,970],[-3200,1070],[-3650,300]
     ]];
-    parcels.forEach(points=>shape(ctx,points,p.blue));
+    parcels.forEach(points=>softShape(ctx,points,p.blue,100));
     // The continuous perimeter streets enclose unequal blocks, rather than ending at each house.
     curves(ctx,northernCurves,p.paper,180);
     curves(ctx,neighborhoodCurves,p.paper,140);
@@ -162,30 +195,20 @@
     curves(ctx,southCurves,p.paper,170);
     polyline(ctx,[[650,-160],[1180,-40],[1487,80]],p.paper,150);
     ribbon(ctx,artery,p.paper);
-    shape(ctx,plaza,p.paper);
+    softShape(ctx,plaza,p.paper,60);
     // These shared forecourts contain the accepted access paths without drawing driveway fingers.
-    shape(ctx,[[200,80],[480,-80],[1160,-80],[1380,100],[1260,240],[340,240]],p.paper);
-    shape(ctx,[[-1390,-910],[-930,-900],[-850,-780],[-844,-650],[-1436,-650],[-1480,-790]],p.paper);
-    shape(ctx,[[-2340,-1200],[-1830,-1170],[-1730,-1080],[-1752,-980],[-2408,-980],[-2500,-1070]],p.paper);
-    const closedHomes=[
-      [-2520,-240,170,150],[-2220,-250,180,160],[-1920,-240,170,155],
-      [-1450,100,285,245],[-1410,440,280,240],
-      [-3440,-400,260,250],[-3390,20,265,250],[-3330,450,280,260],
-      [-1450,-2550,200,240],[380,-2500,320,330],[390,-2050,300,300],
-      [-1160,-3420,240,240],[-640,-3380,235,235],[-90,-3500,260,245],[490,-3510,255,245],[1080,-3400,260,250],
-      [3330,-2250,260,260],[3390,-1760,260,250],[3390,-1260,270,250],
-      [3330,500,300,310],[3750,700,340,350],[3320,1080,310,330],
-      [-370,1460,160,185],[-180,1720,165,190],
-      [-2420,1250,250,240],[-2360,1680,255,240]
-    ];
-    closedHomes.forEach(([x,y,w,h])=>shape(ctx,pentagon({x,y,w,h}),p.ink));
+    softShape(ctx,[[200,80],[480,-80],[1160,-80],[1380,100],[1260,240],[340,240]],p.paper,36);
+    softShape(ctx,[[-1390,-910],[-930,-900],[-850,-780],[-844,-650],[-1436,-650],[-1480,-790]],p.paper,28);
+    softShape(ctx,[[-2340,-1200],[-1830,-1170],[-1730,-1080],[-1752,-980],[-2408,-980],[-2500,-1070]],p.paper,28);
+    paveJunctions(ctx,p.paper);
+    backgroundHomes.forEach(h=>house(ctx,h,p));
     // A few larger public footprints balance the smaller residential groups.
-    shape(ctx,[[860,-790],[1120,-850],[1270,-720],[1230,-420],[840,-330]],p.ink);
-    shape(ctx,[[-490,365],[-150,330],[120,530],[80,680],[-230,780],[-500,620]],p.ink);
-    shape(ctx,[[-350,440],[-170,415],[-30,545],[-60,620],[-240,675],[-370,580]],p.paper);
+    softShape(ctx,[[860,-790],[1120,-850],[1270,-720],[1230,-420],[840,-330]],p.ink,30);
+    softShape(ctx,[[-490,365],[-150,330],[120,530],[80,680],[-230,780],[-500,620]],p.ink,30);
+    softShape(ctx,[[-350,440],[-170,415],[-30,545],[-60,620],[-240,675],[-370,580]],p.paper,25);
     shape(ctx,[[-200,230],[-100,230],[-100,440],[-200,440]],p.paper);
     institution(ctx,p);
-    shape(ctx,forecourtPolygon,p.paper);
+    softShape(ctx,forecourtPolygon,p.paper,48);
     curves(ctx,[straight(at(-1080,0),at(210,0))],p.paper,300);
     homes.forEach(h=>house(ctx,h,p));house(ctx,mainHouse,p);
     grain(ctx,p);
@@ -201,5 +224,5 @@
     polyline(ctx,[at(-36,-150),at(-36,150)],p.quiet||p.line,6);
     ctx.restore();
   }
-  return{drawBase,drawGate,homes,mainHouse,mainDoor,escortCurves,gate,forecourtSlots,road,plaza,detaineeHomeIds:['west','northwest']};
+  return{drawBase,drawGate,homes,backgroundHomes,mainHouse,mainDoor,houseBoundaries,walls,escortCurves,gate,forecourtSlots,road,plaza,detaineeHomeIds:['west','northwest']};
 });

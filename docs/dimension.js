@@ -1,8 +1,8 @@
 /* World-anchored growth and thin XYZ actors share one perspective renderer. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'));
-  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'));
+  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint) {
   'use strict';
   const anchor = Object.freeze({x: 0, y: 0, z: 0});
   const defaultProjection = Object.freeze({x: 0, y: 0, zoom: 1.25, tilt: 0, yaw: 0, focal: 1600, screenY: .57});
@@ -441,9 +441,9 @@
     return ease(along,-950,-550)*(1-ease(along,1500,2300))*(1-ease(Math.hypot(dx,dy),1800,2600));
   }
   function prism(list,item,growth,alpha,hole=false){
-    const count=item.kind===1||item.kind===4?4:6,r=item.r,z=item.h*growth;
+    const count=item.kind===1||item.kind===4?4:6,r=item.r*(item.scale||1),z=item.h*growth;
     const ring=scale=>Array.from({length:count},(_,i)=>{const a=i*Math.PI*2/count+(count===4?Math.PI/4:0);return[item.x+Math.cos(a)*r*scale,item.y+Math.sin(a)*r*scale];});
-    const outside=ring(1),inside=ring(.48),shade=tint(item.color,Palette.navy,.38);
+    const outside=ring(1),inside=ring(item.aperture||.48),shade=tint(item.color,Palette.navy,.38);
     if(!hole)surface(list,outside.map(p=>[...p,z]),item.color,'stone',alpha);
     for(let i=0;i<count;i++){
       const j=(i+1)%count,a=outside[i],b=outside[j];surface(list,[[...a,0],[...b,0],[...b,z],[...a,z]],i%2?shade:item.color,'stone',alpha);
@@ -451,14 +451,14 @@
     }
   }
   function roundedObject(list,item,growth,alpha,hole=false){
-    const count=14,r=item.r;
+    const count=14,r=item.r*(item.scale||1);
     if(hole){
       const z=item.h*.55*growth;
       for(let i=0;i<count;i++){
         const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,point=(angle,size,height)=>[item.x+Math.cos(angle)*r*size,item.y+Math.sin(angle)*r*size,height];
-        surface(list,[point(a,1,z),point(b,1,z),point(b,.5,z),point(a,.5,z)],item.color,'stone',alpha);
+        surface(list,[point(a,1,z),point(b,1,z),point(b,item.aperture||.5,z),point(a,item.aperture||.5,z)],item.color,'stone',alpha);
         surface(list,[point(a,1,0),point(b,1,0),point(b,1,z),point(a,1,z)],tint(item.color,Palette.navy,.24),'stone',alpha);
-        surface(list,[point(a,.5,z),point(b,.5,z),point(b,.5,0),point(a,.5,0)],tint(item.color,Palette.navy,.5),'stone',alpha);
+        surface(list,[point(a,item.aperture||.5,z),point(b,item.aperture||.5,z),point(b,item.aperture||.5,0),point(a,item.aperture||.5,0)],tint(item.color,Palette.navy,.5),'stone',alpha);
       }return;
     }
     const vertex=(lat,lon)=>[item.x+r*Math.sin(lat)*Math.cos(lon),item.y+r*Math.sin(lat)*Math.sin(lon),r*(1+Math.cos(lat))*growth];
@@ -484,18 +484,58 @@
     if(!tag)return;const center=worldToCity([tag.x,tag.y,tag.z||0]),angle=tag.angle+bridgeAngle,ca=Math.cos(angle),sa=Math.sin(angle),s=tag.scale||1.8;
     const point=(x,y,z=.2)=>[center[0]+(x*ca-y*sa)*s,center[1]+(x*sa+y*ca)*s,center[2]+z];
     const alpha=(tag.opacity??1)*distanceAlpha(center,hero);if(alpha<.002)return;
-    const corners=[[-17,-11],[10,-11],[17,0],[10,11],[-17,11]].map(p=>point(...p));
-    face(list,corners,Palette.paper,alpha);edge(list,[...corners,corners[0]],Palette.ink,1.2,alpha);
-    edge(list,[point(-6,-6,.4),point(6,6,.4)],Palette.ink,2.6,alpha);edge(list,[point(-6,6,.4),point(6,-6,.4)],Palette.ink,2.6,alpha);
+    for(const part of Restraint.geometry(tag.geometryState||{peel:1,stress:0,fracture:1})){
+      const points=part.points.map(p=>point(...p));
+      const partAlpha=alpha*(part.opacity??part.alpha??1);
+      face(list,points,Palette[part.fill],partAlpha);
+      if(part.stroke)edge(list,[...points,points[0]],Palette[part.stroke],part.width,partAlpha);
+    }
   }
-  function addJourneyObjects(list,hero,time){
-    for(const item of journeyObjects){const alpha=distanceAlpha([item.x,item.y],hero);if(alpha<.002)continue;const growth=ease(finite(time,138),item.growAt,item.growUntil);if(item.kind===0||item.kind===3)roundedObject(list,item,growth,alpha,item.kind===3);else prism(list,item,growth,alpha,item.kind===4);}
+  function addJourneyObjects(list,hero,time,clock=time){
+    const exit=1-ease(time,134,138);if(exit<=0)return;
+    journeyObjects.forEach((item,index)=>{
+      const alpha=distanceAlpha([item.x,item.y],hero)*exit;if(alpha<.002)return;
+      const breathe=1+.20*Math.sin(clock*.72+index*1.73),scale=(.65+(index%5)*.20)*breathe;
+      const shape={...item,scale,aperture:.47+.16*Math.sin(clock*.51+index*.81)};
+      const growth=ease(time,item.growAt,item.growUntil)*(1-ease(time,136,138));
+      if(item.kind===0||item.kind===3)roundedObject(list,shape,growth,alpha,item.kind===3);else prism(list,shape,growth,alpha,item.kind===4);
+    });
+  }
+  // A strip of small world-space road cells grows out of the same future street plane.
+  // No screen-space rectangle or whole-image transition is used.
+  const journeyGround=[];
+  const groundPoints=[];
+  for(let i=0;i<=32;i++){const p=pathPoint(i/32);groundPoints.push(worldToCity([p.x,p.y,0]));}
+  for(let i=1;i<=14;i++){const d=coastDistance*(1-i/14),point=[-forward[0]*d,-forward[1]*d,0];if(point[1]>165)groundPoints.push(point);}
+  groundPoints.push([0,165,0]);
+  const groundEdges=groundPoints.map((point,i)=>{const before=groundPoints[Math.max(0,i-1)],after=groundPoints[Math.min(groundPoints.length-1,i+1)],h=Math.atan2(after[1]-before[1],after[0]-before[0]);return[-Math.sin(h)*1050,Math.cos(h)*1050];});
+  for(let i=0;i<groundPoints.length-1;i++)for(let side=0;side<4;side++){
+    const lo=-1+side*.5,hi=lo+.5,a=groundPoints[i],b=groundPoints[i+1],na=groundEdges[i],nb=groundEdges[i+1];
+    journeyGround.push({points:[[a[0]+na[0]*lo,a[1]+na[1]*lo,-18],[b[0]+nb[0]*lo,b[1]+nb[1]*lo,-18],[b[0]+nb[0]*hi,b[1]+nb[1]*hi,-18],[a[0]+na[0]*hi,a[1]+na[1]*hi,-18]],center:[(a[0]+b[0])/2,(a[1]+b[1])/2]});
+  }
+  function addJourneyGround(list,hero,time){
+    const amount=ease(time,121,132);if(amount<=0)return;
+    const color=tint(Palette.outside.background,street.road,amount);
+    for(const tile of journeyGround){const alpha=distanceAlpha(tile.center,hero)*amount;if(alpha<.002)continue;list.push({points:tile.points,color,alpha,ground:true});}
+  }
+  function addJourneyDarkness(list,hero,time,clock,data){
+    if(time<119||time>=132)return;
+    const supplied=typeof data.darkness==='number'?data.darkness:data.darkness?.amount;
+    const darkness=clamp(finite(supplied,1-ease(time,119,128)),0,1),speed=clamp((data.chase?.speed||0)/1150,0,1),amount=darkness*(1-speed*.65);
+    if(amount<.002)return;
+    journeyObjects.slice(0,24).forEach((item,index)=>{
+      const alpha=distanceAlpha([item.x,item.y],hero)*amount*.85;if(alpha<.002)return;
+      for(let strand=0;strand<2;strand++){
+        const points=Array.from({length:18},(_,i)=>{const u=i/17,a=u*Math.PI*3+index*.6+strand*1.7,along=(u-.5)*540,across=Math.sin(a)*64+Math.sin(a*2+clock*.15)*22;return[item.x+forward[0]*along-forward[1]*across,item.y+forward[1]*along+forward[0]*across,3+18*Math.pow(Math.sin(a),2)];});
+        edge(list,points,strand?Palette.night:Palette.ink,5+strand*3,alpha);
+      }
+    });
   }
   function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const state=journeyPose(time,data),list=[],clock=finite(ambient,time);
-    addJourneyObjects(list,state.center,time);
+    addJourneyGround(list,state.center,time);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
     const cityHeight=ease(time,130,137.8);
     for(const item of environment){
       const middle=item.points.reduce((sum,p)=>[sum[0]+p[0]/item.points.length,sum[1]+p[1]/item.points.length],[0,0]),alpha=mix(distanceAlpha(middle,state.center),1,ease(time,136.8,138));
@@ -505,10 +545,12 @@
       list.push({...item,points,alpha:item.alpha*alpha});
     }
     const city=ease(time,134.7,138);if(city>0){const companion=[];addSheet(companion,pose(138).companion);for(const item of companion)list.push({...item,alpha:item.alpha*city});}
-    addJourneyHero(list,state,data);addTag(list,data.detachedTag,state.center);
-    const turn=ease(time,119,130),pathHeading=(data.chase?.heading??pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
-    const yaw=mix(-bridgeAngle,-Math.PI/2-pathHeading,turn),coast=ease(time,132,138),streetTurn=ease(time,134.5,138);
-    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,streetTurn)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt:finite(camera.tilt,1.25*ease(time,119,138)),screenY:finite(camera.screenY,.5)};
+    addJourneyHero(list,state,data);if(time<136.5&&data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,136.5))},state.center);
+    const turn=ease(time,119,130),pathHeading=(time<132&&Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
+    const coast=ease(time,132,138),streetTurn=ease(time,134.5,138),tilt=finite(camera.tilt,1.25*ease(time,119,138));
+    const screenHeading=-Math.PI/5,groundHeading=Math.atan2(Math.sin(screenHeading)/Math.cos(tilt),Math.cos(screenHeading));
+    const yaw=mix(-bridgeAngle,groundHeading-pathHeading,turn);
+    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,streetTurn)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt,screenY:finite(camera.screenY,.5)};
     const p=render(ctx,list,view,{w,h},sharedMaterial(clock),Palette.outside.background);
     let light;
     if(time<132&&data.light)light=worldToCity([data.light.x,data.light.y,68*ease(time,125,138)]);
@@ -519,7 +561,7 @@
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const clock=finite(ambient,time),texture=sharedMaterial(clock),events=pose(time),primitives=environment.slice();
-    addJourneyObjects(primitives,[events.hero.x,events.hero.y],time);addSheet(primitives,events.hero);addSheet(primitives,events.companion);addTag(primitives,data.detachedTag,[events.hero.x,events.hero.y]);
+    addSheet(primitives,events.hero);addSheet(primitives,events.companion);
     const p=render(ctx,primitives,camera,{w,h},texture,Palette.outside.background),forward=ease(time,154.3,157.6);
     paintLight(ctx,p,[112+Math.sin(clock*.73)*3,-78-42*forward,68+Math.sin(clock*1.1)*3]);
   }
