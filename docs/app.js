@@ -50,6 +50,10 @@
   function drawActor(entry,context){
     const top=context&&typeof context.save==='function'?context:mainTop;
     let b=entry.body;const actor=entry.actor;if(!b||!actor)return;
+    if(entry.id==='hero'&&!player.playing&&!reduced.matches&&(player.time<1.2||(player.time>=6.8&&player.time<13)||(player.time>=104&&player.time<106.8))){
+      // A small inward breath only at rest; contact silhouettes and machine forces stay on story time.
+      b={...b,bend:(b.bend||0)+.025*(.5+.5*Math.sin(state.ambient*2.4))};
+    }
     if(entry.id==='hero'&&player.time>=119&&player.time<132){const age=(performance.now()-state.inputAt)/1000,k=age>=0&&age<.22?Math.sin(Math.PI*age/.22):0;b={...b,sx:b.sx*(1+.035*k),sy:b.sy*(1-.035*k)};}
     const outline=actor.localPath(b);top.save();transform(top,b);
     top.fillStyle=entry.color||palette.ink;top.fill(outline);
@@ -129,7 +133,7 @@
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
   function interfaceState(v){
     const shot=cameraTrack.shotAt(player.time),index=cameraTrack.shots.indexOf(shot);
-    stage.dataset.phase=shot.id;stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;
+    stage.dataset.phase=shot.id;stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
     if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?mode='+player.mode+'&t='+player.time.toFixed(2);return;}
     const notes=window.FlatlandStoryNotes.at(player.time);
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
