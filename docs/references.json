@@ -1,0 +1,102 @@
+[
+  {
+    "name": "01_主角_连续呼应",
+    "group": "主角与内腔",
+    "src": "assets/ref-01.png"
+  },
+  {
+    "name": "02_主角_完整色域与距离",
+    "group": "主角与内腔",
+    "src": "assets/ref-02.png"
+  },
+  {
+    "name": "03_主角_内腔分岔",
+    "group": "主角与内腔",
+    "src": "assets/ref-03.png"
+  },
+  {
+    "name": "参考_原始R1A内腔近景",
+    "group": "主角与内腔",
+    "src": "assets/ref-04.png"
+  },
+  {
+    "name": "参考_原始R1A造型与姿态",
+    "group": "主角与内腔",
+    "src": "assets/ref-05.png"
+  },
+  {
+    "name": "G01_爵士_扩口与错拍",
+    "group": "可能性意象",
+    "src": "assets/ref-06.png"
+  },
+  {
+    "name": "G02_绘画_笔触与叠色",
+    "group": "可能性意象",
+    "src": "assets/ref-07.png"
+  },
+  {
+    "name": "G03_烹饪_盛放与热气",
+    "group": "可能性意象",
+    "src": "assets/ref-08.png"
+  },
+  {
+    "name": "G04_旅行_路径与远处",
+    "group": "可能性意象",
+    "src": "assets/ref-09.png"
+  },
+  {
+    "name": "G05_摄影_取景与光圈",
+    "group": "可能性意象",
+    "src": "assets/ref-10.png"
+  },
+  {
+    "name": "G06_写作_笔尖与留白",
+    "group": "可能性意象",
+    "src": "assets/ref-11.png"
+  },
+  {
+    "name": "G07_数学_相切与推演",
+    "group": "可能性意象",
+    "src": "assets/ref-12.png"
+  },
+  {
+    "name": "G08_实验_耦合与传播",
+    "group": "可能性意象",
+    "src": "assets/ref-13.png"
+  },
+  {
+    "name": "G09_生命_叶脉与细胞",
+    "group": "可能性意象",
+    "src": "assets/ref-14.png"
+  },
+  {
+    "name": "G10_追问_倾听与记录",
+    "group": "可能性意象",
+    "src": "assets/ref-15.png"
+  },
+  {
+    "name": "01_来到三维世界_街角",
+    "group": "场景与内部状态",
+    "src": "assets/ref-16.png"
+  },
+  {
+    "name": "02_内心空间_多种可能",
+    "group": "场景与内部状态",
+    "src": "assets/ref-17.png"
+  },
+  {
+    "name": "03_内心状态_包裹与余地",
+    "group": "场景与内部状态",
+    "src": "assets/ref-18.png"
+  },
+  {
+    "name": "04_平面国_街区与尺度",
+    "group": "场景与内部状态",
+    "src": "assets/ref-19.png"
+  },
+  {
+    "name": "高维看低维",
+    "group": "保留参考",
+    "src": "assets/ref-20.png"
+  }
+]
