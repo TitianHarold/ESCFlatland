@@ -17,11 +17,6 @@
   const outline = source.map(([x, y]) => [x * radius / sourceRadius, y * radius / sourceRadius]);
   const minX = Math.min(...outline.map(p => p[0])), maxX = Math.max(...outline.map(p => p[0]));
   const span = maxX - minX;
-  const cracks = [
-    [[-50, -22], [-29, -13], [-21, 0], [-7, 6]],
-    [[6, 2], [23, 13], [33, 11], [51, 25]],
-    [[-4, 16], [-10, 30], [-2, 40], [-4, 55]]
-  ];
   const materialSize = 512;
   let materialCanvas, materialContext, materialTick = null;
   let noiseSeed = 18473;
@@ -66,60 +61,6 @@
       for(const [x,y,size,isLight] of grain)if(isLight===light)c.fillRect(x,y,size,size);
     }
     return materialCanvas;
-  }
-  // A fan with concentric subdivisions retains the exact original five straight boundary edges.
-  const uv = [[0, 0]], triangles = [], segments = 40, rings = 8;
-  for (let ring = 1; ring <= rings; ring++) {
-    for (let edge = 0; edge < 5; edge++) {
-      for (let j = 0; j < segments / 5; j++) {
-        const a = outline[edge], b = outline[(edge + 1) % 5], q = j / (segments / 5);
-        uv.push([mix(a[0], b[0], q) * ring / rings, mix(a[1], b[1], q) * ring / rings]);
-      }
-    }
-  }
-  for (let j = 0; j < segments; j++) triangles.push([0, 1 + j, 1 + (j + 1) % segments]);
-  for (let ring = 1; ring < rings; ring++) {
-    const inner = 1 + (ring - 1) * segments, outer = 1 + ring * segments;
-    for (let j = 0; j < segments; j++) {
-      const k = (j + 1) % segments;
-      triangles.push([inner + j, outer + j, outer + k], [inner + j, outer + k, inner + k]);
-    }
-  }
-  const mesh = triangles.map(indices => {
-    const center = indices.reduce((a, i) => [a[0] + uv[i][0] / 3, a[1] + uv[i][1] / 3], [0, 0]);
-    return {indices, center};
-  });
-  function pose(time) {
-    const t = clamp(finite(time, 132), 132, 158);
-    let curl = 0, lean = 0;
-    if (t >= 138 && t < 142) {
-      curl = .037 * ease(t, 138, 140.2) * (1 - ease(t, 140.5, 142));
-      lean = -.43 * ease(t, 138.8, 140.3) * (1 - ease(t, 140.5, 142));
-    } else if (t >= 142) {
-      curl = .020 * ease(t, 142.3, 145.2);
-      lean = -.47 * ease(t, 143, 145.5);
-    }
-    const forward = ease(t, 154.3, 157.6);
-    return {
-      hero: {x: 10 * forward, y: -39 * forward, curl, lean, angle: .19 * ease(t, 146.2, 149.2), damaged: true},
-      companion: {x: 200 + 5 * forward, y: 10 - 44 * forward, curl: .0205, lean: -.46, angle: -.20 * ease(t, 146.4, 149.6), damaged: false}
-    };
-  }
-  function sheetPoint(u, v, body, lift = 0) {
-    const k = body.curl;
-    const local = u - minX;
-    const bentX = k < .000001 ? local : Math.sin(k * local) / k;
-    const bentZ = k < .000001 ? 0 : (1 - Math.cos(k * local)) / k;
-    const centerX = k < .000001 ? -minX : Math.sin(k * -minX) / k;
-    const lean = body.lean, ca = Math.cos(body.angle), sa = Math.sin(body.angle);
-    const x = (bentX - centerX) * Math.cos(lean) + bentZ * Math.sin(lean);
-    const z = bentZ * Math.cos(lean) - (bentX - centerX) * Math.sin(lean);
-    return [body.x + x * ca - v * sa, body.y + x * sa + v * ca, z + body.floor + lift];
-  }
-  function grounded(body) {
-    const b = {...body, floor: 0};
-    b.floor = 4 - Math.min(...uv.map(([u, v]) => sheetPoint(u, v, b)[2]));
-    return b;
   }
   function projection(camera, viewport) {
     const c = {...defaultProjection, ...camera};
@@ -240,18 +181,6 @@
   shadow([[-1305,-450],[-865,-450],[-1265,-78],[-1705,-78]],.23);
   shadow([[370,-450],[920,-450],[515,-40],[-35,-40]],.22);
 
-  function bench(x,y,width){
-    for(let i=0;i<5;i++)box(environment,x,y+i*8,x+width,y+i*8+6,43,51,...street.benchSeat,'wood');
-    for(let i=0;i<3;i++)box(environment,x,y-5,x+width,y+2,65+i*17,77+i*17,...street.benchBack,'wood');
-    for(const side of [x+22,x+width-22]){
-      box(environment,side-5,y-4,side+5,y+40,0,44,...street.benchLeg,'metal');
-      box(environment,side-5,y-12,side+5,y-4,0,109,...street.benchLeg,'metal');
-      box(environment,side-8,y-7,side+8,y+38,70,76,...street.benchLeg,'metal');
-    }
-    shadow([[x,y],[x+width,y],[x+width-80,y+100],[x-80,y+100]],.23);
-  }
-  bench(-90,-244,230);bench(720,-205,255);
-
   function limb(a,b,radius){
     const d=b.map((v,i)=>v-a[i]),length=Math.hypot(...d),unit=d.map(v=>v/length);
     let u=[unit[1],-unit[0],0];if(Math.hypot(...u)<.01)u=[1,0,0];const ul=Math.hypot(...u);u=u.map(v=>v/ul);
@@ -295,6 +224,15 @@
     const canvas=makeCanvas();if(!canvas)return null;const c=canvas.getContext('2d');
     let seed=kind.split('').reduce((n,ch)=>Math.imul(n,31)+ch.charCodeAt(0),5873)>>>0;
     const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    if(kind==='pigment'){
+      // The same dense, small pigment marks remain legible while the sheets sweep past.
+      for(let i=0;i<14500;i++){
+        const x=random()*256,y=random()*256;
+        c.strokeStyle=i%3?'rgba(245,241,230,.19)':'rgba(24,17,45,.23)';c.lineWidth=.45+random()*.55;
+        c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+random()*4-2,y+random()*4-2,x+random()*4-2,y+random()*4-2);c.stroke();
+      }
+      graySurfaces.set(kind,canvas);return canvas;
+    }
     c.fillStyle='#c5c5c5';c.fillRect(0,0,textureSize,textureSize);
     for(let i=0;i<55;i++){
       const x=random()*256,y=random()*256,r=8+random()*35,g=c.createRadialGradient(x,y,0,x,y,r);
@@ -322,38 +260,20 @@
     c.globalCompositeOperation='source-over';c.globalAlpha=1;
     tintedSurfaces.set(key,canvas);return canvas;
   }
+  const pigmentPatterns=new WeakMap();
   function paintSurface(ctx,item){
+    if(item.surface==='pigment'){
+      ctx.beginPath();item.points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();
+      ctx.fillStyle=item.color;ctx.fill();
+      let pattern=pigmentPatterns.get(ctx);if(!pattern){const tile=graySurface('pigment');if(tile){pattern=ctx.createPattern(tile,'repeat');pigmentPatterns.set(ctx,pattern);}}
+      if(pattern){ctx.fillStyle=pattern;ctx.fill();}return true;
+    }
     const texture=surfaceMaterial(item.surface,item.color);if(!texture)return false;
     const texUV=item.points.length===3?[[0,0],[textureSize,0],[textureSize*.5,textureSize]]:item.points.length===4?[[0,0],[textureSize,0],[textureSize,textureSize],[0,textureSize]]:item.points.map((_,i)=>[textureSize*(.5+.5*Math.cos(i*Math.PI*2/item.points.length)),textureSize*(.5+.5*Math.sin(i*Math.PI*2/item.points.length))]);
     for(let i=1;i<item.points.length-1;i++)paintTriangle(ctx,{points:[item.points[0],item.points[i],item.points[i+1]],texUV:[texUV[0],texUV[i],texUV[i+1]]},texture);
     return true;
   }
   let journeyTexture=null,journeyTextureExtent=160;
-  function addSheet(list, rawBody) {
-    const body = grounded(rawBody), vertices = uv.map(([u,v]) => sheetPoint(u,v,body));
-    const x=body.x,y=body.y;
-    face(list, [[x-48,y-28,.5],[x+82,y-9,.5],[x+100,y+18,.5],[x-12,y+26,.5]], street.sheetShadow, .15);
-    for(const m of mesh) {
-      const [u,v]=m.center;
-      // Shared actor textures already carry damage; keep procedural cuts only as a fallback.
-      if(body.damaged && !journeyTexture && Math.hypot(u*1.08,(v-5)*.94)<11) continue;
-      if(body.damaged && !journeyTexture && u>42 && v>23 && v<34) continue;
-      const item={points:m.indices.map(i=>vertices[i]),uv:m.indices.map(i=>uv[i]),alpha:1,material:true};
-      if(body.damaged&&journeyTexture){item.texture=journeyTexture;item.texUV=m.indices.map(i=>uv[i].map(v=>(v/(radius/sourceRadius)/journeyTextureExtent+.5)*journeyTexture.width));}
-      list.push(item);
-    }
-    const below=([u,v])=>{const top=sheetPoint(u,v,body),a=body.curl*(u-minX)-body.lean,s=Math.sin(a),c=Math.cos(a);return[top[0]+4*s*Math.cos(body.angle),top[1]+4*s*Math.sin(body.angle),top[2]-4*c];};
-    for(let j=0;j<segments;j++){
-      const a=uv[1+(rings-1)*segments+j],b=uv[1+(rings-1)*segments+(j+1)%segments];
-      surface(list,[sheetPoint(...a,body),sheetPoint(...b,body),below(b),below(a)],street.crack,'stone');
-    }
-    if(body.damaged&&!journeyTexture) for(const crack of cracks) {
-      for(let i=0;i<crack.length-1;i++) {
-        edge(list,[sheetPoint(...crack[i],body,.13),sheetPoint(...crack[i+1],body,.13)],street.crack,2.5);
-        edge(list,[sheetPoint(crack[i][0]+.65,crack[i][1],body,.17),sheetPoint(crack[i+1][0]+.65,crack[i+1][1],body,.17)],street.crackEdge,.65,.6);
-      }
-    }
-  }
   function paintTriangle(ctx, item, texture) {
     const src=item.texUV||item.uv.map(([u,v])=>[(u+radius)*materialSize/(radius*2),(v+radius)*materialSize/(radius*2)]);
     const [s0,s1,s2]=src,[p0,p1,p2]=item.points;
@@ -431,7 +351,7 @@
     const passTime=index<=32?119+13*Math.sqrt(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
     for(const side of [-1,1]){
       const growAt=clamp(passTime-1.35+(side>0?.18:0),125,132.6);
-      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:43+(index%4)*9,h:80+(index%5)*25,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
+      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,h:80+(index%5)*25,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
     }
   }
   for(let i=0;i<=32;i++){const point=pathPoint(i/32),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
@@ -444,10 +364,10 @@
     const count=item.kind===1||item.kind===4?4:6,r=item.r*(item.scale||1),z=item.h*growth;
     const ring=scale=>Array.from({length:count},(_,i)=>{const a=i*Math.PI*2/count+(count===4?Math.PI/4:0);return[item.x+Math.cos(a)*r*scale,item.y+Math.sin(a)*r*scale];});
     const outside=ring(1),inside=ring(item.aperture||.48),shade=tint(item.color,Palette.navy,.38);
-    if(!hole)surface(list,outside.map(p=>[...p,z]),item.color,'stone',alpha);
+    if(!hole)surface(list,outside.map(p=>[...p,z]),item.color,'pigment',alpha);
     for(let i=0;i<count;i++){
-      const j=(i+1)%count,a=outside[i],b=outside[j];surface(list,[[...a,0],[...b,0],[...b,z],[...a,z]],i%2?shade:item.color,'stone',alpha);
-      if(hole){const c=inside[i],d=inside[j];surface(list,[[...a,z],[...b,z],[...d,z],[...c,z]],item.color,'stone',alpha);surface(list,[[...c,0],[...d,0],[...d,z],[...c,z]],shade,'stone',alpha);}
+      const j=(i+1)%count,a=outside[i],b=outside[j];surface(list,[[...a,0],[...b,0],[...b,z],[...a,z]],i%2?shade:item.color,'pigment',alpha);
+      if(hole){const c=inside[i],d=inside[j];surface(list,[[...a,z],[...b,z],[...d,z],[...c,z]],item.color,'pigment',alpha);surface(list,[[...c,0],[...d,0],[...d,z],[...c,z]],shade,'pigment',alpha);}
     }
   }
   function roundedObject(list,item,growth,alpha,hole=false){
@@ -456,15 +376,15 @@
       const z=item.h*.55*growth;
       for(let i=0;i<count;i++){
         const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,point=(angle,size,height)=>[item.x+Math.cos(angle)*r*size,item.y+Math.sin(angle)*r*size,height];
-        surface(list,[point(a,1,z),point(b,1,z),point(b,item.aperture||.5,z),point(a,item.aperture||.5,z)],item.color,'stone',alpha);
-        surface(list,[point(a,1,0),point(b,1,0),point(b,1,z),point(a,1,z)],tint(item.color,Palette.navy,.24),'stone',alpha);
-        surface(list,[point(a,item.aperture||.5,z),point(b,item.aperture||.5,z),point(b,item.aperture||.5,0),point(a,item.aperture||.5,0)],tint(item.color,Palette.navy,.5),'stone',alpha);
+        surface(list,[point(a,1,z),point(b,1,z),point(b,item.aperture||.5,z),point(a,item.aperture||.5,z)],item.color,'pigment',alpha);
+        surface(list,[point(a,1,0),point(b,1,0),point(b,1,z),point(a,1,z)],tint(item.color,Palette.navy,.24),'pigment',alpha);
+        surface(list,[point(a,item.aperture||.5,z),point(b,item.aperture||.5,z),point(b,item.aperture||.5,0),point(a,item.aperture||.5,0)],tint(item.color,Palette.navy,.5),'pigment',alpha);
       }return;
     }
     const vertex=(lat,lon)=>[item.x+r*Math.sin(lat)*Math.cos(lon),item.y+r*Math.sin(lat)*Math.sin(lon),r*(1+Math.cos(lat))*growth];
     for(let j=0;j<6;j++)for(let i=0;i<count;i++){
       const a=j*Math.PI/6,b=(j+1)*Math.PI/6,c=i*Math.PI*2/count,d=(i+1)*Math.PI*2/count;
-      surface(list,[vertex(a,c),vertex(a,d),vertex(b,d),vertex(b,c)],tint(item.color,Palette.navy,.08+.25*j/6),'stone',alpha);
+      surface(list,[vertex(a,c),vertex(a,d),vertex(b,d),vertex(b,c)],tint(item.color,Palette.navy,.08+.25*j/6),'pigment',alpha);
     }
   }
   function addJourneyHero(list,state,data){
@@ -491,15 +411,59 @@
       if(part.stroke)edge(list,[...points,points[0]],Palette[part.stroke],part.width,partAlpha);
     }
   }
+  function shapeScale(item,time){
+    const q=ease(time,item.passTime-3.2,item.passTime+1.5);
+    // Each apparition has one direction of size change for its entire passage.
+    return item.index%2===0?mix(.22,2.6,q):mix(2.6,.22,q);
+  }
+  function apparition(list,item,time,clock,alpha){
+    const scale=shapeScale(item,time),r=item.r*scale,phase=item.index*.91+item.side*.6;
+    const turn=clock*.21+phase,ax=.92*Math.sin(phase+clock*.19),ay=.78*Math.cos(phase*.6-clock*.17);
+    const ca=Math.cos(turn),sa=Math.sin(turn),cx=Math.cos(ax),sx=Math.sin(ax),cy=Math.cos(ay),sy=Math.sin(ay);
+    const vertex=(a,size,z=0)=>{
+      const warp=1+.10*Math.sin(a*3+phase+clock*.2),x=Math.cos(a)*r*size*warp,y=Math.sin(a)*r*size*warp;
+      const xx=x*ca-y*sa,yy=x*sa+y*ca,zz=yy*sx+z*cx;
+      return[item.x+xx*cy+zz*sy,item.y+yy*cx-z*sx,Math.max(3,22+(-xx*sy+zz*cy)*.7)];
+    };
+    const count=item.kind===0||item.kind===3?36:4+item.kind;
+    const pigments=[item.color,Palette.night,Palette.coral,Palette.lavender,Palette.teal,Palette.cream];
+    const layers=item.kind===3||item.kind===4?4:3;
+    for(let layer=0;layer<layers;layer++){
+      const outer=1-layer*.20,inner=outer-(layer%2?.13:.18);
+      for(let i=0;i<count;i++){
+        const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count;
+        surface(list,[vertex(a,outer,layer*1.1),vertex(b,outer,layer*1.1),vertex(b,inner,layer*1.1),vertex(a,inner,layer*1.1)],pigments[(item.index+layer)%pigments.length],'pigment',alpha);
+      }
+    }
+    if(item.kind<3){const points=Array.from({length:count},(_,i)=>vertex(i*Math.PI*2/count,.42,4));surface(list,points,item.color,'pigment',alpha*.85);}
+  }
   function addJourneyObjects(list,hero,time,clock=time){
     const exit=1-ease(time,134,138);if(exit<=0)return;
     journeyObjects.forEach((item,index)=>{
       const alpha=distanceAlpha([item.x,item.y],hero)*exit;if(alpha<.002)return;
-      const breathe=1+.20*Math.sin(clock*.72+index*1.73),scale=(.65+(index%5)*.20)*breathe;
-      const shape={...item,scale,aperture:.47+.16*Math.sin(clock*.51+index*.81)};
-      const growth=ease(time,item.growAt,item.growUntil)*(1-ease(time,136,138));
-      if(item.kind===0||item.kind===3)roundedObject(list,shape,growth,alpha,item.kind===3);else prism(list,shape,growth,alpha,item.kind===4);
+      const growth=ease(time,Math.max(128,item.growAt),Math.max(130.5,item.growUntil))*(1-ease(time,136,138));
+      const change=ease(time,128.5,133);
+      if(change<1)apparition(list,item,time,clock,alpha*(1-change));
+      if(change>0){
+        const shape={...item,scale:shapeScale(item,time),aperture:.48};
+        if(item.kind===0||item.kind===3)roundedObject(list,shape,growth,alpha*change,item.kind===3);else prism(list,shape,growth,alpha*change,item.kind===4);
+      }
     });
+  }
+  const speedRibbons=Array.from({length:148},(_,i)=>{
+    const point=pathPoint((i%74)/73),center=worldToCity([point.x,point.y,0]),heading=point.heading+bridgeAngle,side=i<74?-1:1;
+    return{center,heading,side,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
+  });
+  function addSpeedRibbons(list,hero,time,data){
+    const speed=clamp((data.chase?.speed||0)/1100,0,1),amount=ease(time,119.4,122)*(1-ease(time,132,137));
+    if(amount<=0)return;
+    for(const item of speedRibbons){
+      const alpha=distanceAlpha(item.center,hero)*amount*(.16+.56*speed);if(alpha<.005)continue;
+      const c=Math.cos(item.heading),s=Math.sin(item.heading),n=[-s,c],x=item.center[0]+n[0]*item.side*item.offset,y=item.center[1]+n[1]*item.side*item.offset;
+      const length=item.length*(.35+2.4*speed),width=item.width;
+      const points=[[-length/2,0],[-length*.25,-width],[length/2,0],[length*.22,width]].map(([u,v])=>[x+c*u+n[0]*v,y+s*u+n[1]*v,2]);
+      surface(list,points,item.color,'pigment',alpha);
+    }
   }
   // A strip of small world-space road cells grows out of the same future street plane.
   // No screen-space rectangle or whole-image transition is used.
@@ -514,7 +478,7 @@
     journeyGround.push({points:[[a[0]+na[0]*lo,a[1]+na[1]*lo,-18],[b[0]+nb[0]*lo,b[1]+nb[1]*lo,-18],[b[0]+nb[0]*hi,b[1]+nb[1]*hi,-18],[a[0]+na[0]*hi,a[1]+na[1]*hi,-18]],center:[(a[0]+b[0])/2,(a[1]+b[1])/2]});
   }
   function addJourneyGround(list,hero,time){
-    const amount=ease(time,121,132);if(amount<=0)return;
+    const amount=ease(time,132,138);if(amount<=0)return;
     const color=tint(Palette.outside.background,street.road,amount);
     for(const tile of journeyGround){const alpha=distanceAlpha(tile.center,hero)*amount;if(alpha<.002)continue;list.push({points:tile.points,color,alpha,ground:true});}
   }
@@ -535,7 +499,7 @@
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const state=journeyPose(time,data),list=[],clock=finite(ambient,time);
-    addJourneyGround(list,state.center,time);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
+    addJourneyGround(list,state.center,time);addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
     const cityHeight=ease(time,130,137.8);
     for(const item of environment){
       const middle=item.points.reduce((sum,p)=>[sum[0]+p[0]/item.points.length,sum[1]+p[1]/item.points.length],[0,0]),alpha=mix(distanceAlpha(middle,state.center),1,ease(time,136.8,138));
@@ -544,7 +508,6 @@
       const points=cityHeight<1&&!item.ground?item.points.map(([x,y,z])=>[x,y,z>0?z*cityHeight:z]):item.points;
       list.push({...item,points,alpha:item.alpha*alpha});
     }
-    const city=ease(time,134.7,138);if(city>0){const companion=[];addSheet(companion,pose(138).companion);for(const item of companion)list.push({...item,alpha:item.alpha*city});}
     addJourneyHero(list,state,data);if(time<136.5&&data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,136.5))},state.center);
     const turn=ease(time,119,130),pathHeading=(time<132&&Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
     const coast=ease(time,132,138),streetTurn=ease(time,134.5,138),tilt=finite(camera.tilt,1.25*ease(time,119,138));
@@ -558,12 +521,7 @@
     paintLight(ctx,p,light,mix(data.light?.r||10,7,coast));
   }
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
-    if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
-    const clock=finite(ambient,time),texture=sharedMaterial(clock),events=pose(time),primitives=environment.slice();
-    addSheet(primitives,events.hero);addSheet(primitives,events.companion);
-    const p=render(ctx,primitives,camera,{w,h},texture,Palette.outside.background),forward=ease(time,154.3,157.6);
-    paintLight(ctx,p,[112+Math.sin(clock*.73)*3,-78-42*forward,68+Math.sin(clock*1.1)*3]);
+    drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
   return Object.freeze({draw,drawJourney,anchor,defaultProjection,journeyPose});
 });

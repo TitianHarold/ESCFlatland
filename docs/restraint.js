@@ -1,4 +1,4 @@
-/* Shared local geometry for the two cuffs, connecting links and geometric lock. */
+/* Two interlocked chains cross the body; the same links draw in 2D and 3D. */
 (function(root,factory){
   if(typeof module==='object'&&module.exports)module.exports=factory();
   else root.FlatlandRestraint=factory();
@@ -6,31 +6,35 @@
   'use strict';
   const TAU=Math.PI*2,clamp=v=>Math.max(0,Math.min(1,v));
   function geometry(state={}){
-    const fracture=clamp(state.fracture||0),peel=Math.max(clamp(state.peel||0),fracture),stress=clamp(state.stress||0),shiver=Number.isFinite(state.shiver)?state.shiver:0,parts=[];
-    function band(cx,cy,rx,ry,width,gap=0,heading=0,segments=18){
-      const start=heading+gap/2,span=TAU-gap;
-      const point=(a,inset)=>[cx+Math.cos(a)*(rx-inset),cy+Math.sin(a)*(ry-inset)];
-      for(let i=0;i<segments;i++){
-        const a=start+span*i/segments,b=start+span*(i+1)/segments;
-        parts.push({points:[point(a,0),point(b,0),point(b,width),point(a,width)],fill:'metal',stroke:'ink',width:.45});
+    const load=state.load===undefined?1:clamp(state.load),stress=clamp(state.stress||0),fracture=clamp(state.fracture||0);
+    const release=Math.max(fracture,clamp(state.release||0)),peel=Math.max(release,clamp(state.peel||0));
+    const shiver=Number.isFinite(state.shiver)?state.shiver:0,parts=[];
+    function link(cx,cy,heading,edgeOn,tension,crack,strand,index){
+      const rx=3.65+tension*.18,ry=edgeOn?1.05:2.05-tension*.18,width=edgeOn?.66:.82;
+      const gap=crack*1.65,start=-Math.PI/2+gap/2,span=TAU-gap,c=Math.cos(heading),s=Math.sin(heading);
+      const point=(a,inset)=>{const x=Math.cos(a)*(rx-inset),y=Math.sin(a)*(ry-inset);return[cx+x*c-y*s,cy+x*s+y*c];};
+      for(let i=0;i<10;i++){
+        const a=start+span*i/10,b=start+span*(i+1)/10;
+        parts.push({points:[point(a,0),point(b,0),point(b,width),point(a,width)],fill:edgeOn?'ink':'metal',stroke:edgeOn?'metal':'ink',width:edgeOn?.23:.32,strand,link:index});
       }
     }
-    // Open centers leave the moving possibility window visible through both cuffs.
-    band(-16-peel*3-stress*.6+shiver,-2,10,21,3.3,peel*1.25,-peel*.25);
-    band(16+peel*3+stress*.6-shiver,-2,10,21,3.3,peel*1.25,Math.PI+peel*.25);
-    for(const x of [-8,0,8]){
-      const side=Math.sign(x);
-      band(x+side*(stress*.6+fracture*2)+shiver*side,8+shiver*side*.4,5.7+stress*.45,3.5-stress*.2,1.5,fracture*(x===0?1.95:.18),-Math.PI/2,10);
-    }
-    // The shackle opens with the cuff ends; the lock plate remains below the seed.
-    band(-peel*2,12-peel*2,5,6,1.8,Math.PI+peel*.9,Math.PI/2-peel*.5,12);
-    parts.push({points:[[-7,14],[7,14],[7,24],[-7,24]],fill:'ink',stroke:'metal',width:.8});
-    // The verdict is cut into the physical lock, rather than carried on a paper card.
-    function verdictBar(x1,y1,x2,y2){
-      const length=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/length*.65,ny=(x2-x1)/length*.65;
-      parts.push({points:[[x1+nx,y1+ny],[x2+nx,y2+ny],[x2-nx,y2-ny],[x1-nx,y1-ny]],fill:'metal'});
-    }
-    verdictBar(-4.3,16.3,4.3,21.7);verdictBar(-4.3,21.7,4.3,16.3);
+    // Unequal endpoints fit the child's pentagon; the crossing leaves the central seed readable.
+    const strands=[{a:[-21,-13],b:[18,22],count:12},{a:[11,-15],b:[-19,13],count:10}];
+    strands.forEach(({a,b,count},strand)=>{
+      const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy),tx=dx/length,ty=dy/length,nx=-ty,ny=tx,heading=Math.atan2(dy,dx),breakAt=Math.floor(count*.48);
+      // Alternating wide and edge-on links overlap, rather than becoming a row of separate rings.
+      for(const edgeOn of [false,true])for(let i=0;i<count;i++){
+        if(Boolean(i%2)!==edgeOn)continue;
+        const u=i/(count-1),side=i<breakAt?-1:1;
+        const stressAtLink=clamp(stress*(count+1)-i),tension=clamp(load*(count+1)-i)+stressAtLink*.4;
+        const slack=(1-clamp(tension))*Math.sin(Math.PI*u)*2.4*(strand?1:-1);
+        const crack=clamp(fracture*1.65-Math.abs(i-breakAt)*.38);
+        const pull=side*peel*(2.4+Math.abs(u-.5)*2)+stressAtLink*(u-.5)*1.2,rattle=shiver*(i%2?1:-1)*stressAtLink;
+        const x=a[0]+dx*u+tx*pull+nx*(slack+rattle+side*peel*.7);
+        const y=a[1]+dy*u+ty*pull+ny*(slack+rattle+side*peel*.7);
+        link(x,y,heading+side*peel*.12+rattle*.035,edgeOn,tension,crack,strand,i);
+      }
+    });
     return parts;
   }
   function draw(ctx,state={},palette={}){

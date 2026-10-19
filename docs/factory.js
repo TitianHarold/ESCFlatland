@@ -127,6 +127,23 @@
     const corrected=age>=22;
     return makeEntry('worker-'+row+'-'+slot+'-'+Math.floor(raw/45),actor,body,corrected?correctedBlack:colors[row%colors.length],state,{row,slot,age,station,turns,cavity:!corrected});
   }
+  let backgroundTime=NaN,backgroundCache=[];
+  function cachedBackground(t,row,slot){
+    if(t!==backgroundTime){backgroundTime=t;backgroundCache=[];}
+    const index=row*3+slot;
+    return backgroundCache[index]||(backgroundCache[index]=backgroundState(t,row,slot));
+  }
+  function viewportBounds(bounds){
+    if(!bounds)return null;
+    const left=bounds.minX??bounds.left,right=bounds.maxX??bounds.right,top=bounds.minY??bounds.top,bottom=bounds.maxY??bounds.bottom;
+    return[left,right,top,bottom].every(Number.isFinite)&&left<=right&&top<=bottom?{left,right,top,bottom}:null;
+  }
+  function localViewport(bounds){
+    const view=viewportBounds(bounds);if(!view)return null;
+    const corners=[[view.left,view.top],[view.right,view.top],[view.right,view.bottom],[view.left,view.bottom]].map(([x,y])=>local({x,y}));
+    return{left:Math.min(...corners.map(p=>p.x)),right:Math.max(...corners.map(p=>p.x)),top:Math.min(...corners.map(p=>p.y)),bottom:Math.max(...corners.map(p=>p.y))};
+  }
+  const visibleLane=(view,row)=>!view||view.right>=-1560&&view.left<=1000&&view.bottom>=rows[row]-160&&view.top<=rows[row]+160;
   // Successful ordinary shells become wholly opaque; failure alone receives a visible label.
   function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
   function lightState(t,hero){
@@ -140,16 +157,21 @@
     const ahead=chasePoint(t,.022);return{x:ahead.x,y:ahead.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'chase'};
   }
   let memoTime=NaN,memoFrame;
-  function frame(time){
+  function fullFrame(time){
     const t=Number.isFinite(time)?Math.max(0,time):0;if(t===memoTime)return memoFrame;memoTime=t;const actors=[];
     if(t<58||t>=132){const detachedTag=detachedTagState(t);return memoFrame={actors,hero:null,...(detachedTag?{detachedTag}:{})};}
-    if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(backgroundState(t,row,slot));
+    if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(cachedBackground(t,row,slot));
     const hero=heroBody(t),state=heroMaterial(t),light=lightState(t,hero),coreVisible=t<104||t>=108.3&&t<116;
     const entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:coreVisible?1:0,coreVisible,coreScale:1,coreReveal:t<104?1:light?.reveal||0,coreEntityId:'hero-seed',coreGlow:light?.glow||0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
     if(t>=97.5&&t<104)[180,-180,-360].forEach((offset,i)=>actors.push({id:'factory-guard-'+i,actor:guards[i],body:escortBody(guards[i],Math.max(98.6,t),offset),color:ink,cavity:false,core:0}));
     const chase=t>=119&&t<132?{x:hero.x,y:hero.y,startX:discard.x,startY:discard.y,speed:hero.speed,heading:chasePoint(t).heading}:undefined;
     const detachedTag=detachedTagState(t);if(light)light.entityId='hero-seed';
     return memoFrame={actors,hero,light,burst:between(t,130,131.8),...(chase?{chase}:{}),...(detachedTag?{detachedTag}:{})};
+  }
+  function frame(time,bounds){
+    const result=fullFrame(time),view=viewportBounds(bounds);if(!view)return result;
+    // View filtering never enters the time cache or removes the hero and escort guards.
+    return{...result,actors:result.actors.filter(entry=>entry.row===undefined||entry.body.x>=view.left-80&&entry.body.x<=view.right+80&&entry.body.y>=view.top-80&&entry.body.y<=view.bottom+80)};
   }
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}
   function stroke(ctx,points,color,width=1){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
@@ -166,12 +188,13 @@
     ctx.fillStyle=paper;ctx.fillRect(left,y-68,right-left,136);stroke(ctx,[[left,y-68],[right,y-68]],P.factory.conveyorEdge,3);stroke(ctx,[[left,y+68],[right,y+68]],P.factory.conveyorEdge,3);
     const shift=((t*54)%74+74)%74;for(let x=left-shift;x<right;x+=74)if(x>=left)stroke(ctx,[[x,y-57],[x,y+57]],P.factory.roller,2);
   }
-  function drawBase(ctx,time){
-    const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);const far=rows.at(-1)+400;
+  function drawBase(ctx,time,bounds){
+    const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);const far=rows.at(-1)+400,view=localViewport(bounds);
     ctx.fillStyle=P.factory.floor;ctx.fillRect(-1750,-650,2650,far+650);
     stroke(ctx,[[-1750,far],[-1750,500]],P.factory.outline,8);stroke(ctx,[[-1750,280],[-1750,-650],[900,-650]],P.factory.outline,8);
     let wallY=-650;for(const y of rows){stroke(ctx,[[900,wallY],[900,y-80]],P.factory.outline,8);wallY=y+80;}stroke(ctx,[[900,wallY],[900,far]],P.factory.outline,8);
     for(let row=0;row<rows.length;row++){
+      if(!visibleLane(view,row))continue;
       const y=rows[row];belt(ctx,y,-1390,-555,t);belt(ctx,y,-345,900,t);
       for(let station=0;station<3;station++){
         const x=stations[station];ctx.fillStyle=P.metal;ctx.fillRect(x-160,y-124,320,248);
@@ -187,19 +210,20 @@
   }
   function pressForRow(t,row){
     if(row===2)return Rules.pressState(heroProgram,t);
-    for(let slot=0;slot<3;slot++){const item=backgroundState(t,row,slot);if(item.station===0)return item.machine;}
+    for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return item.machine;}
     return{plannedGap:92,upperFace:-92,lowerFace:92,force:0,contact:false,headGap:92};
   }
-  function drawOverlay(ctx,time){
-    const t=Number.isFinite(time)?time:0;
+  function drawOverlay(ctx,time,bounds){
+    const t=Number.isFinite(time)?time:0,view=localViewport(bounds);
     if(t>=58&&t<104){setup(ctx);
       for(let row=0;row<rows.length;row++){
+        if(!visibleLane(view,row))continue;
         const y=rows[row],press=pressForRow(t,row),x=stations[0];ctx.fillStyle=ink;
         ctx.fillRect(x-118,y+press.upperFace-32,236,32);ctx.fillRect(x-118,y+press.lowerFace,236,32);
         ctx.fillRect(x-42,y-124,84,Math.max(0,124+press.upperFace-32));ctx.fillRect(x-42,y+press.lowerFace+32,84,Math.max(0,124-press.lowerFace-32));
         let rotation=t*.14,scan=(t*.2+row)%1;
         if(row===2){rotation=Math.PI*6*between(t,80,87);scan=between(t,90,94.5);}
-        else for(let slot=0;slot<3;slot++){const item=backgroundState(t,row,slot);if(item.station===1)rotation=item.turns*Math.PI*2;if(item.station===2)scan=between(item.age,26,30);}
+        else for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===1)rotation=item.turns*Math.PI*2;if(item.station===2)scan=between(item.age,26,30);}
         ctx.save();ctx.translate(stations[1],y);ctx.rotate(rotation);stroke(ctx,[[0,-94],[0,-72]],ink,8);stroke(ctx,[[94,0],[72,0]],ink,8);ctx.restore();
         stroke(ctx,[[stations[2]-90+180*scan,y-73],[stations[2]-90+180*scan,y+73]],P.quiet,3);
       }

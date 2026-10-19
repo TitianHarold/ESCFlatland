@@ -3,7 +3,7 @@
   else root.FlatlandCamera=factory();
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const duration=158, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const duration=138, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const frame=(time,x,y,zoom,tilt=0,yaw=0)=>({time,x,y,zoom,tilt,yaw});
   // Preset views are independent of actor positions; cut marks a fixed-view switch.
   const factoryPoint=(x,y)=>({x:-4000+x*Math.cos(.4)-y*Math.sin(.4),y:-2800+x*Math.sin(.4)+y*Math.cos(.4)});
@@ -25,10 +25,7 @@
     {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(105.7,discard.x,discard.y,1.25),frame(108.3,discard.x,discard.y,1.4),frame(110,discard.x,discard.y,1.5),frame(112,discard.x,discard.y,2.8)]},
     {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(118,discard.x,discard.y,2.8),frame(119,discard.x+100,discard.y-50,1.2)]},
     {id:'chase',label:'014 · 追光 · 图形长出体积',start:119,end:132,space:'journey',follow:'hero',frames:[frame(119,discard.x,discard.y,1.2,0,1.0664437894592371),frame(132,0,0,1.2,.955,-.011631098618334113)]},
-    {id:'dimension',label:'015 · 连续进入街景',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]},
-    {id:'curl',label:'016 · 两次卷曲',start:138,end:146,space:'depth',frames:[frame(138,0,0,1.15,1.25,.32),frame(146,75,-20,1.8,1.16,.28)]},
-    {id:'meet',label:'017 · 相遇',start:146,end:154,space:'depth',frames:[frame(146,75,-20,1.8,1.16,.28),frame(154,100,-25,1.85,1.16,.28)]},
-    {id:'ending',label:'018 · 一起向前',start:154,end:158,space:'depth',frames:[frame(154,100,-25,1.85,1.16,.28),frame(158,100,-100,.6,1.2,.32)]}
+    {id:'dimension',label:'015 · 抵达三维空间',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]}
   ];
   function shotAt(time){return shots.find(shot=>time<shot.end)||shots[shots.length-1];}
   function pose(time){

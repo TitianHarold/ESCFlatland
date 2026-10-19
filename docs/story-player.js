@@ -1,13 +1,13 @@
 /* Input changes story time; it never changes a camera or a character pose. */
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory();
-  else root.FlatlandStoryPlayer=factory();
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'));
+  else root.FlatlandStoryPlayer=factory(root.FlatlandTiming);
+})(typeof globalThis!=='undefined'?globalThis:this,function(Timing){
   'use strict';
   // Stop after a complete reaction or episode, never at first contact or mid-transition.
-  const beats=[6.8,16.0667,24,37.5,51.7,58,70,77,87,98,104,110,119,132,138,142.3,146,154,158];
+  const beats=[6.8,16.0667,24,37.5,51.7,58,70,77,87,98,104,110,119,132,138].map(Timing.playbackAt);
   class StoryPlayer{
-    constructor({duration=158,mode='interactive',playing=false}={}){
+    constructor({duration=Timing.duration,mode='interactive',playing=false}={}){
       this.duration=duration;this.time=0;this.target=0;this.mode=mode;
       this.playing=playing;this.pressed=false;this.pressAge=0;this.pressChase=false;
     }
@@ -22,7 +22,7 @@
     }
     press(){
       if(this.mode!=='interactive')return;
-      this.pressed=true;this.pressAge=0;this.pressChase=this.time>=119&&this.time<132;
+      this.pressed=true;this.pressAge=0;this.pressChase=this.time>=Timing.playbackAt(119)&&this.time<Timing.playbackAt(132);
       if(this.pressChase)this.tap();
     }
     release(cancelled=false){
@@ -31,7 +31,7 @@
       if(!wasPressed)return;
       if(!cancelled&&!wasChase)this.tap();
     }
-    get accelerating(){return this.mode==='interactive'&&this.pressed&&this.pressChase&&this.pressAge>=.18&&this.time<132;}
+    get accelerating(){return this.mode==='interactive'&&this.pressed&&this.pressChase&&this.pressAge>=.18&&this.time<Timing.playbackAt(132);}
     tick(delta){
       const dt=Math.max(0,Math.min(.1,Number(delta)||0));
       if(this.pressed)this.pressAge+=dt;

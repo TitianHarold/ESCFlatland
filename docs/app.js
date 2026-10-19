@@ -7,7 +7,7 @@
   const low=lower.getContext('2d'),mainTop=upper.getContext('2d'),top=mainTop;
   const cameraTrack=window.FlatlandCamera,characters=window.FlatlandCharacters,motion=window.FlatlandMotion;
   const district=window.FlatlandDistrict,factory=window.FlatlandFactory,dimension=window.FlatlandDimension;
-  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),duration=cameraTrack.duration;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),timing=window.FlatlandTiming,duration=timing.duration;
   const palette=window.FlatlandPalette;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const mode=new URLSearchParams(location.search).get('mode')==='auto'?'auto':'interactive';
@@ -15,7 +15,8 @@
   const initialTime=Number(new URLSearchParams(location.search).get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
   const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
-  function view(){const v=cameraTrack.pose(player.time);if(v.follow==='hero'){const hero=factory.frame(player.time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function sceneTime(){return timing.sceneAt(player.time);}
+  function view(){const v=cameraTrack.pose(sceneTime());if(v.follow==='hero'){const hero=factory.frame(sceneTime()).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
   function placeWorld(ctx,v){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
@@ -50,7 +51,7 @@
   function drawActor(entry,context){
     const top=context&&typeof context.save==='function'?context:mainTop;
     let b=entry.body;const actor=entry.actor;if(!b||!actor)return;
-    if(entry.id==='hero'&&player.time>=119&&player.time<132){const age=(performance.now()-state.inputAt)/1000,k=age>=0&&age<.22?Math.sin(Math.PI*age/.22):0;b={...b,sx:b.sx*(1+.035*k),sy:b.sy*(1-.035*k)};}
+    if(entry.id==='hero'&&sceneTime()>=119&&sceneTime()<132){const age=(performance.now()-state.inputAt)/1000,k=age>=0&&age<.22?Math.sin(Math.PI*age/.22):0;b={...b,sx:b.sx*(1+.035*k),sy:b.sy*(1-.035*k)};}
     const outline=actor.localPath(b);top.save();transform(top,b);
     top.fillStyle=entry.color||palette.ink;top.fill(outline);
     if(entry.cavity){
@@ -105,7 +106,8 @@
     }
     world(top,v);const s=scale(v),viewport={w:state.w,h:state.h};
     top.fillStyle=time>=61?palette.outside.background:palette.blue;top.fillRect(v.x-state.w/s/2-1,v.y-state.h/s/2-1,state.w/s+2,state.h/s+2);
-    const plant=factory.frame(time),heading=plant.hero?plant.hero.angle+characters.actors.child.headAxis(plant.hero).angle:0;
+    const bounds={minX:v.x-state.w/s/2,maxX:v.x+state.w/s/2,minY:v.y-state.h/s/2,maxY:v.y+state.h/s/2};
+    const plant=factory.frame(time,bounds),heading=plant.hero?plant.hero.angle+characters.actors.child.headAxis(plant.hero).angle:0;
     if(time<61){
       district.drawBase(top,time);
       const home=district.frame(time);home.actors.forEach(drawActor);
@@ -113,12 +115,12 @@
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
-      top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time);top.restore();
+      top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time,bounds);top.restore();
       plant.actors.forEach(drawActor);drawLight(plant.light);
-      top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawOverlay(top,time);top.restore();
+      top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawOverlay(top,time,bounds);top.restore();
     }else{
       screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);
-      plant.actors.filter(actor=>actor.id==='hero').forEach(entry=>drawActor(plant.light?{...entry,core:0}:entry));if(time<110)drawLight(plant.light);factory.drawOverlay(top,time);
+      plant.actors.filter(actor=>actor.id==='hero').forEach(entry=>drawActor(plant.light?{...entry,core:0}:entry));if(time<110)drawLight(plant.light);factory.drawOverlay(top,time,bounds);
     }
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
@@ -133,10 +135,10 @@
   function screenOverlay(){top.setTransform(state.dpr,0,0,state.dpr,0,0);}
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
   function interfaceState(v){
-    const shot=cameraTrack.shotAt(player.time),index=cameraTrack.shots.indexOf(shot);
-    stage.dataset.phase=shot.id;stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
+    const shot=cameraTrack.shotAt(sceneTime()),index=cameraTrack.shots.indexOf(shot);
+    stage.dataset.phase=shot.id;stage.dataset.sceneTime=sceneTime().toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
     if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?mode='+player.mode+'&t='+player.time.toFixed(2);return;}
-    const notes=window.FlatlandStoryNotes.at(player.time);
+    const notes=window.FlatlandStoryNotes.at(sceneTime());
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(player.time*100);$('progress').style.setProperty('--p',`${player.time/duration*100}%`);
@@ -153,16 +155,16 @@
       if(!reduced.matches)state.ambient+=dt;
     }
     state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=1-state.layer*.92;
-    const v=view();draw(player.time,v);interfaceState(v);requestAnimationFrame(frame);
+    const v=view();draw(sceneTime(),v);interfaceState(v);requestAnimationFrame(frame);
   }
   function resize(){const box=stage.getBoundingClientRect();state.w=box.width;state.h=box.height;state.dpr=Math.min(window.devicePixelRatio||1,2);[lower,upper].forEach(c=>{c.width=Math.round(state.w*state.dpr);c.height=Math.round(state.h*state.dpr);});}
   function seek(time){player.seek(time);}
   function togglePlay(){state.inputAt=performance.now();player.tap();}
   if(workbench){
     cameraTrack.shots.forEach(shot=>{const option=document.createElement('option');option.value=shot.id;option.textContent=shot.label;$('chapter').append(option);});
-    on('chapter','change',e=>seek(cameraTrack.shots.find(s=>s.id===e.target.value).start));
-    on('previous','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(player.time));seek(cameraTrack.shots[Math.max(0,i-1)].start);});
-    on('next','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(player.time));seek(cameraTrack.shots[Math.min(cameraTrack.shots.length-1,i+1)].start);});
+    on('chapter','change',e=>seek(timing.playbackAt(cameraTrack.shots.find(s=>s.id===e.target.value).start)));
+    on('previous','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(sceneTime()));seek(timing.playbackAt(cameraTrack.shots[Math.max(0,i-1)].start));});
+    on('next','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(sceneTime()));seek(timing.playbackAt(cameraTrack.shots[Math.min(cameraTrack.shots.length-1,i+1)].start));});
 
   }
   on('mode-interactive','click',()=>player.setMode('interactive'));

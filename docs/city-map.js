@@ -125,31 +125,197 @@
   function lerpPoint(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];}
   function bezier(c,t){const s=1-t;return[0,1].map(i=>s*s*s*c[0][i]+3*s*s*t*c[1][i]+3*s*t*t*c[2][i]+t*t*t*c[3][i]);}
   const artery=escortCurves.flatMap((c,i)=>Array.from({length:25},(_,j)=>({point:bezier(c,j/24),width:[210,260,230,240,250,310][i]+([260,230,240,250,310,300][i]-[210,260,230,240,250,310][i])*ease(j/24)})).filter((_,j)=>j%25!==0||j===0));
-  const junctions=[
-    {point:[-600,-600],radius:225,arms:[{curve:escortCurves[2],until:.45,width:235},{curve:neighborhoodCurves[0],until:.45,width:140}]},
-    {point:west.roadJoin,radius:190,arms:[{curve:westernCurves[0],until:.7,width:120},{curve:escortCurves[3],until:.4,width:245}]},
-    {point:northwest.roadJoin,radius:185,arms:[{curve:[...westernCurves[4]].reverse(),until:.65,width:120},{curve:escortCurves[4],until:.4,width:272}]},
-    {point:[-650,-1640],radius:185,arms:[{curve:northernCurves[0],until:.5,width:180},{curve:[...neighborhoodCurves[0]].reverse(),until:.28,width:140}]},
-    {point:[1450,-1020],radius:175},{point:[1500,350],radius:165},
-    {point:[1300,1220],radius:170},{point:[1520,1470],radius:155},
-    {point:southernStreet[0],radius:175},{point:[650,-160],radius:145}
+  const externalCurves=[[[ -4600,-650],[-3800,-650],[-3030,-850],[-2760,-150]]];
+  const externalNorthwestCurves=[[[-4600,-650],[-3800,-1500],[-2700,-1070],[-2500,-1140]]];
+  const externalNorthwestApproachCurves=[[[ -2500,-1140],[-2500,-1240],[-2440,-1310],[-2360,-1310]],[[-2360,-1310],[-2260,-1310],[-2180,-1221],[-2080,-1200]]];
+  const northwestDepartureCurves=[[[ -2080,-980],[-2080,-1040],[-2160,-1050],[-2230,-1050]],[[-2230,-1050],[-2340,-1050],[-2510,-1080],[-2510,-1150]],[[-2510,-1150],[-2510,-1260],[-2650,-1450],[-2550,-1580]]];
+  Object.assign(road,{externalCurves,externalNorthwestCurves,externalNorthwestApproachCurves,northwestDepartureCurves});
+  const streetSpecs=[
+    {curves:northernCurves,width:180},{curves:neighborhoodCurves,width:140},
+    {curves:westernCurves,width:120},{curves:eastCurves,width:160},
+    {curves:southCurves,width:170},{curves:externalCurves,width:130},
+    {curves:externalNorthwestCurves,width:130},{curves:externalNorthwestApproachCurves,width:130},{curves:northwestDepartureCurves,width:150},
+    {curves:[straight([650,-160],[1180,-40]),straight([1180,-40],[1487,80])],width:150}
   ];
-  road.junctions=junctions;
-  function paveJunctions(ctx,color){
-    for(const junction of junctions){
-      ctx.beginPath();ctx.arc(...junction.point,junction.radius,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-      // Taper back into each street instead of leaving a round cap at the apron edge.
-      for(const arm of junction.arms||[]){
-        const samples=Array.from({length:25},(_,i)=>{const q=i/24;return{point:bezier(arm.curve,q*arm.until),width:arm.width+(junction.radius*2-arm.width)*(1-ease(q))};});
-        ribbon(ctx,samples,color);
+  const publicCourt=[[-490,365],[-150,330],[120,530],[80,680],[-230,780],[-500,620]];
+  const courtFloor=[[-350,440],[-170,415],[-30,545],[-60,620],[-240,675],[-370,580]];
+  const publicBuilding=[[860,-790],[1120,-850],[1270,-720],[1230,-420],[840,-330]];
+  const courtEntry=[[-150,200],[-170,330],[-205,465],[-200,520]];
+  const forecourts=[
+    [[200,80],[480,-80],[1160,-80],[1380,100],[1260,240],[340,240]],
+    [[-1390,-910],[-930,-900],[-850,-780],[-844,-650],[-1436,-650],[-1480,-790]],
+    [[-2340,-1200],[-1830,-1170],[-1730,-1080],[-1752,-980],[-2408,-980],[-2500,-1070]]
+  ];
+  function sampleCurves(list){
+    return list.flatMap((c,i)=>{
+      const length=c.slice(1).reduce((sum,p,j)=>sum+Math.hypot(p[0]-c[j][0],p[1]-c[j][1]),0),count=Math.max(8,Math.ceil(length/18));
+      return Array.from({length:count+1},(_,j)=>bezier(c,j/count)).filter((_,j)=>!i||j);
+    });
+  }
+  function inPolygon(point,polygon){
+    let inside=false;
+    for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+      const a=polygon[i],b=polygon[j];
+      if((a[1]>point[1])!==(b[1]>point[1])&&point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+    }
+    return inside;
+  }
+  function segmentDistance(point,a,b){
+    const dx=b[0]-a[0],dy=b[1]-a[1],q=clamp(((point[0]-a[0])*dx+(point[1]-a[1])*dy)/(dx*dx+dy*dy||1));
+    return Math.hypot(point[0]-a[0]-q*dx,point[1]-a[1]-q*dy);
+  }
+  function simplify(points,tolerance){
+    if(points.length<3)return points;
+    const keep=new Uint8Array(points.length),stack=[[0,points.length-1]];keep[0]=keep[points.length-1]=1;
+    while(stack.length){
+      const[a,b]=stack.pop();let distance=tolerance,index=-1;
+      for(let i=a+1;i<b;i++){const d=segmentDistance(points[i],points[a],points[b]);if(d>distance){distance=d;index=i;}}
+      if(index>=0){keep[index]=1;stack.push([a,index],[index,b]);}
+    }
+    return points.filter((_,i)=>keep[i]);
+  }
+  function routeAccesses(targets){
+    const step=16,x0=-5000,y0=-3900,w=610,h=455,n=w*h,known=new Uint8Array(n);let clearance=44;
+    const obstacles=[...houseBoundaries.map(h=>({polygon:h.polygon,bounds:h.bounds})),...[publicBuilding,publicCourt].map(polygon=>({polygon,bounds:{minX:Math.min(...polygon.map(p=>p[0])),maxX:Math.max(...polygon.map(p=>p[0])),minY:Math.min(...polygon.map(p=>p[1])),maxY:Math.max(...polygon.map(p=>p[1]))}}))];
+    const point=i=>[x0+(i%w)*step,y0+Math.floor(i/w)*step];
+    const cell=p=>Math.round((p[1]-y0)/step)*w+Math.round((p[0]-x0)/step);
+    function blocked(i){
+      if(i<0||i>=n)return true;if(known[i])return known[i]===2;
+      const p=point(i),padding=clearance;
+      const hit=obstacles.some(o=>{
+        const b=o.bounds;if(p[0]<b.minX-padding||p[0]>b.maxX+padding||p[1]<b.minY-padding||p[1]>b.maxY+padding)return false;
+        return inPolygon(p,o.polygon)||o.polygon.some((a,j)=>segmentDistance(p,a,o.polygon[(j+1)%o.polygon.length])<padding);
+      });
+      known[i]=hit?2:1;return hit;
+    }
+    const goals=[...new Set(targets.map(cell))].filter(i=>!blocked(i));
+    function route(start,padding){
+      clearance=padding;known.fill(0);
+      const source=cell(start),goal=goals.filter(i=>!blocked(i)).reduce((best,i)=>{const p=point(i),d=Math.hypot(p[0]-start[0],p[1]-start[1]);return d<best.d?{i,d}:best;},{d:Infinity}).i;
+      if(blocked(source)||goal===undefined)throw new Error('No clear house access start.');
+      const g=new Float32Array(n).fill(Infinity),parent=new Int32Array(n).fill(-1),closed=new Uint8Array(n),heap=[];
+      const target=point(goal),heuristic=i=>{const p=point(i);return Math.hypot(p[0]-target[0],p[1]-target[1])/step;};
+      function push(i,cost){let k=heap.length;heap.push({i,cost});while(k){const j=(k-1)>>1;if(heap[j].cost<=cost)break;heap[k]=heap[j];k=j;}heap[k]={i,cost};}
+      function pop(){const top=heap[0],last=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length){let j=k*2+1;if(j+1<heap.length&&heap[j+1].cost<heap[j].cost)j++;if(heap[j].cost>=last.cost)break;heap[k]=heap[j];k=j;}heap[k]=last;}return top.i;}
+      g[source]=0;push(source,heuristic(source));
+      while(heap.length){
+        const i=pop();if(closed[i])continue;if(i===goal){const path=[];for(let j=i;j>=0;j=parent[j])path.push(point(j));return simplify(path.reverse(),step*.7);}
+        closed[i]=1;const x=i%w,y=Math.floor(i/w);
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          if((!dx&&!dy)||x+dx<0||x+dx>=w||y+dy<0||y+dy>=h)continue;
+          const j=i+dy*w+dx;if(closed[j]||blocked(j)||(dx&&dy&&(blocked(i+dx)||blocked(i+dy*w))))continue;
+          const cost=g[i]+(dx&&dy?Math.SQRT2:1);if(cost<g[j]){g[j]=cost;parent[j]=i;push(j,cost+heuristic(j));}
+        }
       }
+      throw new Error('House access cannot reach a street.');
+    }
+    const accesses=[{houseId:'main',points:sampleCurves([escortCurves[0]]),width:210,join:escortCurves[0][3]}];
+    for(const home of homes)accesses.push({houseId:home.id,points:sampleCurves(home.accessCurves),width:Math.min(200,home.doorWidth*.9),join:home.roadJoin});
+    for(const home of backgroundHomes){
+      const normal=home.boundary.door.normal,width=Math.max(54,Math.min(80,home.doorWidth*.75)),start=home.door.map((v,i)=>v-normal[i]*60),points=[home.door,start,...route(start,width/2+6)];
+      accesses.push({houseId:home.id,points,width,join:points[points.length-1]});
+    }
+    return accesses;
+  }
+  function strokePolygons(points,width){
+    const left=[],right=[],widthAt=i=>typeof width==='number'?width:width[i];
+    points.forEach((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy)||1,r=widthAt(i)/2;left.push([p[0]-dy/length*r,p[1]+dx/length*r]);right.push([p[0]+dy/length*r,p[1]-dx/length*r]);});
+    return[[...left,...right.reverse()],...[0,points.length-1].map(i=>Array.from({length:24},(_,j)=>{const a=j*Math.PI/12,r=widthAt(i)/2;return[points[i][0]+Math.cos(a)*r,points[i][1]+Math.sin(a)*r];}))];
+  }
+  function rasterPolygon(mask,w,h,bounds,step,polygon){
+    const minY=Math.max(0,Math.ceil((Math.min(...polygon.map(p=>p[1]))-bounds.minY)/step-.5)),maxY=Math.min(h-1,Math.floor((Math.max(...polygon.map(p=>p[1]))-bounds.minY)/step-.5));
+    for(let y=minY;y<=maxY;y++){
+      const worldY=bounds.minY+(y+.5)*step,cuts=[];
+      polygon.forEach((a,i)=>{const b=polygon[(i+1)%polygon.length];if((a[1]>worldY)!==(b[1]>worldY))cuts.push(a[0]+(worldY-a[1])*(b[0]-a[0])/(b[1]-a[1]));});cuts.sort((a,b)=>a-b);
+      for(let i=0;i+1<cuts.length;i+=2){const a=Math.max(0,Math.ceil((cuts[i]-bounds.minX)/step-.5)),b=Math.min(w-1,Math.floor((cuts[i+1]-bounds.minX)/step-.5));if(b>=a)mask.fill(1,y*w+a,y*w+b+1);}
     }
   }
-  function ribbon(ctx,samples,color,extra=0){
-    const left=[],right=[];
-    samples.forEach((s,i)=>{const a=samples[Math.max(0,i-1)].point,b=samples[Math.min(samples.length-1,i+1)].point,dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,w=(s.width+extra)/2;left.push([s.point[0]-dy/l*w,s.point[1]+dx/l*w]);right.push([s.point[0]+dy/l*w,s.point[1]-dx/l*w]);});
-    shape(ctx,[...left,...right.reverse()],color);
+  function distanceField(mask,w,h,value){
+    const size=Math.max(w,h),f=new Float64Array(size),d=new Float64Array(size),v=new Int32Array(size),z=new Float64Array(size+1),temp=new Float32Array(w*h),out=new Float32Array(w*h);
+    function line(length){
+      let k=0;v[0]=0;z[0]=-Infinity;z[1]=Infinity;
+      for(let q=1;q<length;q++){let s;do{s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*(q-v[k]));if(s>z[k])break;k--;}while(k>=0);k++;v[k]=q;z[k]=s;z[k+1]=Infinity;}
+      k=0;for(let q=0;q<length;q++){while(z[k+1]<q)k++;d[q]=(q-v[k])*(q-v[k])+f[v[k]];}
+    }
+    for(let y=0;y<h;y++){for(let x=0;x<w;x++)f[x]=mask[y*w+x]===value?0:1e12;line(w);for(let x=0;x<w;x++)temp[y*w+x]=d[x];}
+    for(let x=0;x<w;x++){for(let y=0;y<h;y++)f[y]=temp[y*w+x];line(h);for(let y=0;y<h;y++)out[y*w+x]=d[y];}
+    return out;
   }
+  function morph(mask,w,h,radius,dilate){
+    const distances=distanceField(mask,w,h,dilate?1:0),out=new Uint8Array(mask.length),r2=radius*radius;
+    for(let i=0;i<mask.length;i++)out[i]=dilate?(distances[i]<=r2?1:0):(distances[i]>r2?1:0);
+    return out;
+  }
+  function smoothContour(points){
+    // Raw contour samples have equal arc length; remove grid-scale ripples before fitting the closed curve.
+    const radius=10,weights=Array.from({length:radius*2+1},(_,i)=>Math.exp(-((i-radius)*(i-radius))/32)),total=weights.reduce((a,b)=>a+b,0),n=points.length;
+    return points.map((_,i)=>{const p=[0,0];weights.forEach((weight,j)=>{const q=points[(i+j-radius+n)%n];p[0]+=q[0]*weight;p[1]+=q[1]*weight;});return p.map(v=>v/total);});
+  }
+  function pavementCorners(points){
+    return points.map((point,i)=>{
+      const before=points[(i+points.length-1)%points.length],after=points[(i+1)%points.length],a=Math.hypot(before[0]-point[0],before[1]-point[1]),b=Math.hypot(after[0]-point[0],after[1]-point[1]),cut=Math.min(24,a*.35,b*.35);
+      return{point,from:lerpPoint(point,before,cut/a),to:lerpPoint(point,after,cut/b)};
+    });
+  }
+  function sampledPavement(points){
+    const result=[];
+    for(const{point:p,from:a,to:b}of pavementCorners(points)){
+      const count=Math.max(2,Math.ceil((Math.hypot(p[0]-a[0],p[1]-a[1])+Math.hypot(b[0]-p[0],b[1]-p[1]))/6));
+      for(let j=0;j<=count;j++){const t=j/count,s=1-t;result.push([s*s*a[0]+2*s*t*p[0]+t*t*b[0],s*s*a[1]+2*s*t*p[1]+t*t*b[1]]);}
+    }
+    return result;
+  }
+  function contours(mask,w,h,bounds,step){
+    const stride=w+1,edges=[],starts=new Map();
+    function edge(a,b,dir){const item={a,b,dir,used:false};edges.push(item);if(!starts.has(a))starts.set(a,[]);starts.get(a).push(item);}
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){
+      const a=y*stride+x,b=a+1,c=b+stride,d=a+stride;
+      if(!y||!mask[(y-1)*w+x])edge(a,b,0);if(x===w-1||!mask[y*w+x+1])edge(b,c,1);
+      if(y===h-1||!mask[(y+1)*w+x])edge(c,d,2);if(!x||!mask[y*w+x-1])edge(d,a,3);
+    }
+    const result=[],world=i=>[bounds.minX+(i%stride)*step,bounds.minY+Math.floor(i/stride)*step];
+    for(const first of edges){
+      if(first.used)continue;let item=first,loop=[];
+      do{item.used=true;loop.push(world(item.a));const options=(starts.get(item.b)||[]).filter(e=>!e.used),priority=[(item.dir+1)%4,item.dir,(item.dir+3)%4,(item.dir+2)%4];item=options.sort((a,b)=>priority.indexOf(a.dir)-priority.indexOf(b.dir))[0];}while(item&&item!==first);
+      if(loop.length<4)continue;
+      loop=smoothContour(loop);
+      let split=1,distance=0;loop.forEach((p,i)=>{const d=Math.hypot(p[0]-loop[0][0],p[1]-loop[0][1]);if(d>distance){distance=d;split=i;}});
+      const points=[...simplify(loop.slice(0,split+1),10).slice(0,-1),...simplify([...loop.slice(split),loop[0]],10).slice(0,-1)];
+      if(points.length>=3)result.push(points);
+    }
+    return result;
+  }
+  let pavementAsset,pavementPath;
+  function getPavement(){
+    if(pavementAsset)return pavementAsset;
+    const streets=streetSpecs.map(spec=>({points:sampleCurves(spec.curves),width:spec.width}));
+    const targets=[...streets.flatMap(s=>s.points),...artery.map(s=>s.point)];
+    const accesses=routeAccesses(targets),polygons=streets.flatMap(s=>strokePolygons(s.points,s.width));
+    polygons.push(...strokePolygons(artery.map(s=>s.point),artery.map(s=>s.width)),plaza,...forecourts,forecourtPolygon,
+      ...strokePolygons(sampleCurves([straight(at(-1080,0),at(210,0))]),300),courtFloor,
+      ...strokePolygons(sampleCurves([courtEntry]),150),...houseBoundaries.map(h=>h.polygon));
+    accesses.forEach(access=>polygons.push(...strokePolygons(access.points,access.width)));
+    const points=polygons.flat(),step=8,closeRadius=88,openRadius=24,pad=closeRadius*3;
+    const bounds={minX:Math.floor((Math.min(...points.map(p=>p[0]))-pad)/step)*step,minY:Math.floor((Math.min(...points.map(p=>p[1]))-pad)/step)*step,maxX:Math.ceil((Math.max(...points.map(p=>p[0]))+pad)/step)*step,maxY:Math.ceil((Math.max(...points.map(p=>p[1]))+pad)/step)*step};
+    const w=Math.ceil((bounds.maxX-bounds.minX)/step),h=Math.ceil((bounds.maxY-bounds.minY)/step);let mask=new Uint8Array(w*h);
+    polygons.forEach(polygon=>rasterPolygon(mask,w,h,bounds,step,polygon));
+    // Smooth the completed union, including its blue negative spaces, instead of rounding each overlapping street separately.
+    mask=morph(morph(mask,w,h,closeRadius/step,true),w,h,closeRadius/step,false);
+    mask=morph(morph(mask,w,h,openRadius/step,false),w,h,openRadius/step,true);
+    const loops=contours(mask,w,h,bounds,step),outlines=loops.map(sampledPavement);
+    pavementAsset={loops,bounds,step,closeRadius,openRadius,accesses,courtEntry,externalCurves,externalNorthwestCurves,
+      contains:point=>outlines.reduce((inside,outline)=>inPolygon(point,outline)?!inside:inside,false)};
+    road.accesses=accesses;return pavementAsset;
+  }
+  function tracePavement(path,loops){
+    for(const points of loops){const corners=pavementCorners(points);path.moveTo(...corners[0].from);corners.forEach(({point,from,to},i)=>{if(i)path.lineTo(...from);path.quadraticCurveTo(...point,...to);});path.closePath();}
+  }
+  function drawPavement(ctx,color){
+    const asset=getPavement();ctx.fillStyle=color;
+    if(typeof Path2D!=='undefined'){if(!pavementPath){pavementPath=new Path2D();tracePavement(pavementPath,asset.loops);}ctx.fill(pavementPath,'evenodd');}
+    else{ctx.beginPath();tracePavement(ctx,asset.loops);ctx.fill('evenodd');}
+  }
+  road.getPavement=getPavement;
   let grainTile,grainKey;
   function grain(ctx,p){
     if(!ctx.createPattern)return;
@@ -187,29 +353,12 @@
       [970,3100],[-2200,2980],[-2770,2040],[-2650,970],[-3200,1070],[-3650,300]
     ]];
     parcels.forEach(points=>softShape(ctx,points,p.blue,100));
-    // The continuous perimeter streets enclose unequal blocks, rather than ending at each house.
-    curves(ctx,northernCurves,p.paper,180);
-    curves(ctx,neighborhoodCurves,p.paper,140);
-    curves(ctx,westernCurves,p.paper,120);
-    curves(ctx,eastCurves,p.paper,160);
-    curves(ctx,southCurves,p.paper,170);
-    polyline(ctx,[[650,-160],[1180,-40],[1487,80]],p.paper,150);
-    ribbon(ctx,artery,p.paper);
-    softShape(ctx,plaza,p.paper,60);
-    // These shared forecourts contain the accepted access paths without drawing driveway fingers.
-    softShape(ctx,[[200,80],[480,-80],[1160,-80],[1380,100],[1260,240],[340,240]],p.paper,36);
-    softShape(ctx,[[-1390,-910],[-930,-900],[-850,-780],[-844,-650],[-1436,-650],[-1480,-790]],p.paper,28);
-    softShape(ctx,[[-2340,-1200],[-1830,-1170],[-1730,-1080],[-1752,-980],[-2408,-980],[-2500,-1070]],p.paper,28);
-    paveJunctions(ctx,p.paper);
-    backgroundHomes.forEach(h=>house(ctx,h,p));
-    // A few larger public footprints balance the smaller residential groups.
-    softShape(ctx,[[860,-790],[1120,-850],[1270,-720],[1230,-420],[840,-330]],p.ink,30);
-    softShape(ctx,[[-490,365],[-150,330],[120,530],[80,680],[-230,780],[-500,620]],p.ink,30);
-    softShape(ctx,[[-350,440],[-170,415],[-30,545],[-60,620],[-240,675],[-370,580]],p.paper,25);
-    shape(ctx,[[-200,230],[-100,230],[-100,440],[-200,440]],p.paper);
+    // Public court walls are drawn before the same pavement asset opens its entrance.
+    softShape(ctx,publicBuilding,p.ink,30);
+    softShape(ctx,publicCourt,p.ink,30);
     institution(ctx,p);
-    softShape(ctx,forecourtPolygon,p.paper,48);
-    curves(ctx,[straight(at(-1080,0),at(210,0))],p.paper,300);
+    drawPavement(ctx,p.paper);
+    backgroundHomes.forEach(h=>house(ctx,h,p));
     homes.forEach(h=>house(ctx,h,p));house(ctx,mainHouse,p);
     grain(ctx,p);
     ctx.restore();
@@ -224,5 +373,5 @@
     polyline(ctx,[at(-36,-150),at(-36,150)],p.quiet||p.line,6);
     ctx.restore();
   }
-  return{drawBase,drawGate,homes,backgroundHomes,mainHouse,mainDoor,houseBoundaries,walls,escortCurves,gate,forecourtSlots,road,plaza,detaineeHomeIds:['west','northwest']};
+  return{drawBase,drawGate,getPavement,homes,backgroundHomes,mainHouse,mainDoor,houseBoundaries,walls,escortCurves,gate,forecourtSlots,road,plaza,detaineeHomeIds:['west','northwest']};
 });
