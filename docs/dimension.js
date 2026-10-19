@@ -395,10 +395,12 @@
   function apparition(list,item,time,clock,alpha){
     const r=item.r*shapeScale(item,time),phase=item.index*.91+item.side*.6;
     const volume=ease(time,Math.max(128.5,item.growAt),Math.max(133.1,item.growUntil));
-    const thickness=r*.065*volume,bend=r*.32*volume;
+    const thickness=r*.038*volume,bend=r*.32*volume;
     const turn=clock*.21+phase,ax=.92*Math.sin(phase+clock*.19),ay=.78*Math.cos(phase*.6-clock*.17);
     const ca=Math.cos(turn),sa=Math.sin(turn),cx=Math.cos(ax),sx=Math.sin(ax),cy=Math.cos(ay),sy=Math.sin(ay);
-    const count=item.kind===0||item.kind===3?36:4+item.kind,steps=count*(count<10?3:1);
+    const count=item.kind===0||item.kind===3?36:4+item.kind;
+    const steps=count*(volume>0?(count<10?Math.max(5,Math.ceil(36/count)):1):(count<10?3:1));
+    const radialSteps=volume>0?2:1,centerSteps=volume>0?3:1;
     const pigments=[item.color,Palette.night,Palette.coral,Palette.lavender,Palette.teal,Palette.cream];
     // Subdivision follows the original warped contour, including every gap and hole.
     const corner=(i,size)=>{const a=i*Math.PI*2/count,warp=1+.10*Math.sin(a*3+phase+clock*.2);return[Math.cos(a)*r*size*warp,Math.sin(a)*r*size*warp];};
@@ -407,32 +409,45 @@
       const a=px/r*1.6+phase*.4,b=py/r*1.2-phase;
       const z=bend*(Math.sin(a)-Math.sin(phase*.4)+.28*(Math.sin(b)+Math.sin(phase)));
       const nx=-bend/r*1.6*Math.cos(a),ny=-bend/r*.28*1.2*Math.cos(b),n=Math.hypot(nx,ny,1);
-      // Extrude the very same bent sheet along its normal, then rotate the entire sheet.
-      const x=px+nx/n*offset,y=py+ny/n*offset,zz=z+offset/n;
+      // Both sides still follow this sheet's own contour. Vary the small normal
+      // separation and shear continuously, rather than making parallel solid slices.
+      const separation=offset*(1+volume*(.18*Math.sin(a+b*.35)+.09*Math.cos(b*1.4)));
+      const shear=volume*offset*.16;
+      const x=px+nx/n*separation+shear*Math.sin(b),y=py+ny/n*separation+shear*Math.cos(a),zz=z+separation/n;
       const xx=x*ca-y*sa,yy=x*sa+y*ca,rotatedZ=yy*sx+zz*cx;
       return[item.x+xx*cy+rotatedZ*sy,item.y+yy*cx-zz*sx,22-xx*sy+rotatedZ*cy];
     };
     function panel(points,color,offset,opacity=1){
       const center=points.reduce((sum,p)=>[sum[0]+p[0]/points.length,sum[1]+p[1]/points.length],[0,0]);
-      const shade=volume*.20*(.5+.5*Math.cos(center[0]/r*1.6+phase*.4));
+      const shade=volume*.12*(.5+.5*Math.cos(center[0]/r*1.6+phase*.4));
       list.push({points:points.map(p=>vertex(p,offset+thickness/2)),color:tint(color,Palette.navy,shade),surface:'pigment',alpha:alpha*opacity,frontOnly:true});
-      list.push({points:points.slice().reverse().map(p=>vertex(p,offset-thickness/2)),color:tint(color,Palette.navy,.26*volume),surface:'pigment',alpha:alpha*opacity,frontOnly:true});
+      list.push({points:points.slice().reverse().map(p=>vertex(p,offset-thickness/2)),color:tint(color,Palette.navy,volume*(.10+shade*.6)),surface:'pigment',alpha:alpha*opacity,frontOnly:true});
     }
     function rim(a,b,color,offset){
       if(thickness<=.002)return;
-      surface(list,[vertex(a,offset-thickness/2),vertex(b,offset-thickness/2),vertex(b,offset+thickness/2),vertex(a,offset+thickness/2)],tint(color,Palette.navy,.40),'pigment',alpha);
+      surface(list,[vertex(a,offset-thickness/2),vertex(b,offset-thickness/2),vertex(b,offset+thickness/2),vertex(a,offset+thickness/2)],tint(color,Palette.navy,.22),'pigment',alpha);
     }
     const layers=item.kind===3||item.kind===4?4:3;
     for(let layer=0;layer<layers;layer++){
       const outer=1-layer*.20,inner=outer-(layer%2?.13:.18),color=pigments[(item.index+layer)%pigments.length],offset=layer*1.1;
       for(let i=0;i<steps;i++){
-        const u=i*count/steps,v=(i+1)*count/steps,a=contour(u,outer),b=contour(v,outer),c=contour(v,inner),d=contour(u,inner);
-        panel([a,b,c,d],color,offset);rim(a,b,color,offset);rim(c,d,color,offset);
+        const u=i*count/steps,v=(i+1)*count/steps;
+        // Sample through the band as well as around it: a single wide quad
+        // bridges the bend and reads as a rigid bevel even with a curved rim.
+        for(let j=0;j<radialSteps;j++){
+          const outside=mix(outer,inner,j/radialSteps),inside=mix(outer,inner,(j+1)/radialSteps);
+          panel([contour(u,outside),contour(v,outside),contour(v,inside),contour(u,inside)],color,offset);
+        }
+        rim(contour(u,outer),contour(v,outer),color,offset);rim(contour(v,inner),contour(u,inner),color,offset);
       }
     }
     if(item.kind<3)for(let i=0;i<steps;i++){
-      const a=contour(i*count/steps,.42),b=contour((i+1)*count/steps,.42);
-      panel([[0,0],a,b],item.color,4,.85);rim(a,b,item.color,4);
+      const u=i*count/steps,v=(i+1)*count/steps;
+      for(let j=0;j<centerSteps;j++){
+        const inner=.42*j/centerSteps,outer=.42*(j+1)/centerSteps,a=contour(u,outer),b=contour(v,outer);
+        panel(j?[a,b,contour(v,inner),contour(u,inner)]:[[0,0],a,b],item.color,4,.85);
+      }
+      rim(contour(u,.42),contour(v,.42),item.color,4);
     }
   }
   function addJourneyObjects(list,hero,time,clock=time){

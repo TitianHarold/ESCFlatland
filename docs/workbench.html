@@ -6,13 +6,20 @@
   <title>平面国 · 工作台</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
-  <script src="palette.js" defer></script>
+  <style>
+    #palette-dialog{width:min(620px,94vw)}#palette-dialog p{font-size:12px;line-height:1.7;color:var(--quiet)}
+    #palette-dialog select{display:block;width:100%;margin:8px 0 20px;padding:10px;background:var(--paper);color:var(--ink);border:1px solid var(--line);font:inherit}
+    .palette-colors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;margin:20px 0}
+    .palette-color{display:grid;grid-template-columns:42px 1fr;column-gap:10px;align-items:center;font-size:12px}.palette-color input{grid-row:span 2;width:42px;height:36px;padding:1px;border:1px solid var(--line);background:var(--paper);cursor:pointer}.palette-color output{display:block;font-size:10px}
+    .palette-actions{display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;margin-top:22px}#palette-apply{background:var(--ink);color:var(--paper)}#palette-status{min-height:1.5em}
+  </style>
+  <script src="palette.js?v=20261019-r8" defer></script>
   <script src="character-geometry.js?v=20261019-r7" defer></script><script src="motion.js?v=20261019-r7" defer></script>
   <script src="possibility.js" defer></script><script src="emotions.js" defer></script>
-  <script src="camera.js?v=20261019-r7" defer></script><script src="portals.js?v=20261019-r7" defer></script><script src="city-map.js?v=20261019-r7" defer></script><script src="collision-world.js?v=20261019-r7" defer></script><script src="district.js?v=20261019-r7" defer></script><script src="correction-rules.js" defer></script><script src="factory.js?v=20261019-r7" defer></script><script src="restraint.js?v=20261019-r7" defer></script><script src="dimension.js?v=20261019-r7" defer></script><script src="story-notes.js?v=20261019-r7" defer></script><script src="inner-world.js?v=20261019-r7" defer></script><script src="story-timing.js?v=20261019-r7" defer></script><script src="story-player.js?v=20261019-r7" defer></script><script src="app.js?v=20261019-r7" defer></script>
+  <script src="camera.js?v=20261019-r7" defer></script><script src="portals.js?v=20261019-r7" defer></script><script src="city-map.js?v=20261019-r7" defer></script><script src="collision-world.js?v=20261019-r7" defer></script><script src="district.js?v=20261019-r7" defer></script><script src="correction-rules.js" defer></script><script src="factory.js?v=20261019-r7" defer></script><script src="restraint.js?v=20261019-r7" defer></script><script src="dimension.js?v=20261019-r8" defer></script><script src="story-notes.js?v=20261019-r7" defer></script><script src="inner-world.js?v=20261019-r7" defer></script><script src="story-timing.js?v=20261019-r7" defer></script><script src="story-player.js?v=20261019-r7" defer></script><script src="app.js?v=20261019-r7" defer></script>
 </head>
 <body class="workbench">
-  <header class="masthead"><a href="./" target="_blank" class="brand">观看页 ↗</a><span class="edition">平面国 · 工作台</span><nav aria-label="工作台工具"><button id="layers" class="text-button" aria-pressed="false">可能性层</button><button id="references" class="text-button">已选素材 · 20</button></nav></header>
+  <header class="masthead"><a href="./" target="_blank" class="brand">观看页 ↗</a><span class="edition">平面国 · 工作台</span><nav aria-label="工作台工具"><a class="text-button" href="storyboard-r2/" target="_blank">分镜制作表 ↗</a><button id="palette-open" class="text-button" aria-haspopup="dialog">配色</button><button id="layers" class="text-button" aria-pressed="false">可能性层</button><button id="references" class="text-button">已选素材 · 20</button></nav></header>
   <main>
     <div class="workbench-scene">
       <section id="stage" class="stage" tabindex="0" aria-label="分镜预览。点击播放一个动作情节，追光时可长按加速，自动播放可在工作台选择。"><canvas id="possibility-world" aria-hidden="true"></canvas><canvas id="outer-world" role="img" aria-label="平面国动作预览"></canvas><div class="grain" aria-hidden="true"></div></section>
@@ -30,5 +37,47 @@
     </footer>
   </main>
   <dialog id="reference-dialog" aria-labelledby="reference-title"><div class="drawer-header"><h2 id="reference-title">已选素材</h2><button id="close-references" class="round-button" aria-label="关闭素材">×</button></div><div class="reference-groups" id="reference-groups"></div></dialog>
+  <dialog id="palette-dialog" aria-labelledby="palette-title">
+    <div class="drawer-header"><h2 id="palette-title">动画配色</h2><button id="palette-close" class="round-button" aria-label="关闭配色">×</button></div>
+    <form id="palette-form">
+      <p>只调整动画颜色，保留当前造型与动作。选好后应用，画面会从当前进度更新；观看页下次打开也会读取这套配色。</p>
+      <label for="palette-preset">配色方案</label><select id="palette-preset"></select>
+      <div class="palette-colors" id="palette-colors"></div>
+      <p id="palette-status" role="status" aria-live="polite"></p>
+      <div class="palette-actions"><button id="palette-reset" type="button" class="step-button">恢复本套默认</button><button id="palette-apply" type="submit" class="step-button">应用配色</button></div>
+    </form>
+  </dialog>
+  <script>
+    document.addEventListener('DOMContentLoaded',()=>{
+      const p=window.FlatlandPalette,$=id=>document.getElementById(id),dialog=$('palette-dialog');
+      const presets=p.presets,keys=p.editableKeys;
+      presets.forEach(item=>{const option=document.createElement('option');option.value=item.id;option.textContent=item.label;$('palette-preset').append(option);});
+      keys.forEach(({key,label})=>{
+        const field=document.createElement('label');field.className='palette-color';
+        const input=document.createElement('input');input.type='color';input.id='palette-color-'+key;input.setAttribute('aria-label',label);
+        const name=document.createElement('span');name.textContent=label;
+        const hex=document.createElement('output');hex.setAttribute('for',input.id);
+        input.addEventListener('input',()=>{hex.value=input.value;});field.append(input,name,hex);$('palette-colors').append(field);
+      });
+      function fill(reset=false){
+        const config=p.getConfig(),preset=presets.find(item=>item.id===$('palette-preset').value)||presets[0];
+        const colors={...preset.colors,...(!reset&&config.preset===preset.id?config.colors:{})};
+        keys.forEach(({key})=>{const input=$('palette-color-'+key);input.value=colors[key];input.parentElement.querySelector('output').value=input.value;});
+        $('palette-status').textContent='尚未应用；原配色也可随时选回。';
+      }
+      $('palette-open').addEventListener('click',()=>{$('palette-preset').value=p.getConfig().preset;fill();dialog.showModal();});
+      $('palette-close').addEventListener('click',()=>dialog.close());
+      $('palette-preset').addEventListener('change',()=>fill());$('palette-reset').addEventListener('click',()=>fill(true));
+      $('palette-form').addEventListener('submit',event=>{
+        event.preventDefault();const preset=presets.find(item=>item.id===$('palette-preset').value),colors={};
+        keys.forEach(({key})=>{const color=$('palette-color-'+key).value;if(color!==preset.colors[key])colors[key]=color;});
+        if(!p.setConfig({preset:preset.id,colors})){$('palette-status').textContent='浏览器未能保存本机配色，尚未应用。请允许本机存储后重试。';return;}
+        const stage=$('stage'),url=new URL(location.href),time=Number(stage.dataset.time);
+        if(Number.isFinite(time))url.searchParams.set('t',time.toFixed(2));
+        url.searchParams.set('mode',(stage.dataset.mode||url.searchParams.get('mode'))==='auto'?'auto':'interactive');
+        history.replaceState(null,'',url);location.reload();
+      });
+    });
+  </script>
 </body>
 </html>
