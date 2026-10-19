@@ -4,8 +4,9 @@
   else root.FlatlandStoryPlayer=factory(root.FlatlandTiming);
 })(typeof globalThis!=='undefined'?globalThis:this,function(Timing){
   'use strict';
-  // Stop after a complete reaction or episode, never at first contact or mid-transition.
-  const beats=[6.8,16.0667,24,37.5,51.7,58,70,77,87,98,104,110,119,132,138].map(Timing.playbackAt);
+  // These are complete action episodes, not camera cuts. Capture, escort, entry and
+  // the three factory stations run continuously through their intermediate shots.
+  const beats=[6.8,98,104,110,119,132,138].map(Timing.playbackAt);
   class StoryPlayer{
     constructor({duration=Timing.duration,mode='interactive',playing=false}={}){
       this.duration=duration;this.time=0;this.target=0;this.mode=mode;

@@ -18,7 +18,7 @@
   const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
-  function view(){if(sceneTime()>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(sceneTime());if(v.follow==='hero'){const hero=factory.frame(sceneTime()).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factory.frame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
   function placeWorld(ctx,v){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
@@ -137,11 +137,11 @@
   }
   function screenOverlay(){top.setTransform(state.dpr,0,0,state.dpr,0,0);}
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
-  function interfaceState(v){
-    const shot=cameraTrack.shotAt(sceneTime()),index=cameraTrack.shots.indexOf(shot);
-    stage.dataset.phase=shot.id;stage.dataset.sceneTime=sceneTime().toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
+  function interfaceState(v,time=sceneTime()){
+    const shot=cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot);
+    stage.dataset.phase=shot.id;stage.dataset.sceneTime=time.toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
     if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?mode='+player.mode+'&t='+player.time.toFixed(2);return;}
-    const notes=window.FlatlandStoryNotes.at(sceneTime());
+    const notes=window.FlatlandStoryNotes.at(time);
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(player.time*100);$('progress').style.setProperty('--p',`${player.time/duration*100}%`);
@@ -158,7 +158,9 @@
       if(!reduced.matches)state.ambient+=dt;
     }
     state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=119?1:1-state.layer*.92;
-    const v=view();draw(sceneTime(),v);interfaceState(v);requestAnimationFrame(frame);
+    // One absolute story time drives actors, the view and shot notes. Automatic
+    // shot changes only select a camera; only explicit review controls call seek.
+    const time=sceneTime(),v=view(time);draw(time,v);interfaceState(v,time);requestAnimationFrame(frame);
   }
   function resize(){const box=stage.getBoundingClientRect();state.w=box.width;state.h=box.height;state.dpr=Math.min(window.devicePixelRatio||1,2);[lower,upper].forEach(c=>{c.width=Math.round(state.w*state.dpr);c.height=Math.round(state.h*state.dpr);});}
   function seek(time){player.seek(time);}

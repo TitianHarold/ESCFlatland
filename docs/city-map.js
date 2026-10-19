@@ -328,9 +328,80 @@
     }
     const pattern=ctx.createPattern(grainTile,'repeat');if(pattern){ctx.fillStyle=pattern;ctx.fillRect(-8000,-6500,14000,11500);}
   }
+  function offsetWallPath(boundary,distance){
+    const points=boundary.wallPath,winding=Math.sign(boundary.polygon.reduce((area,a,i)=>{const b=boundary.polygon[(i+1)%boundary.polygon.length];return area+a[0]*b[1]-b[0]*a[1];},0))||1;
+    const outward=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy)||1;return[winding*dy/length,-winding*dx/length];};
+    return points.map((point,i)=>{
+      const a=outward(points[Math.max(0,i-1)],points[Math.max(1,i)]),b=outward(points[Math.min(points.length-2,i)],points[Math.min(points.length-1,i+1)]);
+      const x=a[0]+b[0],y=a[1]+b[1],scale=(Array.isArray(distance)?distance[i]:distance)/Math.max(.5,x*a[0]+y*a[1]);
+      return[point[0]+x*scale,point[1]+y*scale];
+    });
+  }
+  function wallBounds(points){return{minX:Math.min(...points.map(p=>p[0])),minY:Math.min(...points.map(p=>p[1])),maxX:Math.max(...points.map(p=>p[0])),maxY:Math.max(...points.map(p=>p[1]))};}
+  function makeWallMass(boundary,width,roundCaps=true){
+    // The open path begins and ends at the existing doorway jambs. No polygon closes across it.
+    const rawOuter=offsetWallPath(boundary,width),rawInner=offsetWallPath(boundary,-4),outer=[],inner=[];
+    const add=(a,b)=>{outer.push(a);inner.push(b);},last=rawOuter.length-1;
+    const quadratic=(a,b,c,t)=>[0,1].map(i=>(1-t)*(1-t)*a[i]+2*(1-t)*t*b[i]+t*t*c[i]);
+    const roundEnd=(index,neighbor,start)=>{
+      const o=rawOuter[index],inside=rawInner[index],next=rawOuter[neighbor],nextInner=rawInner[neighbor];
+      const r=Math.min(18,Math.hypot(o[0]-inside[0],o[1]-inside[1])*.4,Math.hypot(next[0]-o[0],next[1]-o[1])*.2);
+      const cap=lerpPoint(o,inside,r/(Math.hypot(o[0]-inside[0],o[1]-inside[1])||1)),q=r/(Math.hypot(next[0]-o[0],next[1]-o[1])||1),edge=lerpPoint(o,next,q),innerEdge=lerpPoint(inside,nextInner,q);
+      for(let j=0;j<=4;j++){const t=start?j/4:1-j/4;add(quadratic(cap,o,edge,t),lerpPoint(inside,innerEdge,t));}
+    };
+    // Round the exposed jamb caps inward, preserving every original inner-wall segment.
+    if(roundCaps)roundEnd(0,1,true);else add(rawOuter[0],rawInner[0]);
+    for(let i=1;i<last;i++)add(rawOuter[i],rawInner[i]);
+    if(roundCaps)roundEnd(last,last-1,false);else add(rawOuter[last],rawInner[last]);
+    const walls=outer.slice(1).map((point,i)=>[outer[i],point,inner[i+1],inner[i]]);
+    return{outer,inner,opening:[outer[0],outer[outer.length-1],inner[inner.length-1],inner[0]],
+      polygon:[...outer,...inner.slice().reverse()],walls,width:Array.isArray(width)?Math.max(...width):width,outerWidths:Array.isArray(width)?width.slice():rawOuter.map(()=>width),innerOffset:4};
+  }
+  function massDistance(point,mass){
+    let distance=Infinity;
+    for(const polygon of mass.walls){
+      if(inPolygon(point,polygon))return 0;
+      for(let i=0;i<polygon.length;i++)distance=Math.min(distance,segmentDistance(point,polygon[i],polygon[(i+1)%polygon.length]));
+    }
+    return distance;
+  }
+  function initializeWallMasses(){
+    // Freeze the existing access routes first; adding wall mass must not re-route the story.
+    const accesses=getPavement().accesses;
+    const streets=streetSpecs.flatMap(spec=>sampleCurves(spec.curves).map(point=>({point,radius:spec.width/2})))
+      .concat(artery.map(({point,width})=>({point,radius:width/2})),accesses.flatMap(access=>access.points.map(point=>({point,radius:access.width/2}))));
+    for(const h of [mainHouse,...homes,...backgroundHomes]){
+      const boundary=h.boundary,desired=Math.max(24,Math.min(76,Math.min(h.w,h.h)*.085)),bounds=boundary.bounds;
+      const nearby=streets.filter(({point,radius})=>point[0]>=bounds.minX-desired-radius&&point[0]<=bounds.maxX+desired+radius&&point[1]>=bounds.minY-desired-radius&&point[1]<=bounds.maxY+desired+radius);
+      const baseline=makeWallMass(boundary,4,false),outerWidths=boundary.wallPath.map(()=>desired);
+      // Taper only the affected stretches, keeping broad walls away from the street intact.
+      for(let i=0;i<baseline.walls.length;i++){
+        const oldWall=baseline.walls[i],limits=nearby.map(({point,radius})=>Math.min(radius,massDistance(point,{walls:[oldWall]})));
+        const fits=quad=>nearby.every(({point},j)=>massDistance(point,{walls:[quad]})>=limits[j]-.15);
+        let quad=makeWallMass(boundary,outerWidths,false).walls[i];
+        if(!fits(quad)){
+          const a=outerWidths[i],b=outerWidths[i+1];let lo=0,hi=1;
+          for(let j=0;j<7;j++){
+            const q=(lo+hi)/2,trial=outerWidths.slice();trial[i]=4+(a-4)*q;trial[i+1]=4+(b-4)*q;
+            if(fits(makeWallMass(boundary,trial,false).walls[i]))lo=q;else hi=q;
+          }
+          outerWidths[i]=4+(a-4)*lo;outerWidths[i+1]=4+(b-4)*lo;
+        }
+      }
+      // Spread a narrowed stretch smoothly along the perimeter rather than making corner spikes.
+      for(let i=1;i<outerWidths.length;i++)outerWidths[i]=Math.min(outerWidths[i],outerWidths[i-1]+.35*Math.hypot(boundary.wallPath[i][0]-boundary.wallPath[i-1][0],boundary.wallPath[i][1]-boundary.wallPath[i-1][1]));
+      for(let i=outerWidths.length-2;i>=0;i--)outerWidths[i]=Math.min(outerWidths[i],outerWidths[i+1]+.35*Math.hypot(boundary.wallPath[i+1][0]-boundary.wallPath[i][0],boundary.wallPath[i+1][1]-boundary.wallPath[i][1]));
+      const mass=makeWallMass(boundary,outerWidths);
+      h.wallMass=boundary.wallMass=mass;
+      boundary.walls=mass.walls;boundary.wallBounds=mass.walls.map(wallBounds);boundary.bounds=wallBounds(mass.walls.flat());
+      boundary.thickness=mass.width+mass.innerOffset;
+    }
+    walls.splice(0,walls.length,...houseBoundaries.flatMap(boundary=>boundary.walls));
+  }
+  initializeWallMasses();
   function house(ctx,h,p){
     shape(ctx,h.boundary.polygon,p.paper);
-    h.boundary.walls.forEach(wall=>shape(ctx,wall,p.ink));
+    shape(ctx,h.wallMass.polygon,p.ink);
   }
   function localRect(ctx,s0,t0,s1,t1,color){shape(ctx,[at(s0,t0),at(s0,t1),at(s1,t1),at(s1,t0)],color);}
   function institution(ctx,p){

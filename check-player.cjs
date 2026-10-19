@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const StoryPlayer = require('./docs/story-player.js');
 const Timing=require('./docs/story-timing.js');
+const Camera=require('./docs/camera.js');
 const step = (player, seconds) => {for(let i=0;i<Math.round(seconds*100);i++)player.tick(.01);};
 
 const ordinary = new StoryPlayer();
@@ -13,7 +14,14 @@ assert(ordinary.playing,'Releasing the mouse cannot interrupt an ordinary episod
 step(ordinary,10);
 assert.equal(ordinary.time,Timing.playbackAt(6.8),'First episode includes contact and the completed parental reflex');
 assert(!ordinary.playing);
-ordinary.tap();assert.equal(ordinary.target,Timing.playbackAt(16.0667),'Next episode includes the mother and the immediate intrusion');
+ordinary.tap();assert.equal(ordinary.target,Timing.playbackAt(98),'Capture, escort, entry and correction continue until the completed failure check');
+const cut=Timing.playbackAt(77);
+step(ordinary,cut-ordinary.time-.01);
+assert.equal(Camera.shotAt(Timing.sceneAt(ordinary.time)).id,'press');
+ordinary.tick(.02);
+assert.equal(Camera.shotAt(Timing.sceneAt(ordinary.time)).id,'turn','The same action crosses an actual camera shot boundary');
+assert(ordinary.playing,'Changing camera shots cannot pause the action');
+assert.equal(ordinary.target,Timing.playbackAt(98),'Crossing the shot boundary cannot reset the episode target');
 
 const chase = new StoryPlayer();chase.seek(Timing.playbackAt(119));chase.press();step(chase,1);
 assert(chase.time>Timing.playbackAt(119)+1.5,'Holding accelerates the chase');

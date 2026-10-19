@@ -219,8 +219,50 @@
     ctx.fillStyle=paper;ctx.fillRect(left,y-68,right-left,136);stroke(ctx,[[left,y-68],[right,y-68]],P.factory.conveyorEdge,3);stroke(ctx,[[left,y+68],[right,y+68]],P.factory.conveyorEdge,3);
     const shift=((t*54)%74+74)%74;for(let x=left-shift;x<right;x+=74)if(x>=left)stroke(ctx,[[x,y-57],[x,y+57]],P.factory.roller,2);
   }
+  function roundedPart(ctx,x,y,w,h,r,fill,outline,width=1.5){
+    if(w<=0||h<=0)return;const radius=Math.min(r,w/2,h/2);ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(x,y,w,h,radius);
+    else{ctx.moveTo(x+radius,y);ctx.lineTo(x+w-radius,y);ctx.quadraticCurveTo(x+w,y,x+w,y+radius);ctx.lineTo(x+w,y+h-radius);ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);ctx.lineTo(x+radius,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-radius);ctx.lineTo(x,y+radius);ctx.quadraticCurveTo(x,y,x+radius,y);ctx.closePath();}
+    if(fill){ctx.fillStyle=fill;ctx.fill();}if(outline){ctx.strokeStyle=outline;ctx.lineWidth=width;ctx.stroke();}
+  }
+  function pressDetail(ctx){const m=ctx.getTransform?.();return !m||Math.hypot(m.a,m.b)>.4;}
+  function pressBolt(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();ctx.strokeStyle=P.ink;ctx.lineWidth=1;ctx.stroke();}
+  function drawPressBase(ctx,x,y,detail){
+    // Two housings share the real conveyor. Nothing paints over its moving centre.
+    for(const side of [-1,1]){
+      ctx.save();ctx.translate(x,y);ctx.scale(1,side);
+      roundedPart(ctx,-157,72,314,54,10,P.paper,P.ink,2);
+      roundedPart(ctx,-148,79,296,39,7,P.teal,detail?P.ink:null,1.2);
+      roundedPart(ctx,-57,104,114,22,6,P.paper,P.ink,1.5);
+      roundedPart(ctx,-32,104,64,20,6,P.teal,P.ink,1.5);
+      if(detail){pressBolt(ctx,-134,109,3.4);pressBolt(ctx,134,109,3.4);pressBolt(ctx,0,115,3.7);}
+      ctx.restore();
+    }
+    stroke(ctx,[[x-160,y-68],[x+160,y-68]],P.ink,5);stroke(ctx,[[x-160,y+68],[x+160,y+68]],P.ink,5);
+  }
+  function drawPressActuators(ctx,x,y,press,detail){
+    // The deep blocks slide into the fixed housings as they retract. Clip only
+    // their outer ends, so neighbouring production lines keep distinct footprints.
+    ctx.save();ctx.beginPath();ctx.rect(x-158,y-128,316,256);ctx.clip();
+    for(const side of [-1,1]){
+      const face=side<0?press.upperFace:press.lowerFace,rear=52,anchor=112-side*face;
+      ctx.save();ctx.translate(x,y+face);ctx.scale(1,side);
+      roundedPart(ctx,-18,rear-4,36,Math.max(0,anchor-rear+8),5,P.teal,P.ink,1.5);
+      if(detail&&anchor>rear)stroke(ctx,[[-6,rear],[-6,anchor]],P.paper,2);
+      roundedPart(ctx,-76,5,152,rear-5,10,P.ink,detail?P.navy:null,2);
+      // The coral pad's inward fill boundary is the collision support face, v=0.
+      // Its rounded corners lie outside every child's possible contact point.
+      roundedPart(ctx,-68,0,136,8,3,P.coral,null);
+      if(detail){
+        stroke(ctx,[[-65,8],[65,8]],P.ink,1.3);
+        ctx.save();ctx.globalAlpha=.22;stroke(ctx,[[-64,17],[-64,36],[-51,40]],P.paper,1.3);ctx.restore();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
   function drawBase(ctx,time,bounds){
-    const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);const far=rows.at(-1)+400,view=localViewport(bounds);
+    const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);const far=rows.at(-1)+400,view=localViewport(bounds),detail=pressDetail(ctx);
     ctx.fillStyle=P.factory.floor;ctx.fillRect(-1750,-650,2650,far+650);
     stroke(ctx,[[-1750,far],[-1750,500]],P.factory.outline,8);stroke(ctx,[[-1750,280],[-1750,-650],[900,-650]],P.factory.outline,8);
     let wallY=-650;for(const y of rows){stroke(ctx,[[900,wallY],[900,y-80]],P.factory.outline,8);wallY=y+80;}stroke(ctx,[[900,wallY],[900,far]],P.factory.outline,8);
@@ -228,9 +270,10 @@
       if(!visibleLane(view,row))continue;
       const y=rows[row];belt(ctx,y,-1390,-555,t);belt(ctx,y,-345,900,t);
       for(let station=0;station<3;station++){
-        const x=stations[station];ctx.fillStyle=P.metal;ctx.fillRect(x-160,y-124,320,248);
-        if(station===0){stroke(ctx,[[x-158,y-80],[x-158,y-124],[x+158,y-124],[x+158,y-80]],ink,12);stroke(ctx,[[x-158,y+80],[x-158,y+124],[x+158,y+124],[x+158,y+80]],ink,12);}
-        else if(station===1){ctx.beginPath();ctx.arc(x,y,96,0,Math.PI*2);ctx.fillStyle=paper;ctx.fill();ctx.strokeStyle=ink;ctx.lineWidth=9;ctx.stroke();}
+        const x=stations[station];
+        if(station===0){drawPressBase(ctx,x,y,detail);continue;}
+        ctx.fillStyle=P.metal;ctx.fillRect(x-160,y-124,320,248);
+        if(station===1){ctx.beginPath();ctx.arc(x,y,96,0,Math.PI*2);ctx.fillStyle=paper;ctx.fill();ctx.strokeStyle=ink;ctx.lineWidth=9;ctx.stroke();}
         else{ctx.fillStyle=paper;ctx.fillRect(x-120,y-78,240,156);stroke(ctx,[[x-143,y-80],[x-143,y-111],[x+143,y-111],[x+143,y-80]],ink,9);stroke(ctx,[[x-143,y+80],[x-143,y+111],[x+143,y+111],[x+143,y+80]],ink,9);}
       }
       identityMark(ctx,835,y-104,row+3);
@@ -249,9 +292,7 @@
     if(t>=58&&t<104){setup(ctx);
       for(let row=0;row<rows.length;row++){
         if(!visibleLane(view,row))continue;
-        const y=rows[row],press=pressForRow(t,row),x=stations[0];ctx.fillStyle=ink;
-        ctx.fillRect(x-118,y+press.upperFace-32,236,32);ctx.fillRect(x-118,y+press.lowerFace,236,32);
-        ctx.fillRect(x-42,y-124,84,Math.max(0,124+press.upperFace-32));ctx.fillRect(x-42,y+press.lowerFace+32,84,Math.max(0,124-press.lowerFace-32));
+        const y=rows[row],press=pressForRow(t,row),x=stations[0];drawPressActuators(ctx,x,y,press,pressDetail(ctx));
         if(press.impact>0){
           ctx.save();ctx.globalAlpha=press.impact;press.contactPoints.forEach((point,side)=>{
             const p=local({x:point[0],y:point[1]}),direction=side?1:-1;
