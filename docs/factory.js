@@ -87,17 +87,18 @@
   }
   const heroPressBody=lanePose(heroActor,480,130),heroProgram=Rules.pressProgram(heroActor,heroPressBody,{normal,contactTime:74,material:Rules.materials.hero});
   const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,contactTime:7,material:Rules.materials.ordinary})));
-  function materialState(program,time,turns,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged};}
-  function heroMaterial(t){return materialState(heroProgram,t,3*between(t,80,87),t>=94.5);}
+  function materialState(program,time,spin,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,spin.turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged,spin};}
+  const heroSpin=t=>Rules.spinState(t,{start:80,end:87});
+  function heroMaterial(t){return materialState(heroProgram,t,heroSpin(t),t>=94.5);}
   function baseHeroBody(t){
     if(t<64){const pose=d=>pathPose(heroActor,entryPath,d),planned=entryPath.length*between(t,58,64),safe=Portals.clampTravel(heroActor,pose,0,planned,entryPortal,t);return pose(safe);}
     if(t<70)return lanePose(heroActor,900,130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
     if(t<77)return lanePose(heroActor,480,130);
     if(t<80)return lanePose(heroActor,lerp(480,-120,between(t,77,80)),130);
-    if(t<87)return lanePose(heroActor,-120,130,Math.PI*6*between(t,80,87));
-    if(t<90)return lanePose(heroActor,lerp(-120,-750,between(t,87,90)),130);
-    if(t<98.6)return lanePose(heroActor,-750,130);
+    if(t<87)return lanePose(heroActor,-120,130,heroSpin(t).angle);
+    if(t<90)return lanePose(heroActor,lerp(-120,-750,between(t,87,90)),130,heroSpin(t).angle);
+    if(t<98.6)return lanePose(heroActor,-750,130,heroSpin(t).angle);
     if(t<102.8)return escortBody(heroActor,t);
     if(t<104)return pathPose(heroActor,throwPath,throwPath.length*between(t,102.8,104));
     if(t<119){
@@ -106,6 +107,7 @@
       return hardPose(heroActor,discard.x+struggle.x-5*retreat,discard.y+struggle.y+3*retreat,head+struggle.roll);
     }
     if(t<122)return probingBody(t);
+    if(t>=132){const p=chasePoint(132),body=hardPose(heroActor,p.x,p.y,p.heading);body.speed=0;body.effort=0;body.bounce=0;body.strain=0;body.axialStretch=0;return body;}
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
     body.speed=p.speed;body.axialStretch=.12*clamp(p.speed/1150)+.12*p.effort-.10*p.preload;body.strain=clamp(p.speed/1100+.08*p.effort);body.bend=.06*p.effort;body.bounce=.012*p.effort;body.effort=p.effort;
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
@@ -143,16 +145,16 @@
     return{x:releaseBody.x+Math.cos(releaseHeading)*along-Math.sin(releaseHeading)*side,y:releaseBody.y+Math.sin(releaseHeading)*along+Math.cos(releaseHeading)*side,angle:releaseBody.angle+turn*trail,z:4+22*Math.sin(u*Math.PI)-4*between(u,.8,1),opacity:1,scale:1.8,geometryState:{load:0,peel:1,release:1,stress:0,fracture:1,shiver:0,trail}};
   }
   function backgroundState(t,row,slot){
-    const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot];let x=900,station=-1,turns=0;
+    const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot],spin=Rules.spinState(age,{start:14,end:22}),turns=spin.turns;let x=900,station=-1;
     if(age<5)x=lerp(900,480,between(age,0,5));
     else if(age<10){x=480;station=0;}
     else if(age<14)x=lerp(480,-120,between(age,10,14));
-    else if(age<22){x=-120;station=1;turns=3*between(age,14,22);}
-    else if(age<26){x=lerp(-120,-750,between(age,22,26));turns=3;}
-    else if(age<32){x=-750;station=2;turns=3;}
-    else{x=lerp(-750,-1470,between(age,32,45));turns=3;}
-    const state=materialState(programs[row][slot],age,turns,age>=30),body=lanePose(actor,x,rows[row],station===1?turns*Math.PI*2:0);
-    const corrected=age>=22;
+    else if(age<22){x=-120;station=1;}
+    else if(age<26)x=lerp(-120,-750,between(age,22,26));
+    else if(age<32){x=-750;station=2;}
+    else x=lerp(-750,-1470,between(age,32,45));
+    const state=materialState(programs[row][slot],age,spin,age>=30),body=lanePose(actor,x,rows[row],spin.angle);
+    const corrected=age>=22&&state.result==='pass';
     return makeEntry('worker-'+row+'-'+slot+'-'+Math.floor(raw/45),actor,body,corrected?correctedBlack:colors[row%colors.length],state,{row,slot,age,station,turns,cavity:!corrected});
   }
   let backgroundTime=NaN,backgroundCache=[];
@@ -173,7 +175,7 @@
   }
   const visibleLane=(view,row)=>!view||view.right>=-1560&&view.left<=1000&&view.bottom>=rows[row]-160&&view.top<=rows[row]+160;
   // Successful ordinary shells become wholly opaque; failure alone receives a visible label.
-  function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
+  function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,phase:state.phase,impact:state.impact,spin:state.spin,turns:state.spin.turns,angularSpeed:state.spin.angularSpeed,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
   function lightState(t,hero){
     if(t<108.3)return undefined;
     if(t<116){
@@ -240,7 +242,7 @@
   function pressForRow(t,row){
     if(row===2)return Rules.pressState(heroProgram,t);
     for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return item.machine;}
-    return{plannedGap:92,upperFace:-92,lowerFace:92,force:0,contact:false,headGap:92};
+    return{phase:'idle',impact:0,plannedGap:64,upperFace:-64,lowerFace:64,force:0,contact:false,headGap:64};
   }
   function drawOverlay(ctx,time,bounds){
     const t=Number.isFinite(time)?time:0,view=localViewport(bounds);
@@ -250,10 +252,23 @@
         const y=rows[row],press=pressForRow(t,row),x=stations[0];ctx.fillStyle=ink;
         ctx.fillRect(x-118,y+press.upperFace-32,236,32);ctx.fillRect(x-118,y+press.lowerFace,236,32);
         ctx.fillRect(x-42,y-124,84,Math.max(0,124+press.upperFace-32));ctx.fillRect(x-42,y+press.lowerFace+32,84,Math.max(0,124-press.lowerFace-32));
-        let rotation=t*.14,scan=(t*.2+row)%1;
-        if(row===2){rotation=Math.PI*6*between(t,80,87);scan=between(t,90,94.5);}
-        else for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===1)rotation=item.turns*Math.PI*2;if(item.station===2)scan=between(item.age,26,30);}
+        if(press.impact>0){
+          ctx.save();ctx.globalAlpha=press.impact;press.contactPoints.forEach((point,side)=>{
+            const p=local({x:point[0],y:point[1]}),direction=side?1:-1;
+            stroke(ctx,[[p.x-12,p.y+direction*3],[p.x-19,p.y+direction*8]],P.gold,2);
+            stroke(ctx,[[p.x+10,p.y+direction*2],[p.x+18,p.y+direction*6]],P.gold,2.5);
+            stroke(ctx,[[p.x+1,p.y+direction*5],[p.x-1,p.y+direction*13]],P.gold,1.5);
+          });ctx.restore();
+        }
+        let spin=null,rotation=t*.14,scan=(t*.2+row)%1;
+        if(row===2){spin=heroSpin(t);rotation=spin.angle;scan=between(t,90,94.5);}
+        else for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===1){spin=item.spin;rotation=spin.angle;}if(item.station===2)scan=between(item.age,26,30);}
         ctx.save();ctx.translate(stations[1],y);ctx.rotate(rotation);stroke(ctx,[[0,-94],[0,-72]],ink,8);stroke(ctx,[[94,0],[72,0]],ink,8);ctx.restore();
+        if(spin&&spin.angularSpeed>0){
+          const speed=clamp(spin.angularSpeed/12);ctx.save();ctx.translate(stations[1],y);ctx.globalAlpha=.16+.38*speed;ctx.strokeStyle=ink;
+          for(let i=0;i<3;i++){const a=rotation*.37+i*2.03;ctx.lineWidth=1.2+i*.45;ctx.beginPath();ctx.arc(0,0,77+i*6,a,a+(.25+.85*speed)*(i%2?-.8:1),Boolean(i%2));ctx.stroke();}
+          ctx.restore();
+        }
         stroke(ctx,[[stations[2]-90+180*scan,y-73],[stations[2]-90+180*scan,y+73]],P.quiet,3);
       }
       ctx.restore();drawPortal(ctx,entryPortal,t,true);drawPortal(ctx,exitPortal,t,true);

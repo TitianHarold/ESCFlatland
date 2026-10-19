@@ -175,8 +175,8 @@
       "ambientSeconds": 81.99999999999999,
       "width": 640,
       "height": 380,
-      "bytes": 220065,
-      "sha256": "044f189142e06e8f585cde288859e2fdcce11489ba86a5ddf44df3a65b6ebdfd",
+      "bytes": 291492,
+      "sha256": "8462c35fd00605bf8d5d81276b3ac6f50fb20cf74c8560630b6d9f59a05832d5",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -189,13 +189,47 @@
         "growth": 0.28936076817558126,
         "screenHeading": -0.6283185307179586,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
       "id": "original-dimension",
       "preset": "original",
       "moment": "dimension",
-      "title": "维度",
+      "title": "白场第一人称看手",
       "requestedPlaybackSeconds": 87,
       "position": "sample",
       "paletteConfig": {
@@ -210,20 +244,51 @@
       "ambientSeconds": 87,
       "width": 640,
       "height": 380,
-      "bytes": 221924,
-      "sha256": "19b5077f0a536404008e2d6cf0ce4860d283b6b58a0b796a67cef2304b2098f8",
+      "bytes": 52661,
+      "sha256": "454d4828e8137e61961fcf78312c0f09e4405cc207009c36c9b026e003194eeb",
       "camera": {
-        "space": "journey",
+        "space": "pov",
         "shotId": "dimension",
-        "follow": "hero",
         "x": 0,
         "y": 0,
-        "zoom": 1.1921875,
-        "tilt": 1.0089874267578125,
-        "yaw": 0.621046195148437,
-        "growth": 0.9910836762688615,
-        "screenHeading": -0.6283185307179586,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
@@ -369,8 +434,8 @@
       "ambientSeconds": 81.99999999999999,
       "width": 640,
       "height": 380,
-      "bytes": 207127,
-      "sha256": "b36f23b46044af93da189071f1179c8694e130f0038ef7fbf056d89d1e9766ea",
+      "bytes": 268957,
+      "sha256": "85ee987370405101e0c3e2c57d58b1a894857aa3796f701482f0d8e76de9a080",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -383,13 +448,47 @@
         "growth": 0.28936076817558126,
         "screenHeading": -0.6283185307179586,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
       "id": "F2-dimension",
       "preset": "F2",
       "moment": "dimension",
-      "title": "维度",
+      "title": "白场第一人称看手",
       "requestedPlaybackSeconds": 87,
       "position": "sample",
       "paletteConfig": {
@@ -404,20 +503,51 @@
       "ambientSeconds": 87,
       "width": 640,
       "height": 380,
-      "bytes": 214154,
-      "sha256": "c9c2860510d2da59430d80ce5be0b00f45fa66880cac78ee31e2f17e90d14654",
+      "bytes": 52661,
+      "sha256": "454d4828e8137e61961fcf78312c0f09e4405cc207009c36c9b026e003194eeb",
       "camera": {
-        "space": "journey",
+        "space": "pov",
         "shotId": "dimension",
-        "follow": "hero",
         "x": 0,
         "y": 0,
-        "zoom": 1.1921875,
-        "tilt": 1.0089874267578125,
-        "yaw": 0.621046195148437,
-        "growth": 0.9910836762688615,
-        "screenHeading": -0.6283185307179586,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
@@ -563,8 +693,8 @@
       "ambientSeconds": 81.99999999999999,
       "width": 640,
       "height": 380,
-      "bytes": 203792,
-      "sha256": "bbb73eac723293ffb78ada5cc371350596c73c5e46e4e737e3dfbc198bd576b9",
+      "bytes": 265501,
+      "sha256": "9cd513b54025b12af22ca68584432482d250e4e49ff249e3969a31aa3014f92c",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -577,13 +707,47 @@
         "growth": 0.28936076817558126,
         "screenHeading": -0.6283185307179586,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
       "id": "F3-dimension",
       "preset": "F3",
       "moment": "dimension",
-      "title": "维度",
+      "title": "白场第一人称看手",
       "requestedPlaybackSeconds": 87,
       "position": "sample",
       "paletteConfig": {
@@ -598,20 +762,51 @@
       "ambientSeconds": 87,
       "width": 640,
       "height": 380,
-      "bytes": 212241,
-      "sha256": "debb5ab76850a1a7c9b8ea44b1397fbf19a2e223731515ad12fceffc0e1ce58d",
+      "bytes": 52661,
+      "sha256": "454d4828e8137e61961fcf78312c0f09e4405cc207009c36c9b026e003194eeb",
       "camera": {
-        "space": "journey",
+        "space": "pov",
         "shotId": "dimension",
-        "follow": "hero",
         "x": 0,
         "y": 0,
-        "zoom": 1.1921875,
-        "tilt": 1.0089874267578125,
-        "yaw": 0.621046195148437,
-        "growth": 0.9910836762688615,
-        "screenHeading": -0.6283185307179586,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
@@ -757,8 +952,8 @@
       "ambientSeconds": 81.99999999999999,
       "width": 640,
       "height": 380,
-      "bytes": 195189,
-      "sha256": "81b14a6af23696d9a9bce1056bd72356def52f5a881233f384a1db06bc02eba1",
+      "bytes": 252578,
+      "sha256": "a9137a8eec70cba530c3296ee296fb188ca2896f9b9300b505895ae08237d0aa",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -771,13 +966,47 @@
         "growth": 0.28936076817558126,
         "screenHeading": -0.6283185307179586,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     },
     {
       "id": "F4-dimension",
       "preset": "F4",
       "moment": "dimension",
-      "title": "维度",
+      "title": "白场第一人称看手",
       "requestedPlaybackSeconds": 87,
       "position": "sample",
       "paletteConfig": {
@@ -792,20 +1021,51 @@
       "ambientSeconds": 87,
       "width": 640,
       "height": 380,
-      "bytes": 199874,
-      "sha256": "08176ab9ca861ac0ce535058967348c1e8b127fa6defafbb7b9cb51b5d7936e8",
+      "bytes": 52661,
+      "sha256": "454d4828e8137e61961fcf78312c0f09e4405cc207009c36c9b026e003194eeb",
       "camera": {
-        "space": "journey",
+        "space": "pov",
         "shotId": "dimension",
-        "follow": "hero",
         "x": 0,
         "y": 0,
-        "zoom": 1.1921875,
-        "tilt": 1.0089874267578125,
-        "yaw": 0.621046195148437,
-        "growth": 0.9910836762688615,
-        "screenHeading": -0.6283185307179586,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
         "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
       }
     }
   ],
@@ -896,5 +1156,103 @@
   "shotsSHA256CurrentDescriptions": "d846d4f5df348c063718eb1acc5b5dc5baed5d133a9e73f4c831c986d62fc7cb",
   "productionCompositionDifference": "Current code-frame family door is on the upper edge. Model-production prompts 001–002 use a proposed right-side door opening onto the right street. These PNGs preserve actual code geometry and were not rerendered as the proposed composition.",
   "isNewHandDrawnArtwork": false,
-  "isBrowserScreenshot": false
+  "isBrowserScreenshot": false,
+  "partialRefresh": {
+    "refreshedAt": "2026-10-19T15:04:26.587Z",
+    "frames": [
+      "original-chase",
+      "original-dimension",
+      "F2-chase",
+      "F2-dimension",
+      "F3-chase",
+      "F3-dimension",
+      "F4-chase",
+      "F4-dimension"
+    ],
+    "sourceSnapshot": {
+      "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+      "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+      "sourceModuleSHA256": {
+        "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+        "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+        "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+        "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+        "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+        "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+        "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+        "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+        "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+        "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+        "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+        "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+        "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+        "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+        "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+        "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+        "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+        "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+      },
+      "loadedHandAssets": [
+        {
+          "src": "assets/pov-hands-open.png",
+          "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+        },
+        {
+          "src": "assets/pov-hands-flexed.png",
+          "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+        }
+      ]
+    },
+    "note": "Only listed chase/POV palette previews were re-rendered. Each preset was reloaded into a fresh VM; hand raster assets retain their approved original pigments."
+  },
+  "refreshHistory": [
+    {
+      "refreshedAt": "2026-10-19T15:00:51.291Z",
+      "frames": [
+        "original-chase",
+        "original-dimension",
+        "F2-chase",
+        "F2-dimension",
+        "F3-chase",
+        "F3-dimension",
+        "F4-chase",
+        "F4-dimension"
+      ],
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/story-notes.js\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "8b085358835321cee0afa63da8f6c6154367fbe12309606991d458f2c1ae7047",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "f246ecc04cb98c690146b9ad2558f5d47de21d118debecbe2733e1100168f2b7",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
+      },
+      "note": "Only listed chase/POV palette previews were re-rendered. Each preset was reloaded into a fresh VM; hand raster assets retain their approved original pigments."
+    }
+  ]
 }

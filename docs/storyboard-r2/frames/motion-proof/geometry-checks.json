@@ -1,0 +1,21 @@
+{
+  "pass": true,
+  "changedModules": [
+    "dimension.js"
+  ],
+  "initialFlatKinds": 5,
+  "initialFlatPrimitivesExactlyUnchanged": true,
+  "streetPrimitives": 2477,
+  "streetGeometryExactlyUnchanged": true,
+  "detachedSurfaceThicknessRange": [
+    0.8084613144430013,
+    1.1766725302905956
+  ],
+  "formsAt138": 0,
+  "identicalBeforeAfterPNGStoryTimes": [
+    126.5,
+    137.95
+  ],
+  "beforeAndAfterPNGCount": 12,
+  "evidenceBoundary": "Offline Canvas rendering and geometry assertions, not browser or performance acceptance"
+}

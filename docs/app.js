@@ -9,6 +9,8 @@
   const district=window.FlatlandDistrict,factory=window.FlatlandFactory,dimension=window.FlatlandDimension;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),timing=window.FlatlandTiming,duration=timing.duration;
   const palette=window.FlatlandPalette;
+  // Paths are supplied with the final transparent hand assets; white remains until they load.
+  dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open.png',flexedHands:'assets/pov-hands-flexed.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const mode=new URLSearchParams(location.search).get('mode')==='auto'?'auto':'interactive';
   const player=new window.FlatlandStoryPlayer({duration,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
@@ -16,7 +18,7 @@
   const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
-  function view(){const v=cameraTrack.pose(sceneTime());if(v.follow==='hero'){const hero=factory.frame(sceneTime()).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function view(){if(sceneTime()>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(sceneTime());if(v.follow==='hero'){const hero=factory.frame(sceneTime()).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
   function placeWorld(ctx,v){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
@@ -97,6 +99,7 @@
     top.fillStyle=light.phase==='notice'||light.phase==='enclosed'||light.phase==='slit'?palette.gold:glow?palette.cream:palette.gold;top.beginPath();top.arc(light.x,light.y,r,0,Math.PI*2);top.fill();top.restore();
   }
   function draw(time,v){
+    if(time>=132){screen(low);low.fillStyle='#ffffff';low.fillRect(0,0,state.w,state.h);screen(top);dimension.drawEnding(top,time,{w:state.w,h:state.h,dpr:state.dpr});return;}
     world(low,v);window.FlatlandPossibility.draw(low,state.ambient);
     if(time>=119){
       screen(top);const data=journeyData(time),viewport={w:state.w,h:state.h,dpr:state.dpr};
@@ -154,7 +157,7 @@
       player.tick(dt);
       if(!reduced.matches)state.ambient+=dt;
     }
-    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=1-state.layer*.92;
+    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=119?1:1-state.layer*.92;
     const v=view();draw(sceneTime(),v);interfaceState(v);requestAnimationFrame(frame);
   }
   function resize(){const box=stage.getBoundingClientRect();state.w=box.width;state.h=box.height;state.dpr=Math.min(window.devicePixelRatio||1,2);[lower,upper].forEach(c=>{c.width=Math.round(state.w*state.dpr);c.height=Math.round(state.h*state.dpr);});}

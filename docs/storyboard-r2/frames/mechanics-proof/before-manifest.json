@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-10-19T14:34:52.768Z",
+  "label": "before",
+  "sourceModuleSHA256": {
+    "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+    "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+    "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+    "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+    "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+    "camera.js": "8b085358835321cee0afa63da8f6c6154367fbe12309606991d458f2c1ae7047",
+    "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+    "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+    "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+    "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+    "correction-rules.js": "7f10fd421fe02f6fc8b73308eed2d65a3c54507bd293615c3f132a2be5f5c164",
+    "factory.js": "1f76f7019ae62b369c94a44d08e272b1e54a7418a12921d8c1a4b66c2a48e0a2",
+    "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+    "dimension.js": "2733bbf81bf22729f8d222cf152217e225e35cf2809c0a4a3bb5a836f1123a7d",
+    "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+    "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+    "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+    "app.js": "65986bb98556ec271b1283411169b6e242053b226d3235708215d4d17dabbdb4"
+  },
+  "renderer": "Existing app.js draw functions in @napi-rs/canvas; offline, not browser screenshots",
+  "frames": [
+    {
+      "storyTime": 73.7,
+      "playbackSeconds": 42.10483870967742,
+      "ambientSeconds": 42.10483870967742,
+      "file": "before-scene-73-7.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 216913,
+      "sha256": "fe9782ac3b66224757e78fc9e9469f5e7209599d52ed0716cad26c76f7f4b726",
+      "camera": {
+        "space": "flat",
+        "shotId": "press",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    },
+    {
+      "storyTime": 74.06,
+      "playbackSeconds": 42.366129032258065,
+      "ambientSeconds": 42.366129032258065,
+      "file": "before-scene-74-06.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 215743,
+      "sha256": "01f092a2f97d1eb73dfc2239489a1ac1650fefc973f88d489ccaeb3860bcea8a",
+      "camera": {
+        "space": "flat",
+        "shotId": "press",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    },
+    {
+      "storyTime": 74.8,
+      "playbackSeconds": 42.90322580645161,
+      "ambientSeconds": 42.90322580645161,
+      "file": "before-scene-74-8.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 218669,
+      "sha256": "98a84e65df1e202d5be79cb6ca36bccd72456f8d2b07a4bb6843527029c28d5a",
+      "camera": {
+        "space": "flat",
+        "shotId": "press",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    },
+    {
+      "storyTime": 76.7,
+      "playbackSeconds": 44.28225806451613,
+      "ambientSeconds": 44.28225806451613,
+      "file": "before-scene-76-7.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 209544,
+      "sha256": "213616b855cacafb7fac82c4f6f977570a169d8a87ed747b151d21e56986872d",
+      "camera": {
+        "space": "flat",
+        "shotId": "press",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    },
+    {
+      "storyTime": 80,
+      "playbackSeconds": 45.85,
+      "ambientSeconds": 45.85,
+      "file": "before-scene-80.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 213106,
+      "sha256": "c90ee60e2108388d866e77e5514a619d819346f2277bd9c78eab42f39c2f0ef0",
+      "camera": {
+        "space": "flat",
+        "shotId": "turn",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    },
+    {
+      "storyTime": 80.35,
+      "playbackSeconds": 46.0075,
+      "ambientSeconds": 46.0075,
+      "file": "before-scene-80-35.png",
+      "width": 1280,
+      "height": 760,
+      "bytes": 211309,
+      "sha256": "49c6b1547245714c0a413bbf6e19d1774e6fef0707e7f31795a80f72846be708",
+      "camera": {
+        "space": "flat",
+        "shotId": "turn",
+        "x": -4161.151703780471,
+        "y": -2726.992271856663,
+        "zoom": 0.6,
+        "tilt": 0,
+        "yaw": 0
+      }
+    }
+  ]
+}

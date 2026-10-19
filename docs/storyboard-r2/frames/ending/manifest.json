@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-10-19T15:04:21.834Z",
+  "evidenceBoundary": "Offline Node Canvas render of current repository geometry and actual app.js draw functions. This is not a browser screenshot and is not newly generated hand-drawn artwork. Minimal DOM and Canvas rasterization may differ from browser output.",
+  "renderIncludesGeneratedTransparentHandAssets": true,
+  "isBrowserScreenshot": false,
+  "playbackDuration": 90,
+  "frames": [
+    {
+      "id": "015A-POV-start",
+      "shot": "015A",
+      "position": "start",
+      "width": 1280,
+      "height": 760,
+      "description": "132秒，冲刺已停止，纯白画面，双手尚未抬起。",
+      "file": "POV-start.png",
+      "src": "frames/ending/POV-start.png",
+      "sceneTime": 132,
+      "playbackSeconds": 86,
+      "ambientSeconds": 86,
+      "bytes": 5626,
+      "sha256": "54708fc8764fa449ad9e23c8d834f06424496edd9e582a9a54abea415e4b53ef",
+      "camera": {
+        "space": "pov",
+        "shotId": "dimension",
+        "x": 0,
+        "y": 0,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
+        "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "015A-POV-end",
+      "shot": "015A",
+      "position": "end",
+      "width": 1280,
+      "height": 760,
+      "description": "137.5秒，第一人称双手已抬起并轻屈指，左右独立姿态，白场无街景。",
+      "file": "POV-end.png",
+      "src": "frames/ending/POV-end.png",
+      "sceneTime": 137.5,
+      "playbackSeconds": 89.66666666666667,
+      "ambientSeconds": 89.66666666666667,
+      "bytes": 266511,
+      "sha256": "b0a6f48b02d0cf8e0dc567e18c64a9c9a075021d930d80b86a371d7f2191f946",
+      "camera": {
+        "space": "pov",
+        "shotId": "dimension",
+        "x": 0,
+        "y": 0,
+        "zoom": 1,
+        "tilt": 0,
+        "yaw": 0,
+        "screenY": 0.5
+      },
+      "sourceSnapshot": {
+        "sourceCommit": "dee586a4f17394cfc492b1d4c3333ded3bed1a2b",
+        "sourceWorkingTree": "M docs/app.js\n M docs/camera.js\n M docs/correction-rules.js\n M docs/dimension.js\n M docs/factory.js\n M docs/index.html\n M docs/story-notes.js\n M docs/workbench.html\n?? check-mechanics.cjs\n?? docs/assets/pov-hands-flexed.png\n?? docs/assets/pov-hands-open.png",
+        "sourceModuleSHA256": {
+          "palette.js": "afb3d6cd81cb9f09d8d3a8e794944c7aa2119f96d96474c1f549b7f85b70153d",
+          "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
+          "motion.js": "afcf4c7895b7c5e65ee7b65250f40f892d5b9b2a3b52a635985359791cbeeeca",
+          "possibility.js": "b061996299c421f34c2b3659d90680d3483fb963242cea1c2218439074966f88",
+          "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
+          "camera.js": "61e28bd5676aa5a2aa6afbe3a5ff44a5e0408646215d1bcf0642b0070785b1e0",
+          "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
+          "city-map.js": "031db056641fe9a7f7db0eb170e36e718d77324c51c4b792c1a4997e48f1d8aa",
+          "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
+          "district.js": "0305f47ef52f1370e66cd4bb5d8bc490dc9d03c95ea98ad5c577f1ab74eaae61",
+          "correction-rules.js": "8ece5b6fbe20d201bc034da802a309f128b0e0126c56ec4430f0a35c4afecc57",
+          "factory.js": "463ea6755796978ba72c5414ce8dd05f5831ca0a32e5de3c5ccec5be9bdaaebc",
+          "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
+          "dimension.js": "c285370beb52110940602c7a87a47154118e835ecb8307322c051d4df234412d",
+          "inner-world.js": "d72b0779c3ed27f0eba5a189837866d2dff24a239117445cb8943afe768f673a",
+          "story-timing.js": "cd654732acae9ffbe841ec4a7d08789a05a21509d4b34e09fd180164f5784f65",
+          "story-player.js": "240df9172699ef9f790c02d7a30b37e7d31db6897df3e6823de7bf8df0f0da94",
+          "app.js": "a5767089922db24af737837fb2b8de6c506b8a20651d8b39ff5b0d9eab7b73a1"
+        },
+        "loadedHandAssets": [
+          {
+            "src": "assets/pov-hands-open.png",
+            "sha256": "7f5af1f51b972a3bf23b874f2c63360a42471f1ee23ecb48d0dfb1ed33c3dced"
+          },
+          {
+            "src": "assets/pov-hands-flexed.png",
+            "sha256": "bb901909b7220201e05f3ead75e3eb86f4d019fe4de6edec46ea5fb1145697e3"
+          }
+        ]
+      }
+    }
+  ]
+}

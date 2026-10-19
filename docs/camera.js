@@ -25,7 +25,7 @@
     {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(105.7,discard.x,discard.y,1.25),frame(108.3,discard.x,discard.y,1.4),frame(110,discard.x,discard.y,1.5),frame(112,discard.x,discard.y,2.8)]},
     {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(118,discard.x,discard.y,2.8),frame(119,discard.x,discard.y,1.2)]},
     {id:'chase',label:'014 · 追光 · 图形长出体积',start:119,end:132,space:'journey',follow:'hero',frames:[frame(119,discard.x,discard.y,1.2,0,1.0664437894592371),frame(132,0,0,1.2,.955,-.011631098618334113)]},
-    {id:'dimension',label:'015 · 抵达三维空间',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]}
+    {id:'dimension',label:'015 · 白场 · 看见双手',start:132,end:138,space:'pov',frames:[frame(132,0,0,1),frame(138,0,0,1)]}
   ];
   function shotAt(time){return shots.find(shot=>time<shot.end)||shots[shots.length-1];}
   function pose(time){
