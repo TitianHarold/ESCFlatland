@@ -297,6 +297,7 @@
     for(const primitive of primitives) {
       const points=primitive.points.map(p);
       if(points.some(point=>!point))continue;
+      if(primitive.frontOnly&&points.reduce((sum,a,i)=>{const b=points[(i+1)%points.length];return sum+a[0]*b[1]-b[0]*a[1];},0)<=0)continue;
       const xs=points.map(q=>q[0]),ys=points.map(q=>q[1]),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
       if(right<-2||left>w+2||bottom<-2||top>h+2)continue;
       rendered.push({...primitive,points,pixelArea:(right-left)*(bottom-top),depth:points.reduce((sum,q)=>sum+q[2],0)/points.length});
@@ -351,7 +352,7 @@
     const passTime=index<=32?119+13*Math.sqrt(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
     for(const side of [-1,1]){
       const growAt=clamp(passTime-1.35+(side>0?.18:0),125,132.6);
-      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,h:80+(index%5)*25,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
+      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
     }
   }
   for(let i=0;i<=32;i++){const point=pathPoint(i/32),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
@@ -359,33 +360,6 @@
   function distanceAlpha(point,hero){
     const dx=point[0]-hero[0],dy=point[1]-hero[1],along=dx*forward[0]+dy*forward[1];
     return ease(along,-950,-550)*(1-ease(along,1500,2300))*(1-ease(Math.hypot(dx,dy),1800,2600));
-  }
-  function prism(list,item,growth,alpha,hole=false){
-    const count=item.kind===1||item.kind===4?4:6,r=item.r*(item.scale||1),z=item.h*growth;
-    const ring=scale=>Array.from({length:count},(_,i)=>{const a=i*Math.PI*2/count+(count===4?Math.PI/4:0);return[item.x+Math.cos(a)*r*scale,item.y+Math.sin(a)*r*scale];});
-    const outside=ring(1),inside=ring(item.aperture||.48),shade=tint(item.color,Palette.navy,.38);
-    if(!hole)surface(list,outside.map(p=>[...p,z]),item.color,'pigment',alpha);
-    for(let i=0;i<count;i++){
-      const j=(i+1)%count,a=outside[i],b=outside[j];surface(list,[[...a,0],[...b,0],[...b,z],[...a,z]],i%2?shade:item.color,'pigment',alpha);
-      if(hole){const c=inside[i],d=inside[j];surface(list,[[...a,z],[...b,z],[...d,z],[...c,z]],item.color,'pigment',alpha);surface(list,[[...c,0],[...d,0],[...d,z],[...c,z]],shade,'pigment',alpha);}
-    }
-  }
-  function roundedObject(list,item,growth,alpha,hole=false){
-    const count=14,r=item.r*(item.scale||1);
-    if(hole){
-      const z=item.h*.55*growth;
-      for(let i=0;i<count;i++){
-        const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count,point=(angle,size,height)=>[item.x+Math.cos(angle)*r*size,item.y+Math.sin(angle)*r*size,height];
-        surface(list,[point(a,1,z),point(b,1,z),point(b,item.aperture||.5,z),point(a,item.aperture||.5,z)],item.color,'pigment',alpha);
-        surface(list,[point(a,1,0),point(b,1,0),point(b,1,z),point(a,1,z)],tint(item.color,Palette.navy,.24),'pigment',alpha);
-        surface(list,[point(a,item.aperture||.5,z),point(b,item.aperture||.5,z),point(b,item.aperture||.5,0),point(a,item.aperture||.5,0)],tint(item.color,Palette.navy,.5),'pigment',alpha);
-      }return;
-    }
-    const vertex=(lat,lon)=>[item.x+r*Math.sin(lat)*Math.cos(lon),item.y+r*Math.sin(lat)*Math.sin(lon),r*(1+Math.cos(lat))*growth];
-    for(let j=0;j<6;j++)for(let i=0;i<count;i++){
-      const a=j*Math.PI/6,b=(j+1)*Math.PI/6,c=i*Math.PI*2/count,d=(i+1)*Math.PI*2/count;
-      surface(list,[vertex(a,c),vertex(a,d),vertex(b,d),vertex(b,c)],tint(item.color,Palette.navy,.08+.25*j/6),'pigment',alpha);
-    }
   }
   function addJourneyHero(list,state,data){
     const actor=data.entry?.actor||Characters.actors.child,body=state.raw,points=[];
@@ -417,38 +391,54 @@
     return item.index%2===0?mix(.22,2.6,q):mix(2.6,.22,q);
   }
   function apparition(list,item,time,clock,alpha){
-    const scale=shapeScale(item,time),r=item.r*scale,phase=item.index*.91+item.side*.6;
+    const r=item.r*shapeScale(item,time),phase=item.index*.91+item.side*.6;
+    const volume=ease(time,Math.max(128.5,item.growAt),Math.max(133.1,item.growUntil));
+    const thickness=r*.065*volume,bend=r*.32*volume;
     const turn=clock*.21+phase,ax=.92*Math.sin(phase+clock*.19),ay=.78*Math.cos(phase*.6-clock*.17);
     const ca=Math.cos(turn),sa=Math.sin(turn),cx=Math.cos(ax),sx=Math.sin(ax),cy=Math.cos(ay),sy=Math.sin(ay);
-    const vertex=(a,size,z=0)=>{
-      const warp=1+.10*Math.sin(a*3+phase+clock*.2),x=Math.cos(a)*r*size*warp,y=Math.sin(a)*r*size*warp;
-      const xx=x*ca-y*sa,yy=x*sa+y*ca,zz=yy*sx+z*cx;
-      return[item.x+xx*cy+zz*sy,item.y+yy*cx-z*sx,Math.max(3,22+(-xx*sy+zz*cy)*.7)];
-    };
-    const count=item.kind===0||item.kind===3?36:4+item.kind;
+    const count=item.kind===0||item.kind===3?36:4+item.kind,steps=count*(count<10?3:1);
     const pigments=[item.color,Palette.night,Palette.coral,Palette.lavender,Palette.teal,Palette.cream];
+    // Subdivision follows the original warped contour, including every gap and hole.
+    const corner=(i,size)=>{const a=i*Math.PI*2/count,warp=1+.10*Math.sin(a*3+phase+clock*.2);return[Math.cos(a)*r*size*warp,Math.sin(a)*r*size*warp];};
+    const contour=(u,size)=>{const i=Math.floor(u),q=u-i,a=corner(i,size),b=corner(i+1,size);return[mix(a[0],b[0],q),mix(a[1],b[1],q)];};
+    const vertex=([px,py],offset)=>{
+      const a=px/r*1.6+phase*.4,b=py/r*1.2-phase;
+      const z=bend*(Math.sin(a)-Math.sin(phase*.4)+.28*(Math.sin(b)+Math.sin(phase)));
+      const nx=-bend/r*1.6*Math.cos(a),ny=-bend/r*.28*1.2*Math.cos(b),n=Math.hypot(nx,ny,1);
+      // Extrude the very same bent sheet along its normal, then rotate the entire sheet.
+      const x=px+nx/n*offset,y=py+ny/n*offset,zz=z+offset/n;
+      const xx=x*ca-y*sa,yy=x*sa+y*ca,rotatedZ=yy*sx+zz*cx;
+      return[item.x+xx*cy+rotatedZ*sy,item.y+yy*cx-zz*sx,22-xx*sy+rotatedZ*cy];
+    };
+    function panel(points,color,offset,opacity=1){
+      const center=points.reduce((sum,p)=>[sum[0]+p[0]/points.length,sum[1]+p[1]/points.length],[0,0]);
+      const shade=volume*.20*(.5+.5*Math.cos(center[0]/r*1.6+phase*.4));
+      list.push({points:points.map(p=>vertex(p,offset+thickness/2)),color:tint(color,Palette.navy,shade),surface:'pigment',alpha:alpha*opacity,frontOnly:true});
+      list.push({points:points.slice().reverse().map(p=>vertex(p,offset-thickness/2)),color:tint(color,Palette.navy,.26*volume),surface:'pigment',alpha:alpha*opacity,frontOnly:true});
+    }
+    function rim(a,b,color,offset){
+      if(thickness<=.002)return;
+      surface(list,[vertex(a,offset-thickness/2),vertex(b,offset-thickness/2),vertex(b,offset+thickness/2),vertex(a,offset+thickness/2)],tint(color,Palette.navy,.40),'pigment',alpha);
+    }
     const layers=item.kind===3||item.kind===4?4:3;
     for(let layer=0;layer<layers;layer++){
-      const outer=1-layer*.20,inner=outer-(layer%2?.13:.18);
-      for(let i=0;i<count;i++){
-        const a=i*Math.PI*2/count,b=(i+1)*Math.PI*2/count;
-        surface(list,[vertex(a,outer,layer*1.1),vertex(b,outer,layer*1.1),vertex(b,inner,layer*1.1),vertex(a,inner,layer*1.1)],pigments[(item.index+layer)%pigments.length],'pigment',alpha);
+      const outer=1-layer*.20,inner=outer-(layer%2?.13:.18),color=pigments[(item.index+layer)%pigments.length],offset=layer*1.1;
+      for(let i=0;i<steps;i++){
+        const u=i*count/steps,v=(i+1)*count/steps,a=contour(u,outer),b=contour(v,outer),c=contour(v,inner),d=contour(u,inner);
+        panel([a,b,c,d],color,offset);rim(a,b,color,offset);rim(c,d,color,offset);
       }
     }
-    if(item.kind<3){const points=Array.from({length:count},(_,i)=>vertex(i*Math.PI*2/count,.42,4));surface(list,points,item.color,'pigment',alpha*.85);}
+    if(item.kind<3)for(let i=0;i<steps;i++){
+      const a=contour(i*count/steps,.42),b=contour((i+1)*count/steps,.42);
+      panel([[0,0],a,b],item.color,4,.85);rim(a,b,item.color,4);
+    }
   }
   function addJourneyObjects(list,hero,time,clock=time){
     const exit=1-ease(time,134,138);if(exit<=0)return;
-    journeyObjects.forEach((item,index)=>{
-      const alpha=distanceAlpha([item.x,item.y],hero)*exit;if(alpha<.002)return;
-      const growth=ease(time,Math.max(128,item.growAt),Math.max(130.5,item.growUntil))*(1-ease(time,136,138));
-      const change=ease(time,128.5,133);
-      if(change<1)apparition(list,item,time,clock,alpha*(1-change));
-      if(change>0){
-        const shape={...item,scale:shapeScale(item,time),aperture:.48};
-        if(item.kind===0||item.kind===3)roundedObject(list,shape,growth,alpha*change,item.kind===3);else prism(list,shape,growth,alpha*change,item.kind===4);
-      }
-    });
+    for(const item of journeyObjects){
+      const alpha=distanceAlpha([item.x,item.y],hero)*exit;
+      if(alpha>=.002)apparition(list,item,time,clock,alpha);
+    }
   }
   const speedRibbons=Array.from({length:148},(_,i)=>{
     const point=pathPoint((i%74)/73),center=worldToCity([point.x,point.y,0]),heading=point.heading+bridgeAngle,side=i<74?-1:1;
