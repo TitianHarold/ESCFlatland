@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory();
-  else root.FlatlandCamera=factory();
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./motion.js'));
+  else root.FlatlandCamera=factory(root.FlatlandMotion);
+})(typeof globalThis!=='undefined'?globalThis:this,function(Motion){
   'use strict';
   const duration=138, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const frame=(time,x,y,zoom,tilt=0,yaw=0)=>({time,x,y,zoom,tilt,yaw});
@@ -23,7 +23,7 @@
     {id:'failure',label:'010 · 第三关 · 检查失败',start:90,end:98,frames:[factoryMedium(90)]},
     {id:'discard',label:'011 · 左墙出口 · 扔出',start:98,end:104,frames:[frame(98,exitView.x,exitView.y,.55),{...frame(102.8,discard.x,discard.y,.7),cut:true}]},
     {id:'exhausted',label:'012 · 墙外弱动',start:104,end:112,frames:[frame(104,discard.x,discard.y,1),frame(105.7,discard.x,discard.y,1.25),frame(108.3,discard.x,discard.y,1.4),frame(110,discard.x,discard.y,1.5),frame(112,discard.x,discard.y,2.8)]},
-    {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(118,discard.x,discard.y,2.8),frame(119,discard.x+100,discard.y-50,1.2)]},
+    {id:'inner',label:'013 · 光从内心出现',start:112,end:119,frames:[frame(112,discard.x,discard.y,2.8),frame(118,discard.x,discard.y,2.8),frame(119,discard.x,discard.y,1.2)]},
     {id:'chase',label:'014 · 追光 · 图形长出体积',start:119,end:132,space:'journey',follow:'hero',frames:[frame(119,discard.x,discard.y,1.2,0,1.0664437894592371),frame(132,0,0,1.2,.955,-.011631098618334113)]},
     {id:'dimension',label:'015 · 抵达三维空间',start:132,end:138,space:'journey',follow:'hero',frames:[frame(132,0,0,1.2,.955,-.011631098618334113),frame(138,0,0,1.15,1.25,.32)]}
   ];
@@ -41,10 +41,11 @@
       view.x=-4255+(medium.x+4255)*u;view.y=-2300+(medium.y+2300)*u;view.zoom=.22+.38*u;
     }
     if(shot.space==='journey'){
+      if(time<122){delete view.follow;view.x=discard.x;view.y=discard.y;}
       const ease=(a,b)=>{const u=clamp((time-a)/(b-a),0,1);return u*u*(3-2*u);};
-      const u=clamp((time-119)/13,0,1)**2,s=1-u,heading=Math.atan2(-3300*(s*s*.30+2*s*u*.35+u*u*.35),5378.207340306721*(s*s*.25+2*s*u*.35+u*u*.40));
-      const turn=ease(119,130),coast=ease(132,138),streetTurn=ease(134.5,138);
-      view.tilt=1.25*ease(119,138);
+      const u=Motion.chaseProgress(time).q,s=1-u,heading=Math.atan2(-3300*(s*s*.30+2*s*u*.35+u*u*.35),5378.207340306721*(s*s*.25+2*s*u*.35+u*u*.40));
+      const turn=ease(122,130),coast=ease(132,138),streetTurn=ease(134.5,138);
+      view.tilt=1.25*ease(122,138);
       // Compensate for the vertical foreshortening so the travel reads diagonally on screen.
       const groundHeading=Math.atan2(Math.sin(chaseScreenHeading)/Math.cos(view.tilt),Math.cos(chaseScreenHeading));
       const aligned=groundHeading-heading+bridgeYaw;

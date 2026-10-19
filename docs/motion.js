@@ -144,6 +144,15 @@
     const phase = p < .06 ? 'settle' : p < events.father ? 'approach-father' : p < .34 ? 'pause-father' : p < .50 ? 'turn-to-mother' : p < events.mother ? 'approach-mother' : 'pause-mother';
     return {phase, child: guardedChild(p, father, mother, fear), father, mother, reaction: {father: father.fear, mother: mother.fear, child: fear}};
   }
+  // The actor, camera tangent and passing graphics sample one paced journey.
+  function chaseProgress(time){
+    const u=clamp((time-122)/10),w=16*u*u*(1-u)*(1-u),dw=32*u*(1-u)*(1-2*u),beat=16*Math.PI*u;
+    const q=(19*u*u-6*u*u*u)/13+.009*w*Math.sin(beat);
+    const qSpeed=time<122||time>132?0:((38*u-18*u*u)/13+.009*(dw*Math.sin(beat)+w*16*Math.PI*Math.cos(beat)))/10;
+    const effort=time<122?0:Math.pow(Math.max(0,Math.cos(beat)),3)*ease((time-122)/.2)*(1-ease((time-131.6)/.4));
+    const preload=Math.pow(Math.max(0,Math.cos(beat+.72)),10)*ease((time-122)/.15)*(1-ease((time-131.7)/.3));
+    return{q,qSpeed,effort,preload};
+  }
   const contacts = Object.freeze(Object.fromEntries(Object.entries(impacts).map(([kind, impact]) => [kind, Object.freeze({time: impact.time, edgeIndex: impact.edgeIndex, point: Object.freeze([...impact.point])})])));
-  return {pose, geometry, duration, contactTimes: Object.freeze({...events}), contacts};
+  return {pose, geometry, duration, chaseProgress, contactTimes: Object.freeze({...events}), contacts};
 });

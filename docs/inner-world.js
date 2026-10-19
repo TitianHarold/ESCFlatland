@@ -76,7 +76,7 @@
     ctx.bezierCurveTo(15,-57,30,-31,47,-6);ctx.bezierCurveTo(60,16,35,43,7,45);
     ctx.bezierCurveTo(-24,51,-53,35,-49,7);ctx.closePath();
   }
-  function amount(t){return t>=110&&t<119?ease(t,110,110.18)*(1-ease(t,118.88,119)):0;}
+  function amount(t){return t>=110&&t<119?ease(t,110,110.18)*(1-ease(t,118.2,119)):0;}
   function portalProgress(t){return t<110||t>=119?0:ease(t,110,112)*(1-ease(t,118,119));}
   function darkness(t){return(.82-.37*ease(t,113.2,116))*(1-ease(t,119,130));}
   function portalGeometry(t,viewport,portal,externalLight){
@@ -151,7 +151,7 @@
       ctx.scale(1/k,1/k);ctx.rotate(-g.angle);ctx.translate(-g.x,-g.y);
       const texture=material(ctx);ctx.fillStyle=P.navy;ctx.fillRect(0,0,w,h);
       if(texture){ctx.fillStyle=texture;ctx.fillRect(0,0,w,h);}
-      // The whole printed space grows out of the small window; the aperture alone controls visibility.
+      // The printed space returns through the window while its color fades into the outer space.
       const contentScale=(g.start/470)*(1-g.entry)+s*g.entry;
       ctx.translate(g.x*(1-g.entry)+w/2*g.entry,g.y*(1-g.entry)+h/2*g.entry);ctx.scale(contentScale,contentScale);
       const time=(t-110)*.9+(Number.isFinite(clock)?clock*.035:0);
@@ -160,7 +160,7 @@
       drawVeil(ctx,t,viewport,clock);
       ctx.restore();
       if(g.exit<.9){
-        ctx.save();ctx.globalAlpha=1;ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
+        ctx.save();ctx.globalAlpha=1-ease(t,118.2,119);ctx.translate(g.x,g.y);ctx.rotate(g.angle);ctx.scale(k,k);
         ctx.strokeStyle=P.navy;ctx.lineWidth=1.1;
         if(supplied)ctx.stroke(supplied);else{cavity(ctx);ctx.stroke();}ctx.restore();
       }

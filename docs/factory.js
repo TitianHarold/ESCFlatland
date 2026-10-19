@@ -1,8 +1,8 @@
 /* One material rule drives every rigid shell on the correction line. */
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./character-geometry.js'),require('./palette.js'),require('./city-map.js'),require('./portals.js'),require('./correction-rules.js'));
-  else root.FlatlandFactory=factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandCityMap,root.FlatlandPortals,root.FlatlandCorrectionRules);
-})(typeof globalThis!=='undefined'?globalThis:this,function(C,P,CityMap,Portals,Rules){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./character-geometry.js'),require('./palette.js'),require('./city-map.js'),require('./portals.js'),require('./correction-rules.js'),require('./motion.js'));
+  else root.FlatlandFactory=factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandCityMap,root.FlatlandPortals,root.FlatlandCorrectionRules,root.FlatlandMotion);
+})(typeof globalThis!=='undefined'?globalThis:this,function(C,P,CityMap,Portals,Rules,Motion){
   'use strict';
   if(!C||!P||!CityMap||!Portals||!Rules)throw new Error('Load characters, palette, city-map, portals and correction-rules before factory.');
   const origin={x:-4000,y:-2800},angle=.4,cs=Math.cos(angle),sn=Math.sin(angle),normal=[-sn,cs];
@@ -55,11 +55,35 @@
   const thrownFrom=pathPoint(escortPath,escortDistance(102.8)),throwHeading=angle+Math.PI;
   const throwPath=makePath([[[thrownFrom.x,thrownFrom.y],[thrownFrom.x+90*Math.cos(throwHeading),thrownFrom.y+90*Math.sin(throwHeading)],[discard.x-160,discard.y],[discard.x,discard.y]]],false);
   // One diagonal curve: both world coordinates advance throughout the chase.
-  // Squared time accelerates continuously; the reported speed is the exact cubic derivative.
+  // The sprint begins after the nearby invitation; its final velocity still matches the existing coast.
   const chaseCurve=[[discard.x,discard.y],[lerp(discard.x,chaseEnd.x,.25),lerp(discard.y,chaseEnd.y,.30)],[lerp(discard.x,chaseEnd.x,.60),lerp(discard.y,chaseEnd.y,.65)],[chaseEnd.x,chaseEnd.y]];
   function chasePoint(t,lead=0){
-    const u=clamp((t-119)/13),q=Math.min(1,u*u+lead),p=cubic(chaseCurve,q);
-    p.heading=Math.atan2(p.dy,p.dx);p.speed=Math.hypot(p.dx,p.dy)*2*u/13;return p;
+    const progress=Motion.chaseProgress(t),p=cubic(chaseCurve,Math.min(1,progress.q+lead));
+    p.heading=Math.atan2(p.dy,p.dx);p.speed=Math.hypot(p.dx,p.dy)*progress.qSpeed;
+    return Object.assign(p,progress);
+  }
+
+  function actionPulse(t,a,b){const u=clamp((t-a)/(b-a));return{value:t>a&&t<b?Math.sin(Math.PI*u)**2:0,velocity:t>a&&t<b?Math.PI*Math.sin(2*Math.PI*u)/(b-a):0};}
+  function struggleAt(t){
+    const wave=(a,b)=>{const u=clamp((t-a)/(b-a));return t>a&&t<b?Math.sin(4*Math.PI*u)*between(t,a,a+.12)*(1-between(t,b-.12,b)):0;};
+    const x=wave(104.35,105.625),y=wave(105.625,106.9);
+    return{x:-21*x,y:-15*y,force:Math.max(Math.abs(x),Math.abs(y)),roll:-.15*x-.10*y};
+  }
+  const invitationStart=cubic(chaseCurve,.022),invitationLeft=[discard.x-45,discard.y-65],invitationRight=[discard.x+70,discard.y-38];
+  const invitationCurves=[
+    [[invitationStart.x,invitationStart.y],[discard.x+72,discard.y-88],[discard.x-50,discard.y-92],invitationLeft],
+    [invitationLeft,[discard.x-35,discard.y-95],[discard.x+65,discard.y-88],invitationRight],
+    [invitationRight,[discard.x+98,discard.y-22],[discard.x+105,discard.y-68],[invitationStart.x,invitationStart.y]]
+  ];
+  function invitationLight(t){const index=t<119.9?0:t<120.9?1:2,a=[119,119.9,120.9][index],b=[119.9,120.9,122][index];return cubic(invitationCurves[index],between(t,a,b));}
+  function probingBody(t){
+    const first=actionPulse(t,119.35,120.25),second=actionPulse(t,120.4,121.3),ready=actionPulse(t,121.55,122);
+    const x=discard.x-18*first.value+26*second.value-6*ready.value,y=discard.y-15*first.value-17*second.value+4*ready.value;
+    const light=invitationLight(t),initial=chasePoint(122).heading,look=Math.atan2(light.y-y,light.x-x),delta=Math.atan2(Math.sin(look-initial),Math.cos(look-initial));
+    const heading=initial+delta*between(t,119,119.22)*(1-between(t,121.8,122)),body=hardPose(heroActor,x,y,heading);
+    body.speed=Math.hypot(-18*first.velocity+26*second.velocity-6*ready.velocity,-15*first.velocity-17*second.velocity+4*ready.velocity);
+    body.strain=.18*(first.value+second.value)+.28*ready.value;body.axialStretch=.05*(first.value+second.value)-.08*ready.value;body.bend=.08*(first.value-second.value);
+    body.effort=.3*(first.value+second.value)+.6*ready.value;body.angle=heading-heroActor.headAxis(body).angle;return body;
   }
   const heroPressBody=lanePose(heroActor,480,130),heroProgram=Rules.pressProgram(heroActor,heroPressBody,{normal,contactTime:74,material:Rules.materials.hero});
   const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,contactTime:7,material:Rules.materials.ordinary})));
@@ -77,13 +101,13 @@
     if(t<102.8)return escortBody(heroActor,t);
     if(t<104)return pathPose(heroActor,throwPath,throwPath.length*between(t,102.8,104));
     if(t<119){
-      const u=clamp((t-104.8)/.9),attempt=t>=104.8&&t<105.7?Math.sin(Math.PI*u)**2:0;
-      const withdraw=between(t,105.7,107.1),notice=between(t,108.3,110),ready=between(t,118.2,119);
+      const struggle=struggleAt(t),withdraw=between(t,106.9,108.0),notice=between(t,108.3,110),ready=between(t,118.2,119);
       const retreat=withdraw*(1-notice),head=(.25*withdraw-.67*notice)*(1-ready)+chasePoint(119).heading*ready;
-      return hardPose(heroActor,discard.x+12*attempt-5*retreat,discard.y-4*attempt+3*retreat,head-.08*attempt);
+      return hardPose(heroActor,discard.x+struggle.x-5*retreat,discard.y+struggle.y+3*retreat,head+struggle.roll);
     }
+    if(t<122)return probingBody(t);
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
-    body.speed=p.speed;body.strain=clamp(p.speed/1000);body.bounce=.006*Math.sin((t-119)*12)*clamp(p.speed/200);
+    body.speed=p.speed;body.axialStretch=.12*clamp(p.speed/1150)+.12*p.effort-.10*p.preload;body.strain=clamp(p.speed/1100+.08*p.effort);body.bend=.06*p.effort;body.bounce=.012*p.effort;body.effort=p.effort;
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
   }
   const tagReleaseTime=127.25;
@@ -91,7 +115,9 @@
     const fracture=between(t,126,tagReleaseTime),release=fracture,load=t<94.5?0:between(t,94.5,94.9)*(1-release);
     const stress=between(t,125,125.45)*(1-between(t,127,tagReleaseTime));
     const shiver=t>=125&&t<tagReleaseTime?.38*stress*(1-.65*fracture)*Math.sin((t-125)*24):0;
-    return{attached:t>=94.5&&t<tagReleaseTime,load,release,peel:fracture,stress,fracture,shiver,size:1.8,offset:[0,0]};
+    let offset=[0,0];
+    if(t>=104.35&&t<106.9){const struggle=struggleAt(t),body=baseHeroBody(t),c=Math.cos(body.angle),s=Math.sin(body.angle);offset=[-.55*(struggle.x*c+struggle.y*s),-.55*(-struggle.x*s+struggle.y*c)];}
+    return{attached:t>=94.5&&t<tagReleaseTime,load,release,peel:fracture,stress,fracture,shiver,size:1.8,offset};
   }
   function heroBody(t){
     const body=baseHeroBody(t);
@@ -100,19 +126,21 @@
     // The restraint bends selected edges; it never scales the entire child down.
     // The escort doorway still uses the exact rigid silhouette approved for that route.
     const envelope=t<98?1-between(t,97.6,98):between(t,104,104.2);
-    const u=clamp((t-104.8)/.9),struggle=t<104?.22*Math.sin((t-94.5)*Math.PI/1.4)**2:t>=104.8&&t<105.7?Math.sin(Math.PI*u)**2:0;
-    const cower=between(t,105.7,107.1),notice=between(t,108.3,110);
+    const struggle=t<104?.22*Math.sin((t-94.5)*Math.PI/1.4)**2:struggleAt(t).force;
+    const cower=between(t,106.9,108.0),notice=between(t,108.3,110);
     const tighten=restraint.load*envelope;
-    body.edgeBends=[.50-.19*struggle+.14*cower-.04*notice,.08+.04*struggle+.06*cower,.11+.06*struggle+.04*cower,.43-.22*struggle+.17*cower-.04*notice,.025+.04*cower].map(v=>v*tighten);
-    if(t>=104&&t<119){body.bounce=0;body.strain=.13*struggle;}
+    body.edgeBends=[.50-.28*struggle+.14*cower-.04*notice,.08+.10*struggle+.06*cower,.11+.10*struggle+.04*cower,.43-.30*struggle+.17*cower-.04*notice,.025+.07*struggle+.04*cower].map(v=>v*tighten);
+    if(t>=104&&t<119){body.bounce=0;body.strain=.24*struggle;}
     body.angle=heading-heroActor.headAxis(body).angle;return body;
   }
-  // The released cross remains an independent world object, including after the 2D handoff.
-  const releaseBody=heroBody(tagReleaseTime),releaseHeading=chasePoint(tagReleaseTime).heading;
+  // The broken links briefly inherit the child's velocity, then drag apart behind it.
+  const releaseBody=heroBody(tagReleaseTime),releasePoint=chasePoint(tagReleaseTime),releaseHeading=releasePoint.heading;
   function detachedTagState(t){
     if(t<tagReleaseTime)return undefined;
-    const u=clamp((t-tagReleaseTime)/2.5),travel=740*(1-Math.pow(1-u,3)),side=95*Math.sin(u*Math.PI/2);
-    return{x:releaseBody.x-Math.cos(releaseHeading)*travel-Math.sin(releaseHeading)*side,y:releaseBody.y-Math.sin(releaseHeading)*travel+Math.cos(releaseHeading)*side,angle:releaseBody.angle+3.5*ease(u),z:22*Math.sin(u*Math.PI),opacity:1,scale:1.8,geometryState:{peel:1,stress:0,fracture:1,shiver:0}};
+    const age=t-tagReleaseTime,u=clamp(age/2.5),trail=between(t,tagReleaseTime,tagReleaseTime+.85);
+    const carry=releasePoint.speed*.23*(1-Math.exp(-age/.23)),drag=170*between(age,.20,2),along=carry-drag,side=70*between(age,.15,1.6);
+    const turn=Math.atan2(Math.sin(releaseHeading-releaseBody.angle),Math.cos(releaseHeading-releaseBody.angle));
+    return{x:releaseBody.x+Math.cos(releaseHeading)*along-Math.sin(releaseHeading)*side,y:releaseBody.y+Math.sin(releaseHeading)*along+Math.cos(releaseHeading)*side,angle:releaseBody.angle+turn*trail,z:4+22*Math.sin(u*Math.PI)-4*between(u,.8,1),opacity:1,scale:1.8,geometryState:{load:0,peel:1,release:1,stress:0,fracture:1,shiver:0,trail}};
   }
   function backgroundState(t,row,slot){
     const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot];let x=900,station=-1,turns=0;
@@ -154,6 +182,7 @@
     }
     if(t<118.2){const u=between(t,116,118.2);return{x:hero.x+103*u,y:hero.y-80*u,r:10,glow:lerp(.26,.45,u),reveal:1,complete:true,inside:false,phase:'emerge'};}
     if(t<119){const u=between(t,118.2,119),ahead=chasePoint(119,.022);return{x:hero.x+lerp(103,ahead.x-discard.x,u),y:hero.y+lerp(-80,ahead.y-discard.y,u),r:10,glow:lerp(.45,.55,u),reveal:1,complete:true,inside:false,phase:'lead'};}
+    if(t<122){const p=invitationLight(t);return{x:p.x,y:p.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'invite'};}
     const ahead=chasePoint(t,.022);return{x:ahead.x,y:ahead.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'chase'};
   }
   let memoTime=NaN,memoFrame;
@@ -164,7 +193,7 @@
     const hero=heroBody(t),state=heroMaterial(t),light=lightState(t,hero),coreVisible=t<104||t>=108.3&&t<116;
     const entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:coreVisible?1:0,coreVisible,coreScale:1,coreReveal:t<104?1:light?.reveal||0,coreEntityId:'hero-seed',coreGlow:light?.glow||0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
     if(t>=97.5&&t<104)[180,-180,-360].forEach((offset,i)=>actors.push({id:'factory-guard-'+i,actor:guards[i],body:escortBody(guards[i],Math.max(98.6,t),offset),color:ink,cavity:false,core:0}));
-    const chase=t>=119&&t<132?{x:hero.x,y:hero.y,startX:discard.x,startY:discard.y,speed:hero.speed,heading:chasePoint(t).heading}:undefined;
+    const travel=t>=119&&t<132?chasePoint(t):null,chase=travel?{x:hero.x,y:hero.y,startX:discard.x,startY:discard.y,speed:hero.speed,heading:travel.heading,q:travel.q,qSpeed:travel.qSpeed,effort:hero.effort||0,kick:hero.effort||0,phase:t<122?'invite':'sprint',lookHeading:hero.angle+heroActor.headAxis(hero).angle}:undefined;
     const detachedTag=detachedTagState(t);if(light)light.entityId='hero-seed';
     return memoFrame={actors,hero,light,burst:between(t,130,131.8),...(chase?{chase}:{}),...(detachedTag?{detachedTag}:{})};
   }

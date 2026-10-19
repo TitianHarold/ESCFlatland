@@ -22,8 +22,8 @@
   function placeWorld(ctx,v){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
   function world(ctx,v){screen(ctx);placeWorld(ctx,v);}
   function transform(ctx,b){ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);ctx.scale(b.sx??1,b.sy??1);}
-  function cavityTransform(ctx,actor){
-    if(actor.kind==='child'){ctx.scale(motion.geometry.childScale,motion.geometry.childScale);return;}
+  function cavityTransform(ctx,actor,body){
+    if(actor.kind==='child'){const stretch=1+Math.max(-.15,Math.min(.32,body.axialStretch??0)),head=actor.vertices[actor.headIndex],angle=Math.atan2(head[1],head[0]);ctx.rotate(angle);ctx.scale(stretch,1/stretch);ctx.rotate(-angle);ctx.scale(motion.geometry.childScale,motion.geometry.childScale);return;}
     const xs=actor.vertices.map(p=>p[0]),ys=actor.vertices.map(p=>p[1]);
     ctx.translate((Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2);
     ctx.scale((Math.max(...xs)-Math.min(...xs))/135,(Math.max(...ys)-Math.min(...ys))/145);
@@ -51,11 +51,10 @@
   function drawActor(entry,context){
     const top=context&&typeof context.save==='function'?context:mainTop;
     let b=entry.body;const actor=entry.actor;if(!b||!actor)return;
-    if(entry.id==='hero'&&sceneTime()>=119&&sceneTime()<132){const age=(performance.now()-state.inputAt)/1000,k=age>=0&&age<.22?Math.sin(Math.PI*age/.22):0;b={...b,sx:b.sx*(1+.035*k),sy:b.sy*(1-.035*k)};}
     const outline=actor.localPath(b);top.save();transform(top,b);
     top.fillStyle=entry.color||palette.ink;top.fill(outline);
     if(entry.cavity){
-      top.save();top.clip(outline);cavityTransform(top,actor);
+      top.save();top.clip(outline);cavityTransform(top,actor,b);
       top.globalCompositeOperation='destination-out';top.fill(cavity);top.globalCompositeOperation='source-over';top.clip(cavity);
       const damage=clamp(entry.damage||0);
       fracture(entry,damage,top);
@@ -82,7 +81,8 @@
     const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){
-      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:0,body:{...entry.body,x:0,y:0,angle:0}},ctx);
+      const textureBody=time>=132?dimension.journeyPose(time,sample).raw:entry.body;
+      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:0,body:{...textureBody,x:0,y:0,angle:0}},ctx);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.clearRect(0,0,256,256);
       heroMaterialContext.setTransform(a,0,0,a,128-800*a,128-550*a);window.FlatlandPossibility.draw(heroMaterialContext,state.ambient);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.globalAlpha=darkness;heroMaterialContext.fillStyle=palette.night;heroMaterialContext.fillRect(0,0,256,256);heroMaterialContext.globalAlpha=1;

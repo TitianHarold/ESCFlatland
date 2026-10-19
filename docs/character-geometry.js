@@ -47,6 +47,7 @@
     localSegments(body = {}) {
       const bend = clamp(body.bend ?? body.fear ?? this.state.bend), strain = clamp(body.strain ?? (body.speed === undefined ? this.state.strain : Math.abs(body.speed) / 80));
       const bounce = Math.max(-.03, Math.min(.03, body.bounce ?? this.state.bounce));
+      const axial = Math.max(-.15, Math.min(.32, body.axialStretch ?? 0));
       const vertices = this.vertices.map(point => [...point]);
       this.edges.forEach((edge, i) => {
         const a = vertices[i], b = vertices[(i + 1) % vertices.length], stretch = Math.max(.85, Math.min(1.15, body.edgeStretch?.[i] ?? edge.stretch)) - 1;
@@ -55,7 +56,7 @@
       });
       const head = this.vertices[this.headIndex], axisLength = Math.hypot(...head), fx = head[0] / axisLength, fy = head[1] / axisLength;
       const points = vertices.map(([x, y]) => {
-        const forward = (x * fx + y * fy) * (1 + .04 * strain), side = (-x * fy + y * fx) * (1 - .04 * strain + bounce);
+        const forward = (x * fx + y * fy) * (1 + .04 * strain) * (1 + axial), side = (-x * fy + y * fx) * (1 - .04 * strain + bounce) / (1 + axial);
         return [forward * fx - side * fy, forward * fy + side * fx];
       });
       const segments = points.map((from, i) => {

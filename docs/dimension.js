@@ -1,8 +1,8 @@
 /* World-anchored growth and thin XYZ actors share one perspective renderer. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'));
-  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'),require('./motion.js'));
+  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint,root.FlatlandMotion);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint,Motion) {
   'use strict';
   const anchor = Object.freeze({x: 0, y: 0, z: 0});
   const defaultProjection = Object.freeze({x: 0, y: 0, zoom: 1.25, tilt: 0, yaw: 0, focal: 1600, screenY: .57});
@@ -332,7 +332,7 @@
   // The fixed world-to-city bridge keeps paused scrubs independent of prior frames.
   const journeyStart={x:-6178.207340306721,y:-3297.506565417906},journeyEnd={x:-800,y:-6597.506565417906};
   const journeyDX=journeyEnd.x-journeyStart.x,journeyDY=journeyEnd.y-journeyStart.y;
-  const endHeading=Math.atan2(journeyDY*.35,journeyDX*.40),endSpeed=Math.hypot(journeyDX*.40,journeyDY*.35)*6/13;
+  const endHeading=Math.atan2(journeyDY*.35,journeyDX*.40),endSpeed=Math.hypot(journeyDX*.40,journeyDY*.35)*3*Motion.chaseProgress(132).qSpeed;
   const headAngle=Characters.actors.child.headAxis({strain:1}).angle,bridgeAngle=headAngle-endHeading;
   const bridgeCos=Math.cos(bridgeAngle),bridgeSin=Math.sin(bridgeAngle),forward=[Math.cos(headAngle),Math.sin(headAngle)],coastDistance=endSpeed*3;
   function worldToCity(point){const x=point[0]-journeyEnd.x,y=point[1]-journeyEnd.y;return[x*bridgeCos-y*bridgeSin-forward[0]*coastDistance,x*bridgeSin+y*bridgeCos-forward[1]*coastDistance,point[2]||0];}
@@ -341,15 +341,17 @@
     return{x:s*s*s*a[0]+3*s*s*q*b[0]+3*s*q*q*c[0]+q*q*q*d[0],y:s*s*s*a[1]+3*s*s*q*b[1]+3*s*q*q*c[1]+q*q*q*d[1],heading:Math.atan2(3*s*s*(b[1]-a[1])+6*s*q*(c[1]-b[1])+3*q*q*(d[1]-c[1]),3*s*s*(b[0]-a[0])+6*s*q*(c[0]-b[0])+3*q*q*(d[0]-c[0]))};
   }
   function journeyPose(time,data={}){
-    const t=clamp(time,119,138),u=clamp((t-132)/6,0,1),progress=clamp((t-119)/13,0,1),sample=pathPoint(progress*progress);
-    const raw=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,strain:progress}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,strain:(1-u),bend:0};
+    const t=clamp(time,119,138),u=clamp((t-132)/6,0,1),progress=Motion.chaseProgress(t).q,sample=pathPoint(progress);
+    const raw=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,strain:progress}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,strain:(1-u),axialStretch:.12*clamp(endSpeed/1150,0,1)*(1-u)**2,bend:0};
+    if(t>=132)raw.angle=endHeading-Characters.actors.child.headAxis(raw).angle;
     const center=t<132?worldToCity([raw.x,raw.y,0]):[-forward[0]*coastDistance*(1-u)**2,-forward[1]*coastDistance*(1-u)**2,0];
     return{raw,center,angle:(raw.angle||0)+bridgeAngle,size:mix(1,radius/sourceRadius,ease(t,132,138)),growth:ease(t,125,134),coast:u};
   }
   const journeyObjects=[];
+  function chasePassTime(q){let a=122,b=132;for(let i=0;i<20;i++){const m=(a+b)/2;if(Motion.chaseProgress(m).q<q)a=m;else b=m;}return(a+b)/2;}
   function placeJourneyObject(point,heading,index){
     const normal=[-Math.sin(heading),Math.cos(heading)];
-    const passTime=index<=32?119+13*Math.sqrt(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
+    const passTime=index<=32?chasePassTime(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
     for(const side of [-1,1]){
       const growAt=clamp(passTime-1.35+(side>0?.18:0),125,132.6);
       journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],growAt,growUntil:growAt+2.9+(index%3)*.2+(side>0?.1:0)});
@@ -434,7 +436,7 @@
     }
   }
   function addJourneyObjects(list,hero,time,clock=time){
-    const exit=1-ease(time,134,138);if(exit<=0)return;
+    const exit=ease(time,122.2,124.8)*(1-ease(time,134,138));if(exit<=0)return;
     for(const item of journeyObjects){
       const alpha=distanceAlpha([item.x,item.y],hero)*exit;
       if(alpha>=.002)apparition(list,item,time,clock,alpha);
@@ -445,12 +447,13 @@
     return{center,heading,side,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
   });
   function addSpeedRibbons(list,hero,time,data){
-    const speed=clamp((data.chase?.speed||0)/1100,0,1),amount=ease(time,119.4,122)*(1-ease(time,132,137));
+    const speed=clamp((data.chase?.speed||0)/1150,0,1),kick=clamp(data.chase?.effort||0,0,1);
+    const amount=ease(time,122.15,124.2)*(1-ease(time,132,137));
     if(amount<=0)return;
     for(const item of speedRibbons){
-      const alpha=distanceAlpha(item.center,hero)*amount*(.16+.56*speed);if(alpha<.005)continue;
+      const alpha=distanceAlpha(item.center,hero)*amount*(.18+.62*speed+.18*kick);if(alpha<.005)continue;
       const c=Math.cos(item.heading),s=Math.sin(item.heading),n=[-s,c],x=item.center[0]+n[0]*item.side*item.offset,y=item.center[1]+n[1]*item.side*item.offset;
-      const length=item.length*(.35+2.4*speed),width=item.width;
+      const length=item.length*(.25+3.2*speed+1.0*kick),width=item.width*(1+.7*kick);
       const points=[[-length/2,0],[-length*.25,-width],[length/2,0],[length*.22,width]].map(([u,v])=>[x+c*u+n[0]*v,y+s*u+n[1]*v,2]);
       surface(list,points,item.color,'pigment',alpha);
     }
@@ -473,9 +476,9 @@
     for(const tile of journeyGround){const alpha=distanceAlpha(tile.center,hero)*amount;if(alpha<.002)continue;list.push({points:tile.points,color,alpha,ground:true});}
   }
   function addJourneyDarkness(list,hero,time,clock,data){
-    if(time<119||time>=132)return;
+    if(time<122||time>=132)return;
     const supplied=typeof data.darkness==='number'?data.darkness:data.darkness?.amount;
-    const darkness=clamp(finite(supplied,1-ease(time,119,128)),0,1),speed=clamp((data.chase?.speed||0)/1150,0,1),amount=darkness*(1-speed*.65);
+    const darkness=clamp(finite(supplied,1-ease(time,119,128)),0,1),speed=clamp((data.chase?.speed||0)/1150,0,1),amount=darkness*(1-speed*.65)*ease(time,122,124);
     if(amount<.002)return;
     journeyObjects.slice(0,24).forEach((item,index)=>{
       const alpha=distanceAlpha([item.x,item.y],hero)*amount*.85;if(alpha<.002)return;
@@ -499,11 +502,12 @@
       list.push({...item,points,alpha:item.alpha*alpha});
     }
     addJourneyHero(list,state,data);if(time<136.5&&data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,136.5))},state.center);
-    const turn=ease(time,119,130),pathHeading=(time<132&&Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(clamp((time-119)/13,0,1)**2).heading)+bridgeAngle;
-    const coast=ease(time,132,138),streetTurn=ease(time,134.5,138),tilt=finite(camera.tilt,1.25*ease(time,119,138));
+    const turn=ease(time,122,130),pathHeading=(time<132&&Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(Motion.chaseProgress(time).q).heading)+bridgeAngle;
+    const coast=ease(time,132,138),streetTurn=ease(time,134.5,138),tilt=finite(camera.tilt,1.25*ease(time,122,138));
     const screenHeading=-Math.PI/5,groundHeading=Math.atan2(Math.sin(screenHeading)/Math.cos(tilt),Math.cos(screenHeading));
     const yaw=mix(-bridgeAngle,groundHeading-pathHeading,turn);
-    const view={...camera,x:state.center[0],y:state.center[1],yaw:finite(camera.yaw,mix(yaw,.32,streetTurn)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt,screenY:finite(camera.screenY,.5)};
+    const focus=time<122?worldToCity([finite(camera.x,journeyStart.x),finite(camera.y,journeyStart.y),0]):state.center;
+    const view={...camera,x:focus[0],y:focus[1],yaw:finite(camera.yaw,mix(yaw,.32,streetTurn)),zoom:finite(camera.zoom,mix(1.2,1.15,coast)),tilt,screenY:finite(camera.screenY,.5)};
     const p=render(ctx,list,view,{w,h},sharedMaterial(clock),Palette.outside.background);
     let light;
     if(time<132&&data.light)light=worldToCity([data.light.x,data.light.y,68*ease(time,125,138)]);
