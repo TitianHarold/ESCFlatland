@@ -35,18 +35,21 @@
     }
     get accelerating(){return this.mode==='interactive'&&this.pressed&&this.pressChase&&this.pressAge>=.18&&this.time<this.timing.playbackAt(132);}
     get playbackRate(){return this.mode==='interactive'&&this.time>=this.timing.playbackAt(119)&&this.time<this.timing.playbackAt(132)?this.chaseRate:1;}
-    tick(delta){
+    tick(delta,ceiling=Infinity){
       const dt=Math.max(0,Math.min(.1,Number(delta)||0));
       if(this.pressed)this.pressAge+=dt;
       if(!this.playing)return this.time;
       const end=this.mode==='auto'?this.duration:this.target;
+      const limit=typeof ceiling==='number'&&!Number.isNaN(ceiling)?ceiling:Infinity;
       const inChase=this.mode==='interactive'&&this.time>=this.timing.playbackAt(119)&&this.time<this.timing.playbackAt(132);
       const target=inChase&&this.accelerating?1.8:1,old=inChase?this.chaseRate:1,tau=target>old?.10:.18,decay=Math.exp(-dt/tau);
       this.chaseRate=target+(old-target)*decay;
       // Integrate the smooth rate instead of snapping between two time multipliers.
       const travel=target*dt+(old-target)*tau*(1-decay);
-      this.time=Math.min(end,this.time+travel);
-      if(this.time>=end){this.playing=false;if(end===this.duration)this.pressed=false;}
+      // A scene can hold story time while ambient activity and its input remain live.
+      // Keeping the episode active also lets a ceiling at its endpoint resume normally.
+      this.time=Math.min(Math.max(this.time,Math.min(end,limit)),this.time+travel);
+      if(this.time>=end&&limit>end){this.playing=false;if(end===this.duration)this.pressed=false;}
       return this.time;
     }
   }

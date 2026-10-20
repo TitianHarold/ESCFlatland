@@ -70,6 +70,14 @@
     });
     return faces.sort((a,b)=>b.z-a.z);
   }
+  function drawContents(ctx,viewport,clock){
+    const w=viewport.w,h=viewport.h,s=Math.max(w/1280,h/760),texture=material(ctx);
+    ctx.save();ctx.fillStyle=P.navy;ctx.fillRect(0,0,w,h);
+    if(texture){ctx.fillStyle=texture;ctx.fillRect(0,0,w,h);}
+    ctx.translate(w/2,h/2);ctx.scale(s,s);
+    for(const face of foldedFaces((Number.isFinite(clock)?clock:0)*.35))polygon(ctx,face.points,face.color,texture);
+    ctx.restore();
+  }
   const cavityPath='M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z';
   function cavity(ctx){
     ctx.beginPath();ctx.moveTo(-49,7);ctx.bezierCurveTo(-57,-17,-33,-44,-9,-48);
@@ -172,5 +180,5 @@
     if(t>=119)return;
     ctx.save();ctx.globalAlpha=1;ctx.fillStyle=P.outside?.background||P.white||P.paper;ctx.fillRect(0,0,viewport.w,viewport.h);ctx.restore();
   }
-  return{draw,drawOuter,amount,portalProgress,portalGeometry,darkness,cavityPath};
+  return{draw,drawContents,drawOuter,amount,portalProgress,portalGeometry,darkness,cavityPath};
 });

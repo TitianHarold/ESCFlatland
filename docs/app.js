@@ -17,7 +17,8 @@
   const mode=params.get('mode')==='auto'?'auto':'interactive';
   const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
   const initialTime=Number(params.get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
-  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,modalResume:false,inputAt:-Infinity};
+  const discovery=window.FlatlandInnerDiscovery,inner=new discovery.Session({autoDuration:timing.playbackAt(119)-timing.playbackAt(110)});
+  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,innerActive:false,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
   function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factory.frame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
@@ -105,23 +106,34 @@
     if(glow){const gradient=top.createRadialGradient(light.x,light.y,r*.2,light.x,light.y,r*5);gradient.addColorStop(0,palette.gold+'88');gradient.addColorStop(1,palette.gold+'00');top.fillStyle=gradient;top.beginPath();top.arc(light.x,light.y,r*5*glow,0,Math.PI*2);top.fill();}
     top.fillStyle=light.phase==='notice'||light.phase==='enclosed'||light.phase==='slit'?palette.gold:glow?palette.cream:palette.gold;top.beginPath();top.arc(light.x,light.y,r,0,Math.PI*2);top.fill();top.restore();
   }
-  function drawRoutineInner(time){
-    const viewport={w:state.w,h:state.h,dpr:state.dpr},plant=factory.frame(time);
-    screen(low);low.fillStyle=palette.night;low.fillRect(0,0,state.w,state.h);
-    screen(top);top.fillStyle=palette.night;top.fillRect(0,0,state.w,state.h);
-    const startView=view(119),data=journeyData(119),point=dimension.journeyLightPoint(119,startView,viewport,data);
-    // The inner opening contracts into the very same light that leads the chase.
-    if(time>=118.2){
-      top.save();top.globalAlpha=clamp((time-118.2)/.6);
-      dimension.drawJourney(top,119,startView,viewport,state.ambient,data);top.restore();
+  function inInner(time=sceneTime()){return time>=110-1e-7&&time<119-1e-7;}
+  function viewport(){return{w:state.w,h:state.h,dpr:state.dpr};}
+  function innerState(){return inner.snapshot(viewport());}
+  function innerDisplayTime(){return inInner()?timing.playbackAt(110+9*innerState().progress):player.time;}
+  function drawInner(){
+    const box=viewport(),snapshot=innerState(),b=snapshot.breakProgress;
+    const exit=clamp((b-.72)/.28),u=exit*exit*(3-2*exit);
+    screen(low);low.fillStyle=discovery.background;low.fillRect(0,0,state.w,state.h);
+    screen(top);top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);
+    const startView=view(119),data=journeyData(119),point=dimension.journeyLightPoint(119,startView,box,data);
+    if(u>0){top.save();top.globalAlpha=u;dimension.drawJourney(top,119,startView,box,state.ambient,{...data,hideLight:true});top.restore();}
+    // The discovered space closes into the same projected seed that leads the chase.
+    top.save();
+    if(u>0){
+      const x=state.w/2+(point[0]-state.w/2)*u,y=state.h/2+(point[1]-state.h/2)*u;
+      const cover=1.8*Math.hypot(state.w,state.h),radius=cover*Math.pow(Math.max(1,point[3]*5.5)/cover,u);
+      top.translate(x,y);top.scale(radius/50,radius/50);top.clip(cavity);top.scale(50/radius,50/radius);top.translate(-x,-y);
     }
-    const light=plant.light,screenLight={...light,x:point[0],y:point[1],r:(light.r||10)*point[3]};
-    const portal={x:state.w/2,y:state.h/2,radius:1.8*Math.hypot(state.w,state.h),seedRadius:10*Math.max(state.w/1280,state.h/760),angle:plant.hero.angle};
-    screenOverlay();window.FlatlandInner.draw(top,time,viewport,state.ambient,screenLight,portal);
+    discovery.draw(top,box,snapshot,{drawContents:(ctx,v)=>window.FlatlandInner.drawContents(ctx,v,state.ambient)});top.restore();
+    if(b>.35){
+      const q=clamp((b-.35)/.65),flight=q*q*(3-2*q),scale=Math.max(state.w/1280,state.h/760);
+      const x=state.w/2+(point[0]-state.w/2)*flight,y=state.h/2+(point[1]-state.h/2)*flight,k=scale+(point[3]-scale)*flight;
+      screenOverlay();top.save();top.globalAlpha=clamp((b-.35)/.15);dimension.paintArrivalLight(top,[x,y,0,k],119,10,state.w,state.h);top.restore();
+    }
   }
   function draw(time,v){
     if(time>=132){screen(low);low.fillStyle='#ffffff';low.fillRect(0,0,state.w,state.h);screen(top);dimension.drawEnding(top,time,{w:state.w,h:state.h,dpr:state.dpr});return;}
-    if(version.id==='routine'&&time>=110&&time<119){drawRoutineInner(time);return;}
+    if(inInner(time)){drawInner();return;}
     world(low,v);window.FlatlandPossibility.draw(low,state.ambient);
     if(time>=119){
       screen(top);const data=journeyData(time),viewport={w:state.w,h:state.h,dpr:state.dpr};
@@ -140,7 +152,7 @@
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(version.id==='routine'){
       factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
-      if(plant.outsideDarkness){screenOverlay();top.save();top.globalAlpha=plant.outsideDarkness;top.fillStyle=palette.night;top.fillRect(0,0,state.w,state.h);top.restore();}
+      if(plant.outsideDarkness){screenOverlay();top.save();top.globalAlpha=plant.outsideDarkness;top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
       top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time,bounds);top.restore();
@@ -153,50 +165,79 @@
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
-    if(version.id!=='routine'&&time>=110&&time<119){
-      screenOverlay();const light=plant.light,portal={x:(plant.hero.x-v.x)*s+state.w/2,y:(plant.hero.y-v.y)*s+state.h/2,radius:50*s*motion.geometry.childScale,seedRadius:(light?.r||10)*s,angle:plant.hero.angle};
-      const screenLight=light?{...light,x:(light.x-v.x)*s+state.w/2,y:(light.y-v.y)*s+state.h/2,r:(light.r||10)*s}:null;
-      window.FlatlandInner.draw(top,time,viewport,state.ambient,screenLight,portal);
-      if(time<112&&plant.actors.find(a=>a.id==='hero')?.restraint?.attached){const g=window.FlatlandInner.portalGeometry(time,viewport,portal,screenLight),entry=plant.actors.find(a=>a.id==='hero');top.save();top.globalAlpha=1-clamp((time-110)/2);top.translate(g.x,g.y);top.rotate(g.angle);top.scale(g.radius/(50*motion.geometry.childScale),g.radius/(50*motion.geometry.childScale));drawFailureMark(top,entry.restraint);top.restore();}
-    }
+    if(version.id==='rhythm'&&time>=108.8&&time<110){screenOverlay();top.save();const q=clamp((time-108.8)/1.2);top.globalAlpha=q*q*(3-2*q);top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
   }
   function screenOverlay(){top.setTransform(state.dpr,0,0,state.dpr,0,0);}
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
   function interfaceState(v,time=sceneTime()){
-    const shot=cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot);
-    stage.dataset.phase=shot.id;stage.dataset.sceneTime=time.toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
-    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+player.time.toFixed(2);return;}
-    const notes=version.notes.at(time);
+    const shot=inInner(time)?cameraTrack.shots.find(s=>s.id==='inner'):cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot),displayTime=innerDisplayTime();
+    stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
+    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
+    const snapshot=inInner(time)?innerState():null;
+    const notes=snapshot?{summary:'黑暗中有微弱光点缓慢闪动。点亮的局部留下流动色带，逐渐积累，最后破开迷雾。',action:snapshot.phase==='break'||snapshot.done?'已发现的色域连成光缝，暗层向两侧分开；同一颗光种子飞向前方。':snapshot.collected?'已经点亮的局部持续翻卷，其余微光仍在暗处闪动。':'暗层缓慢运动，偶尔有小点亮起，尚未照亮色带。',camera:'保持内心全景；破雾后窗口向光点收拢，连续接入右上方追逐。'}:version.notes.at(time);
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
-    $('chapter').value=shot.id;$('progress').value=Math.round(player.time*100);$('progress').style.setProperty('--p',`${player.time/duration*100}%`);
-    $('time').value=`${format(player.time)} / ${format(duration)}`;$('play').setAttribute('aria-label',player.playing?'暂停':'播放');$('play-icon').textContent=player.mode==='auto'&&player.playing?'Ⅱ':'▶';
+    $('chapter').value=shot.id;$('progress').value=Math.round(displayTime*100);$('progress').style.setProperty('--p',`${displayTime/duration*100}%`);
+    $('time').value=`${format(displayTime)} / ${format(duration)}`;$('play').setAttribute('aria-label',player.playing?'暂停':'播放');$('play-icon').textContent=player.mode==='auto'&&player.playing?'Ⅱ':'▶';
     $('mode-interactive').setAttribute('aria-pressed',String(player.mode==='interactive'));
     $('mode-auto').setAttribute('aria-pressed',String(player.mode==='auto'));
-    $('play').setAttribute('aria-label',player.mode==='interactive'?'推进下一动作':player.playing?'暂停':'播放');
-    const viewer=document.querySelector('.brand');if(viewer)viewer.href='./?version='+version.id+'&mode='+player.mode+'&t='+player.time.toFixed(2);
+    $('play').setAttribute('aria-label',player.mode==='interactive'?(inInner(time)?'点亮下一处微光':'推进下一动作'):player.playing?'暂停':'播放');
+    const viewer=document.querySelector('.brand');if(viewer)viewer.href='./?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);
   }
   function frame(now){
     const dt=state.last?Math.min((now-state.last)/1000,.05):0;state.last=now;
-    if(!document.hidden&&!$('reference-dialog')?.open){
-      player.tick(dt);
+    if(!document.hidden&&!$('reference-dialog')?.open&&!$('palette-dialog')?.open){
+      tickStory(dt);
       if(!reduced.matches)state.ambient+=dt;
     }
-    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=(version.id==='routine'?110:119)?1:1-state.layer*.92;
-    // One absolute story time drives actors, the view and shot notes. Automatic
-    // shot changes only select a camera; only explicit review controls call seek.
+    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=110?1:1-state.layer*.92;
+    // Discovery owns its action clock; scene changes never reset the ambient motion.
     const time=sceneTime(),v=view(time);draw(time,v);interfaceState(v,time);requestAnimationFrame(frame);
   }
   function resize(){const box=stage.getBoundingClientRect();state.w=box.width;state.h=box.height;state.dpr=Math.min(window.devicePixelRatio||1,2);[lower,upper].forEach(c=>{c.width=Math.round(state.w*state.dpr);c.height=Math.round(state.h*state.dpr);});}
-  function seek(time){player.seek(time);}
-  function togglePlay(){state.inputAt=performance.now();player.tap();}
+  function syncInner(reconstruct=false){
+    const time=sceneTime();state.innerActive=inInner(time);
+    if(state.innerActive){inner.reset();if(reconstruct)inner.seek(clamp((time-110)/9));}
+  }
+  function tickStory(dt){
+    const time=sceneTime();
+    if(inInner(time)){
+      if(!state.innerActive)syncInner();
+      inner.update(dt,{automatic:player.mode==='auto'&&player.playing,advance:player.playing});
+      const done=innerState().done;
+      if(done&&player.mode==='interactive'&&player.playing){
+        // The visible portal has already reached the chase's initial pose.
+        player.time=timing.playbackAt(119);player.target=timing.playbackAt(132);state.innerActive=false;
+      }else player.tick(dt,player.mode==='interactive'?player.time:done?Infinity:timing.playbackAt(119)-1e-7);
+    }else{
+      state.innerActive=false;player.tick(dt,time<110?timing.playbackAt(110):Infinity);
+      if(inInner())syncInner();
+    }
+  }
+  function seek(time){player.seek(time);syncInner(true);state.pointer=null;state.innerPointer=false;}
+  function resumeInner(){player.target=Math.max(player.target,timing.playbackAt(119));player.playing=true;}
+  function touchInner(x,y){
+    if(['break','done'].includes(innerState().phase)){resumeInner();return true;}
+    if(!inner.tap(x,y,viewport()))return false;
+    if(!player.playing)resumeInner();
+    return true;
+  }
+  function togglePlay(){
+    state.inputAt=performance.now();
+    if(inInner()&&player.mode==='interactive'){
+      const point=innerState().points.find(p=>p.visible&&!p.collected);
+      if(point)touchInner(point.x,point.y);
+      else resumeInner();
+    }else player.tap();
+  }
+  function setMode(mode){if(inInner())player.time=innerDisplayTime();player.setMode(mode);}
   if(workbench){
     $('progress').max=String(duration*100);
     $('story-version').value=version.id;
     if(version.id==='routine')document.querySelectorAll('.timeline-marks span').forEach((mark,i)=>{mark.textContent=['家庭','查家','规整化','日常工作','追光','新维度'][i];});
     on('story-version','change',e=>{
       const next=window.FlatlandStoryVersions.get(e.target.value),url=new URL(location.href);
-      url.searchParams.set('version',next.id);url.searchParams.set('t',next.timing.playbackAt(sceneTime()).toFixed(2));url.searchParams.set('mode',player.mode);location.href=url.href;
+      url.searchParams.set('version',next.id);url.searchParams.set('t',next.timing.playbackAt(inInner()?110+9*innerState().progress:sceneTime()).toFixed(2));url.searchParams.set('mode',player.mode);location.href=url.href;
     });
     cameraTrack.shots.forEach(shot=>{const option=document.createElement('option');option.value=shot.id;option.textContent=shot.label;$('chapter').append(option);});
     on('chapter','change',e=>seek(timing.playbackAt(cameraTrack.shots.find(s=>s.id===e.target.value).start)));
@@ -204,21 +245,27 @@
     on('next','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(sceneTime()));seek(timing.playbackAt(cameraTrack.shots[Math.min(cameraTrack.shots.length-1,i+1)].start));});
 
   }
-  on('mode-interactive','click',()=>player.setMode('interactive'));
-  on('mode-auto','click',()=>player.setMode('auto'));
+  on('mode-interactive','click',()=>setMode('interactive'));
+  on('mode-auto','click',()=>setMode('auto'));
   on('play','click',togglePlay);on('restart','click',()=>seek(0));
   on('progress','input',e=>seek(Number(e.target.value)/100));
   on('layers','click',()=>{state.open=!state.open;$('layers').setAttribute('aria-pressed',String(state.open));});
-  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat)togglePlay();}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(player.time+(e.key==='ArrowRight'?1:-1));}});
+  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat)togglePlay();}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
   stage.addEventListener('pointerdown',e=>{
     if(e.button!==0||state.pointer!==null)return;
-    state.pointer=e.pointerId;state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);player.press();
+    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer)player.press();
   });
-  function release(e,cancelled=false){if(state.pointer!==e.pointerId)return;state.pointer=null;player.release(cancelled);}
+  function pointerPoint(e){const box=stage.getBoundingClientRect();return{x:(e.clientX-box.left)*state.w/box.width,y:(e.clientY-box.top)*state.h/box.height};}
+  function release(e,cancelled=false){
+    if(state.pointer!==e.pointerId)return;state.pointer=null;
+    if(state.innerPointer){state.innerPointer=false;if(!cancelled&&inInner()){const p=pointerPoint(e);touchInner(p.x,p.y);}return;}
+    player.release(cancelled);
+  }
+  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e);stage.style.cursor=player.mode==='interactive'&&inInner()&&innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius)?'pointer':'default';});
   stage.addEventListener('pointerup',e=>release(e));
   stage.addEventListener('pointercancel',e=>release(e,true));
   stage.addEventListener('contextmenu',e=>e.preventDefault());
-  document.addEventListener('visibilitychange',()=>{state.last=0;if(document.hidden&&player.pressed){player.release(true);state.pointer=null;}});
+  document.addEventListener('visibilitychange',()=>{state.last=0;if(document.hidden){if(player.pressed)player.release(true);state.pointer=null;state.innerPointer=false;}});
   const dialog=$('reference-dialog');let loadedReferences=false;
   on('references','click',async()=>{
     state.modalResume=player.playing;player.playing=false;dialog.showModal();if(loadedReferences)return;
@@ -235,5 +282,5 @@
   on('close-references','click',()=>dialog.close());
   dialog?.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
   dialog?.addEventListener('close',()=>{player.playing=state.modalResume;state.modalResume=false;});
-  new ResizeObserver(resize).observe(stage);resize();requestAnimationFrame(frame);
+  new ResizeObserver(resize).observe(stage);resize();syncInner(true);requestAnimationFrame(frame);
 })();

@@ -603,10 +603,10 @@
     addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
     addJourneyHero(list,state,data);if(data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,132))},state.center);
     const project=render(ctx,list,layout.view,{w,h},sharedMaterial(clock),Palette.outside.background),lightPoint=projectJourneyLight(time,layout,data,project);
-    paintArrivalLight(ctx,lightPoint,time,data.light?.r||10,w,h);
+    if(!data.hideLight)paintArrivalLight(ctx,lightPoint,time,data.light?.r||10,w,h);
   }
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight});
 });

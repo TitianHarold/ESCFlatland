@@ -2,6 +2,8 @@
 
 最长90秒的平面国交互短片。追光在全白视野中结束，最后以静止第一人称观察自己的双手。默认观看页每次点击播放一个完整动作情节，等待时内窗继续流动；追光时可以长按加速，松开回到持续加速的基础速度。两版追光路程扩大为原来的4.75倍，沿途图形加速后掠，角色随速度拉伸。右上几何图标打开工作台，工作台左上可返回观看页。
 
+两版的内心世界都从黑暗和微光开始。点击微光后局部色带持续可见，六处发现积累后破雾并连续进入追光；点空处不推进剧情，等待时暗线和微光继续运动。空格或回车可点亮下一处微光。自动播放沿同一发现顺序预览；交互等待时长不限。
+
 工作台底部可切换两版：`?version=rhythm` 是四组夹具错拍夹压，每组0.5秒夹紧、3秒回收、1.5秒等待，相邻夹具错开0.5秒；`?version=routine` 是套标准框、压实、逐边喷黑、大量办公单元的重复工作、按钮驱动闸门、外景变暗并进入内心世界，光点引向追光。第一版79秒，第二版90秒；观看页链接保留版本和播放进度。
 
 [分镜制作表](docs/storyboard-r2/分镜制作表.html)包含36个动作段、72张代码首尾帧、四套配色的24张代码预览，以及8个图对使用的14张唯一图片。图对包含直接生成的手绘图、纯白代码帧和批准双手素材的代码合成帧；具体来源保留在JSON与生成记录中。视频提示词始终整段显示，可复制或下载TXT/CSV。两个工作台在相同网站来源下使用`flatland.palette.v1`保存配色；双手结尾保持中性纯白，不随配色染色。
@@ -14,7 +16,7 @@ Published with GitHub Pages from `main` / `docs`.
 - `portals.js` / `city-map.js`：同一房屋资产生成开口、墙体及绘制几何。
 - `collision-world.js`：移动、旋转和形变沿途检查墙体及其他角色。
 - `district.js`：生成移动意图与共用出口队列，再以固定步长求解碰撞；缓存使拖动回看可重复。
-- `factory.js` / `restraint.js` / `inner-world.js` / `dimension.js`：表演、束缚、暗层与光缝、空间转换；`camera.js` 独立控制取景。
+- `factory.js` / `restraint.js` / `inner-world.js` / `dimension.js`：表演、束缚、暗层与光缝、空间转换；`camera.js` 独立控制取景。`inner-discovery.js`：内心发现状态、光点命中与局部破雾；其行动时钟与剧情时钟分离。
 - `correction-rules.js`：夹具接触、受力与四工位累计处理；`factory-routine.js`：第二版外壳、逐边喷漆和工作轨迹，与第一版的失败判定分开。`office-world.js`：统一办公单元、通行墙体、工作循环及按钮与闸门信号。
 
-本轮定向检查：`node check-mechanics.cjs`、`node check-routine.cjs`、`node check-office.cjs`、`node check-chase.cjs`、`node check-player.cjs`。街区碰撞检查：`node check-collision-world.cjs`。
+本轮定向检查：`node check-mechanics.cjs`、`node check-routine.cjs`、`node check-office.cjs`、`node check-chase.cjs`、`node check-player.cjs`、`node check-inner-player.cjs`、`node check-inner-discovery.cjs`。街区碰撞检查：`node check-collision-world.cjs`。
