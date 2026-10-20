@@ -6,6 +6,15 @@ const hero=t=>Routine.frame(t).actors.find(e=>e.id==='hero');
 for(let t=58;t<132;t+=.1){const e=hero(t);assert(e);assert.equal(e.damage,0);assert.equal(e.blacken,0);assert.equal(e.label,undefined);assert.equal(e.result,undefined);assert.equal(e.restraint,undefined);assert(e.body.sx===1&&e.body.sy===1);}
 assert.equal(hero(71).routine.fitted,0);assert.equal(hero(77).routine.fitted,1);assert(hero(77).actor.vertices.every(p=>C.contains(p,hero(77).routine.vertices)),'regular shell contains the whole original child');
 for(const t of [78.5,79,79.25,79.5,80.5,82]){const e=hero(t);assert.equal(e.body.bend,0);assert(e.body.edgeBends.every(v=>v===0));const m=e.routine.compacting;assert(m.upperFace<=m.upperSupport+1e-8&&m.lowerFace>=m.lowerSupport-1e-8);if(m.force){assert(Math.abs(m.upperFace-m.upperSupport)<1e-8);assert(Math.abs(m.lowerFace-m.lowerSupport)<1e-8);}}
+const compact=t=>hero(t).routine.compacting;
+assert.equal(compact(78.5).phase,'windup');assert.equal(compact(78.5).clearance,16);
+assert(compact(79.14).clearance>23.9,'heavy windup opens outward before the fast strike');
+assert.equal(compact(79.2).phase,'slam');assert(compact(79.2).clearance>20,'energy is released in the very last stroke');
+assert(compact(79.24).clearance<7);assert(compact(79.249).clearance<1);
+assert.equal(compact(79.25).impact,1);assert.equal(compact(79.25).clearance,0);
+assert(Math.abs(compact(79.27).recoil)>1,'outer brace receives a brief impact vibration');
+assert(Math.abs(compact(79.5).recoil)>.1,'loaded supports keep rattling briefly while the die remains tight');assert.equal(compact(79.5).impact,0);assert.equal(compact(79.65).recoil,0);
+assert.equal(compact(79.64).force,1);assert.equal(compact(79.66).force,0);
 // Each indexed step paints one more region; it never wipes the whole figure at once.
 const start=83.2,span=(94-start)/5;
 for(let i=0;i<5;i++){const before=Routine.paintAt(start+i*span+span*.50,5),after=Routine.paintAt(start+i*span+span*.82,5);assert.equal(before.side.filter(v=>v===1).length,i);assert.equal(after.side.filter(v=>v===1).length,i+1);const e=hero(start+i*span+span*.82),points=e.routine.vertices,a=points[after.sideIndex],b=points[(after.sideIndex+1)%5],rel=e.body.angle-Routine.anchors.localRotation,x=(a[0]+b[0])/2*Math.cos(rel)-(a[1]+b[1])/2*Math.sin(rel),y=(a[0]+b[0])/2*Math.sin(rel)+(a[1]+b[1])/2*Math.cos(rel);assert(Math.abs(x)<1e-8&&y<0,'each painted edge faces the fixed nozzle');}

@@ -11,7 +11,7 @@
   const ease=n=>{const u=clamp(n);return u*u*u*(u*(u*6-15)+10);},between=(t,a,b)=>ease((t-a)/(b-a));
   const world=(x,y)=>({x:origin.x+x*cs-y*sn,y:origin.y+x*sn+y*cs});
   const local=p=>({x:(p.x-origin.x)*cs+(p.y-origin.y)*sn,y:-(p.x-origin.x)*sn+(p.y-origin.y)*cs});
-  const entrance={x:-3000,y:-2100},discard=world(-2450,390),chaseEnd={x:-800,y:discard.y-3300};
+  const entrance={x:-3000,y:-2100},discard=world(-2450,390),chaseScale=4.75,chaseEnd={x:discard.x+(-800-discard.x)*chaseScale,y:discard.y-3300*chaseScale};
   const heroActor=C.create('child'),backgroundActors=rows.map((_,row)=>Array.from({length:3},()=>C.create({sides:row+3,radius:45,regular:false})));
   const guards=Array.from({length:3},()=>new C.Character('guard',[[0,-60],[12,48],[-12,48]],0));
   let playbackClock=time=>time;
@@ -65,7 +65,7 @@
   const chaseCurve=[[discard.x,discard.y],[lerp(discard.x,chaseEnd.x,.25),lerp(discard.y,chaseEnd.y,.30)],[lerp(discard.x,chaseEnd.x,.60),lerp(discard.y,chaseEnd.y,.65)],[chaseEnd.x,chaseEnd.y]];
   const chasePath=makePath([chaseCurve],false);
   function chasePoint(t,lead=0){
-    const progress=Motion.chaseProgress(t),p=pathPoint(chasePath,Math.min(1,progress.q+lead)*chasePath.length);
+    const progress=Motion.chaseProgress(t),p=pathPoint(chasePath,Math.min(chasePath.length,progress.q*chasePath.length+lead));
     p.speed=chasePath.length*progress.qSpeed;
     return Object.assign(p,progress);
   }
@@ -75,7 +75,7 @@
     const x=wave(104.35,105.625),y=wave(105.625,106.9);
     return{x:-21*x,y:-15*y,force:Math.max(Math.abs(x),Math.abs(y)),roll:-.15*x-.10*y};
   }
-  const invitationStart=cubic(chaseCurve,.022),invitationLeft=[discard.x-45,discard.y-65],invitationRight=[discard.x+70,discard.y-38];
+  const invitationStart=pathPoint(chasePath,140),invitationLeft=[discard.x-45,discard.y-65],invitationRight=[discard.x+70,discard.y-38];
   const invitationCurves=[
     [[invitationStart.x,invitationStart.y],[discard.x+72,discard.y-88],[discard.x-50,discard.y-92],invitationLeft],
     [invitationLeft,[discard.x-35,discard.y-95],[discard.x+65,discard.y-88],invitationRight],
@@ -121,7 +121,7 @@
     if(t<122)return probingBody(t);
     if(t>=132){const p=chasePoint(132),body=hardPose(heroActor,p.x,p.y,p.heading);body.speed=0;body.effort=0;body.bounce=0;body.strain=0;body.axialStretch=0;return body;}
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
-    body.speed=p.speed;body.axialStretch=.12*clamp(p.speed/1150);body.strain=clamp(p.speed/1100);body.bend=0;body.bounce=0;body.effort=0;
+    body.speed=p.speed;body.axialStretch=.14+.17*clamp((p.speed-1900)/2400);body.strain=clamp(p.speed/3000);body.bend=0;body.bounce=0;body.effort=0;
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
   }
   const tagReleaseTime=127.25;
@@ -195,9 +195,9 @@
       return{x:hero.x,y:hero.y,r:10,glow:.08*notice+.18*slit,reveal,complete:true,inside:true,phase:t<110?'notice':t<113.2?'enclosed':'slit'};
     }
     if(t<118.2){const u=between(t,116,118.2);return{x:hero.x+103*u,y:hero.y-80*u,r:10,glow:lerp(.26,.45,u),reveal:1,complete:true,inside:false,phase:'emerge'};}
-    if(t<119){const u=between(t,118.2,119),ahead=chasePoint(119,.022);return{x:hero.x+lerp(103,ahead.x-discard.x,u),y:hero.y+lerp(-80,ahead.y-discard.y,u),r:10,glow:lerp(.45,.55,u),reveal:1,complete:true,inside:false,phase:'lead'};}
+    if(t<119){const u=between(t,118.2,119),ahead=chasePoint(119,140);return{x:hero.x+lerp(103,ahead.x-discard.x,u),y:hero.y+lerp(-80,ahead.y-discard.y,u),r:10,glow:lerp(.45,.55,u),reveal:1,complete:true,inside:false,phase:'lead'};}
     if(t<122){const p=invitationLight(t);return{x:p.x,y:p.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'invite'};}
-    const ahead=chasePoint(t,.022);return{x:ahead.x,y:ahead.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'chase'};
+    const ahead=chasePoint(t,140);return{x:ahead.x,y:ahead.y,r:10,glow:.55,reveal:1,complete:true,inside:false,phase:'chase'};
   }
   let memoTime=NaN,memoFrame;
   function fullFrame(time){
@@ -330,6 +330,6 @@
       ctx.restore();drawPortal(ctx,entryPortal,t,true);drawPortal(ctx,exitPortal,t,true);
     }
   }
-  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:-800,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
+  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
   return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock};
 });

@@ -336,37 +336,40 @@
   const headAngle=Characters.actors.child.headAxis({strain:1}).angle,bridgeAngle=headAngle-endHeading;
   const bridgeCos=Math.cos(bridgeAngle),bridgeSin=Math.sin(bridgeAngle),forward=[Math.cos(headAngle),Math.sin(headAngle)],coastDistance=endSpeed*3;
   function worldToCity(point){const x=point[0]-journeyEnd.x,y=point[1]-journeyEnd.y;return[x*bridgeCos-y*bridgeSin-forward[0]*coastDistance,x*bridgeSin+y*bridgeCos-forward[1]*coastDistance,point[2]||0];}
-  function pathPoint(q){
+  function curvePoint(q){
     const a=[journeyStart.x,journeyStart.y],b=[a[0]+journeyDX*.25,a[1]+journeyDY*.30],c=[a[0]+journeyDX*.60,a[1]+journeyDY*.65],d=[journeyEnd.x,journeyEnd.y],s=1-q;
     return{x:s*s*s*a[0]+3*s*s*q*b[0]+3*s*q*q*c[0]+q*q*q*d[0],y:s*s*s*a[1]+3*s*s*q*b[1]+3*s*q*q*c[1]+q*q*q*d[1],heading:Math.atan2(3*s*s*(b[1]-a[1])+6*s*q*(c[1]-b[1])+3*q*q*(d[1]-c[1]),3*s*s*(b[0]-a[0])+6*s*q*(c[0]-b[0])+3*q*q*(d[0]-c[0]))};
   }
+  const pathLengths=[0];for(let i=1;i<=32;i++){const a=curvePoint((i-1)/32),b=curvePoint(i/32);pathLengths.push(pathLengths[i-1]+Math.hypot(b.x-a.x,b.y-a.y));}
+  function pathPoint(q){const d=clamp(q,0,1)*pathLengths[32];let i=1;while(i<32&&d>pathLengths[i])i++;return curvePoint((i-1+(d-pathLengths[i-1])/(pathLengths[i]-pathLengths[i-1]))/32);}
   function journeyPose(time,data={}){
     const t=clamp(time,119,138),progress=Motion.chaseProgress(Math.min(t,132)).q,sample=pathPoint(progress);
     const raw=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,strain:progress}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,strain:0,axialStretch:0,bend:0,speed:0,effort:0,bounce:0};
-    return{raw,center:worldToCity([raw.x,raw.y,0]),angle:(raw.angle||0)+bridgeAngle,size:1,growth:ease(Math.min(t,132),125,134),coast:0,phase:t<132?'chase':'pov'};
+    const speed=finite(data.chase?.speed,raw.speed||0),sprintStretch=t>=122&&t<132?1.3+1.45*clamp(speed/4500,0,1)+.3*clamp(data.chase?.effort||0,0,1):1;
+    return{raw,center:worldToCity([raw.x,raw.y,0]),angle:(raw.angle||0)+bridgeAngle,size:1,sprintStretch,growth:ease(Math.min(t,132),125,134),coast:0,phase:t<132?'chase':'pov'};
   }
-  const journeyObjects=[];
+  const journeyObjects=[],journeyObjectCount=120;
   function chasePassTime(q){let a=122,b=132;for(let i=0;i<20;i++){const m=(a+b)/2;if(Motion.chaseProgress(m).q<q)a=m;else b=m;}return(a+b)/2;}
   function placeJourneyObject(point,heading,index){
     const normal=[-Math.sin(heading),Math.cos(heading)];
-    const passTime=index<=32?chasePassTime(index/32):132+6*(1-Math.sqrt(1-(index-32)/14));
+    const passTime=chasePassTime(index/journeyObjectCount);
     for(const side of [-1,1]){
-      const growAt=clamp(passTime-1.2+(side>0?.12:0),124.8,129.5),enterAt=passTime-mix(.35,1.45,clamp(index/30,0,1))+(side>0?.08:0);
-      journeyObjects.push({x:point[0]+normal[0]*side*((index>=43?610:250)+(index%3)*95),y:point[1]+normal[1]*side*((index>=43?610:250)+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],enterAt,growAt,growUntil:growAt+1.1+(index%3)*.12});
+      const growAt=clamp(passTime-1.2+(side>0?.12:0),124.8,129.5),enterAt=passTime-mix(.35,1.45,clamp(index/(journeyObjectCount*.94),0,1))+(side>0?.08:0);
+      journeyObjects.push({x:point[0]+normal[0]*side*(250+(index%3)*95),y:point[1]+normal[1]*side*(250+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],enterAt,growAt,growUntil:growAt+1.1+(index%3)*.12});
     }
   }
-  for(let i=0;i<=32;i++){const point=pathPoint(i/32),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
-  for(let i=1;i<=14;i++){const d=coastDistance*(1-i/14);placeJourneyObject([-forward[0]*d,-forward[1]*d,0],headAngle,32+i);}
+  for(let i=0;i<=journeyObjectCount;i++){const point=pathPoint(i/journeyObjectCount),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
   function distanceAlpha(point,hero){
     const dx=point[0]-hero[0],dy=point[1]-hero[1],along=dx*forward[0]+dy*forward[1];
-    return ease(along,-950,-550)*(1-ease(along,1500,2300))*(1-ease(Math.hypot(dx,dy),1800,2600));
+    return ease(along,-650,-250)*(1-ease(along,900,1700))*(1-ease(Math.hypot(dx,dy),1600,2200));
   }
   function addJourneyHero(list,state,data){
     const actor=data.entry?.actor||Characters.actors.child,body=state.raw,points=[];
     for(const segment of actor.localSegments(body))for(let i=0;i<8;i++){
       const q=i/8,s=1-q;points.push([s*s*segment.from[0]+2*s*q*segment.control[0]+q*q*segment.to[0],s*s*segment.from[1]+2*s*q*segment.control[1]+q*q*segment.to[1]]);
     }
-    const ca=Math.cos(state.angle),sa=Math.sin(state.angle),vertex=(p,z)=>{const x=p[0]*(body.sx??1)*state.size,y=p[1]*(body.sy??1)*state.size;return[state.center[0]+x*ca-y*sa,state.center[1]+x*sa+y*ca,z];};
+    const ca=Math.cos(state.angle),sa=Math.sin(state.angle),axis=actor.headAxis(body).angle,fx=Math.cos(axis),fy=Math.sin(axis),stretch=state.sprintStretch;
+    const vertex=(p,z)=>{const along=(p[0]*fx+p[1]*fy)*stretch,across=(-p[0]*fy+p[1]*fx)/stretch,x=(along*fx-across*fy)*(body.sx??1)*state.size,y=(along*fy+across*fx)*(body.sy??1)*state.size;return[state.center[0]+x*ca-y*sa,state.center[1]+x*sa+y*ca,z];};
     const texture=data.heroTexture||journeyTexture,extent=data.textureExtent||journeyTextureExtent,tex=p=>p.map(v=>(v/extent+.5)*(texture?.width||256));
     for(let i=0;i<points.length;i++){
       const a=points[i],b=points[(i+1)%points.length];
@@ -386,9 +389,9 @@
     }
   }
   function shapeScale(item,time){
-    const depth=ease(item.index,0,30),base=mix(.30,3.2,depth),q=ease(time,item.passTime-1.4,item.passTime+.7);
+    const depth=ease(item.index,0,journeyObjectCount*.94),base=mix(.30,3.2,depth),q=ease(time,item.passTime-.6,item.passTime+.25);
     // The route has small forms first and large forms farther on; local motion cannot reveal a huge early ring.
-    return base*(item.index<6?mix(.82,1.10,q):item.index%2===0?mix(.85,1.12,q):mix(1.12,.92,q));
+    return base*(item.index<18?mix(.82,1.10,q):item.index%2===0?mix(.85,1.12,q):mix(1.12,.92,q));
   }
   function apparition(list,item,time,clock,alpha){
     const r=item.r*shapeScale(item,time),phase=item.index*.91+item.side*.6;
@@ -451,23 +454,23 @@
   function addJourneyObjects(list,hero,time,clock=time){
     const exit=ease(time,122.15,122.45);if(exit<=0)return;
     for(const item of journeyObjects){
-      if(item.index<6&&item.side!==(item.index%2?1:-1))continue;
+      if(item.index<18&&item.side!==(item.index%2?1:-1))continue;
       const alpha=distanceAlpha([item.x,item.y],hero)*exit*ease(time,item.enterAt,item.enterAt+.45);
       if(alpha>=.002)apparition(list,item,time,clock,alpha);
     }
   }
-  const speedRibbons=Array.from({length:148},(_,i)=>{
-    const point=pathPoint((i%74)/73),center=worldToCity([point.x,point.y,0]),heading=point.heading+bridgeAngle,side=i<74?-1:1;
+  const speedRibbons=Array.from({length:560},(_,i)=>{
+    const point=pathPoint((i%280)/279),center=worldToCity([point.x,point.y,0]),heading=point.heading+bridgeAngle,side=i<280?-1:1;
     return{center,heading,side,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
   });
   function addSpeedRibbons(list,hero,time,data){
-    const speed=clamp((data.chase?.speed||0)/1150,0,1),kick=clamp(data.chase?.effort||0,0,1);
+    const speed=clamp((data.chase?.speed||0)/4500,0,1),kick=clamp(data.chase?.effort||0,0,1);
     const amount=ease(time,122,122.3)*(1-ease(time,132,137));
     if(amount<=0)return;
     for(const item of speedRibbons){
       const alpha=distanceAlpha(item.center,hero)*amount*(.18+.62*speed+.18*kick);if(alpha<.005)continue;
       const c=Math.cos(item.heading),s=Math.sin(item.heading),n=[-s,c],x=item.center[0]+n[0]*item.side*item.offset,y=item.center[1]+n[1]*item.side*item.offset;
-      const length=item.length*(.25+3.2*speed+1.0*kick),width=item.width*(1+.7*kick);
+      const length=item.length*(.7+4.8*speed+1.0*kick),width=item.width*(1+.7*kick);
       const points=[[-length/2,0],[-length*.25,-width],[length/2,0],[length*.22,width]].map(([u,v])=>[x+c*u+n[0]*v,y+s*u+n[1]*v,2]);
       surface(list,points,item.color,'pigment',alpha);
     }
@@ -569,29 +572,41 @@
     const complete=ease(time,131.72,132);if(complete>0){ctx.globalAlpha=complete;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
     ctx.restore();
   }
-  function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
-    if(time>=132){drawEnding(ctx,time,{w,h});return;}
-    if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
-    const state=journeyPose(time,data),list=[],clock=finite(ambient,time);
-    addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
-    addJourneyHero(list,state,data);if(data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,132))},state.center);
+  function journeyView(time,camera,viewport,data,state=journeyPose(time,data)){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760);
     const pathHeading=(Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(Motion.chaseProgress(time).q).heading)+bridgeAngle;
     const lower=ease(time,128,131.6),tilt=mix(finite(camera.tilt,1.25*ease(time,122,138)),1.25,lower),screenHeading=-Math.PI/5;
     const groundHeading=Math.atan2(Math.sin(screenHeading)/Math.cos(tilt),Math.cos(screenHeading));
     const focus=time<122?worldToCity([finite(camera.x,journeyStart.x),finite(camera.y,journeyStart.y),0]):state.center;
-    const view={...camera,x:focus[0],y:focus[1],yaw:time<122?finite(camera.yaw,-bridgeAngle):groundHeading-pathHeading,zoom:1.2,tilt,focal:mix(1600,720,ease(time,127,131)),screenY:.5};
-    const project=render(ctx,list,view,{w,h},sharedMaterial(clock),Palette.outside.background);
+    const view={...camera,x:focus[0],y:focus[1],yaw:time<122?finite(camera.yaw,-bridgeAngle):groundHeading-pathHeading,zoom:1.2,tilt,focal:mix(1600,620,ease(time,123.5,130)),screenY:.5};
+    return{state,view,w,h,pathHeading};
+  }
+  function projectJourneyLight(time,layout,data,project=projection(layout.view,layout)){
+    const {state,pathHeading,w,h}=layout;
     const near=data.light?[data.light.x,data.light.y]:[state.raw.x+Math.cos(pathHeading-bridgeAngle)*100,state.raw.y+Math.sin(pathHeading-bridgeAngle)*100];
     const target=ease(time,122.5,125),end=[journeyEnd.x+Math.cos(endHeading)*20,journeyEnd.y+Math.sin(endHeading)*20];
     const light=worldToCity([mix(near[0],end[0],target),mix(near[1],end[1],target),0]);
     const lightPoint=project(light);
     // Keep the one destination point inside the upper-right field while the early, nearly flat view still has its vanishing point beyond the frame.
     if(time>=122&&lightPoint){lightPoint[0]=clamp(lightPoint[0],w*.55,w*.80);lightPoint[1]=clamp(lightPoint[1],h*.18,h*.45);}
+    return lightPoint;
+  }
+  function journeyLightPoint(time,camera={},viewport={},data={}){
+    if(time>=132)return null;
+    return projectJourneyLight(time,journeyView(time,camera,viewport,data),data);
+  }
+  function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
+    if(time>=132){drawEnding(ctx,time,{w,h});return;}
+    if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
+    const layout=journeyView(time,camera,viewport,data),state=layout.state,list=[],clock=finite(ambient,time);
+    addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
+    addJourneyHero(list,state,data);if(data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,132))},state.center);
+    const project=render(ctx,list,layout.view,{w,h},sharedMaterial(clock),Palette.outside.background),lightPoint=projectJourneyLight(time,layout,data,project);
     paintArrivalLight(ctx,lightPoint,time,data.light?.r||10,w,h);
   }
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint});
 });

@@ -39,26 +39,36 @@ chase.release();assert.equal(chase.target,Timing.playbackAt(132));
 
 const auto = new StoryPlayer({mode:'auto',playing:true});step(auto,160);
 assert.equal(auto.time,90);assert(!auto.playing);
-// The actual curved world path advances equal distances at equal playback intervals.
-const distances=[];let last=Factory.frame(122).hero;
-for(let playback=76.25;playback<86;playback+=.25){
-  const time=Timing.sceneAt(playback),next=Factory.frame(time).hero;
-  distances.push(Math.hypot(next.x-last.x,next.y-last.y));last=next;
-  assert.equal(Motion.chaseProgress(time).qSpeed,.1,'There is no scripted speed pulse');
+// Equal playback intervals travel progressively farther, without periodic speed pulses.
+const distances=[],distancePerProgress=[],speedIncrements=[];
+let last=Factory.frame(122).hero,lastProgress=Motion.chaseProgress(122);
+for(let playback=76.25;playback<=86;playback+=.25){
+  const time=Timing.sceneAt(playback),next=time===132?Factory.anchors.chaseEnd:Factory.frame(time).hero,progress=Motion.chaseProgress(time);
+  const distance=Math.hypot(next.x-last.x,next.y-last.y);
+  distances.push(distance);distancePerProgress.push(distance/(progress.q-lastProgress.q));
+  speedIncrements.push(progress.qSpeed-lastProgress.qSpeed);
+  assert(progress.qSpeed>lastProgress.qSpeed,'Sprint speed rises continuously rather than pulsing');
+  if(distances.length>1)assert(distance>distances.at(-2),'Successive equal-time world displacements increase');
+  last=next;lastProgress=progress;
   assert(Math.abs(Timing.sceneAt(playback)-122-(playback-76))<1e-9,'Sprint editing time is uniform');
 }
-assert(Math.max(...distances)/Math.min(...distances)<1.012,'Arc sampling keeps world displacement uniform');
+assert(Math.max(...distancePerProgress)/Math.min(...distancePerProgress)<1.012,'World displacement follows the smooth progress curve along the sampled arc');
+assert(Math.max(...speedIncrements)/Math.min(...speedIncrements)<1.000001,'The acceleration has no step changes between samples');
+const oldRouteSpan=Math.hypot(-800-Factory.anchors.discard.x,3300);
+assert(distances.reduce((sum,distance)=>sum+distance,0)>oldRouteSpan*3,'The sprint travels over three times the former route span');
+assert(Factory.frame(122).chase.speed>oldRouteSpan/10*3,'The sprint starts above three times the former cruise speed');
 const testAuto=new StoryPlayer({mode:'auto'});testAuto.seek(76);testAuto.setMode('auto');
 for(let i=0;i<50;i++){testAuto.tick(.1);assert.equal(testAuto.playbackRate,1,'Autoplay stays at base speed');}
 assert(Math.abs(testAuto.time-81)<1e-8);
 assert.equal(Timing.duration,90);
 assert.equal(Factory.frame(132).hero,null,'The sprint ends at the white POV stop, with no coast actor');
-console.log('Click episodes, continuous cuts, smooth input acceleration/release, uniform world chase and 90s autoplay passed.');
+console.log('Click episodes, continuous cuts, smooth input rate, uninterrupted accelerating chase over 3x the former route and 90s autoplay passed.');
 
 for(let t=0;t<=90;t+=.25)assert(Math.abs(Timing.playbackAt(Timing.sceneAt(t))-t)<1e-8,'Edit clock round trips');
 
 // Version edits have separate clocks and cameras, while the input model stays shared.
 const Versions=require('./docs/story-versions.js'),A=Versions.get('rhythm'),B=Versions.get('routine');
+const Office=require('./docs/office-world.js');
 Factory.setPlaybackClock(A.timing.playbackAt);
 try {
 assert.equal(Versions.get().id,'rhythm');
@@ -93,6 +103,27 @@ assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' 
 assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(70),16);
 assert.equal(B.timing.playbackAt(108)-B.timing.playbackAt(94),16);
 assert.equal(B.timing.playbackAt(119)-B.timing.playbackAt(108),10);
+const workView=B.camera.pose(98),officeView=B.camera.pose(104);
+assert.equal(workView.x,Office.anchors.work.x);assert.equal(workView.y,Office.anchors.work.y);
+assert.equal(officeView.x,Office.anchors.overview.x);assert.equal(officeView.y,Office.anchors.overview.y);
+assert(officeView.zoom<workView.zoom*.3,'The office overview reveals a substantially wider area');
+for(const raw of[98,100,102,104]){
+  const previous=B.camera.pose(raw-.001),next=B.camera.pose(raw+.001);
+  assert(Math.hypot(next.x-previous.x,next.y-previous.y)<3&&Math.abs(next.zoom-previous.zoom)<.001,'The office pullback has no position or zoom jump');
+}
+assert.deepEqual(B.camera.pose(109),{...officeView,shotId:'work'},'The full office view stays fixed while it darkens');
+assert.equal(B.camera.shotAt(109.99).id,'work');assert.equal(B.camera.shotAt(110).id,'inner');
+const innerView=B.camera.pose(110);
+assert.equal(innerView.x,Factory.anchors.discard.x);assert.equal(innerView.y,Factory.anchors.discard.y);
+assert.equal(B.camera.pose(118.9).x,innerView.x);assert.equal(B.camera.pose(118.9).y,innerView.y,'The inner shot does not travel along an office exit');
+const officeEpisode=new StoryPlayer({timing:B.timing,beats:B.beats});
+officeEpisode.seek(B.timing.playbackAt(94));officeEpisode.tap();
+assert.equal(officeEpisode.target,B.timing.playbackAt(119),'Office work, darkening and inner light are one click episode');
+step(officeEpisode,B.timing.playbackAt(110)-officeEpisode.time+.02);
+assert(officeEpisode.playing&&B.timing.sceneAt(officeEpisode.time)>110,'The work-to-inner cut does not stop the action');
+assert.equal(officeEpisode.target,B.timing.playbackAt(119));
+assert(B.notes.at(102).action.includes('按钮')&&B.notes.at(102).action.includes('闸门'));
+assert(B.notes.at(107).action.includes('逐渐变暗')&&B.notes.at(113).summary.includes('内心'));
 for(const variant of[A,B]){
   Factory.setPlaybackClock(variant.timing.playbackAt);
   assert.equal(variant.timing.playbackAt(138),variant.duration);
@@ -107,7 +138,8 @@ for(const variant of[A,B]){
   p.press();step(p,20);assert.equal(p.time,variant.timing.playbackAt(132));
   assert(!p.playing,'The shared white stop remains an action boundary');
   const startView=variant.camera.pose(119);assert.equal(startView.x,A.factory.anchors.discard.x);assert.equal(startView.y,A.factory.anchors.discard.y);
-  for(let raw=70;raw<119;raw+=.1){
+  // B's external world is fully hidden from 110; its inner view uses the shared chase-space anchor.
+  for(let raw=70;raw<(variant.id==='routine'?110:119);raw+=.1){
     const body=variant.factory.frame(raw).hero,view=variant.camera.pose(raw);
     assert(Math.abs((body.x-view.x)*view.zoom)<600&&Math.abs((body.y-view.y)*view.zoom)<340,'The hero stays inside the shot while moving between stations and the work circuit');
   }
@@ -117,6 +149,6 @@ const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.pl
 injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
 assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
 assert.equal(injected.target,alternateTiming.playbackAt(132));
-console.log('Version A/B: real-time offset fixtures .5s down + 3s up + 1.5s upper wait, no empty-cycle damage, 79s/90s edits, continuous cuts, containment and chase hold passed.');
+console.log('Version A/B: real-time offset fixtures, unchanged 79s/90s edits, continuous office pullback/inner episode, containment and chase hold passed.');
 
 } finally {Factory.setPlaybackClock(time=>time);}

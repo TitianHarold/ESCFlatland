@@ -1,10 +1,10 @@
 /* Two story edits share the family, input model and final chase. */
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'),require('./camera.js'),require('./story-notes.js'),require('./factory.js'),require('./factory-routine.js'));
-  else root.FlatlandStoryVersions=factory(root.FlatlandTiming,root.FlatlandCamera,root.FlatlandStoryNotes,root.FlatlandFactory,root.FlatlandRoutineFactory);
-})(typeof globalThis!=='undefined'?globalThis:this,function(Timing,Camera,StoryNotes,Factory,RoutineFactory){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'),require('./camera.js'),require('./story-notes.js'),require('./factory.js'),require('./factory-routine.js'),require('./office-world.js'));
+  else root.FlatlandStoryVersions=factory(root.FlatlandTiming,root.FlatlandCamera,root.FlatlandStoryNotes,root.FlatlandFactory,root.FlatlandRoutineFactory,root.FlatlandOfficeWorld);
+})(typeof globalThis!=='undefined'?globalThis:this,function(Timing,Camera,StoryNotes,Factory,RoutineFactory,Office){
   'use strict';
-  if(!Timing||!Camera||!StoryNotes||!Factory||!RoutineFactory)throw new Error('Load timing, camera, notes and both factories before story-versions.js.');
+  if(!Timing||!Camera||!StoryNotes||!Factory||!RoutineFactory||!Office)throw new Error('Load timing, camera, notes, both factories and office-world before story-versions.js.');
   const clamp=(value,a,b)=>Math.max(a,Math.min(b,value)),ease=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
   function edit(cuts){
     function map(value,from,to){
@@ -33,7 +33,7 @@
     ...endingShots.map((s,i)=>({...s,label:(i?'015':'014')+' · '+s.label}))];
   const routineShots=[...firstShots,
     shot('factory','006 · 工厂概览',64,70),shot('mold','007 · 套模',70,77),shot('compact','008 · 压实',77,82),
-    shot('paint','009 · 逐边喷涂',82,94),shot('work','010 · 循环工作',94,108),shot('awaken','011 · 光触发',108,119),
+    shot('paint','009 · 逐边喷涂',82,94),shot('work','010 · 重复办公室',94,110),shot('inner','011 · 光从内心出现',110,119),
     ...endingShots.map((s,i)=>({...s,label:(i?'013':'012')+' · '+s.label}))];
   function cameraFor(id,shots){
     const shotAt=time=>shots.find(s=>time<s.end)||shots.at(-1);
@@ -56,14 +56,15 @@
         else if(time<104)v={...fixed([discard],.7)};
         else v={...Camera.pose(time),x:discard.x,y:discard.y};
       }else{
-        const b=RoutineFactory.anchors||{},work=point(b.work,discard),awaken=point(b.awaken,discard);
+        const b=RoutineFactory.anchors||{},work=Office.anchors.work,officeOverview=Office.anchors.overview;
         if(time<70){const p=point(b.overview,overview);v=fixed([p],p.zoom||.22);}
         else if(time<77)v=move(time,70,71.7,point(b.approach,stage.m1),point(b.mold,stage.m1),b.mold?.zoom||1.5);
         else if(time<82)v=move(time,77,78.5,point(b.mold,stage.m1),point(b.compact,stage.m2),b.compact?.zoom||1.5);
         else if(time<94)v=move(time,82,83.2,point(b.compact,stage.m2),point(b.paint,stage.m3),b.paint?.zoom||1.5);
         else if(time<98)v=move(time,94,98,point(b.paint,stage.m3),work,b.paint?.zoom||1.5,work.zoom||.75);
-        else if(time<108)v=fixed([work],work.zoom||.75);
-        else{const u=ease((time-111)/8);v={...fixed([work,awaken],.75),x:work.x+(discard.x-work.x)*u,y:work.y+(discard.y-work.y)*u,zoom:.75+.45*u};}
+        else if(time<104)v=move(time,98,104,work,officeOverview,work.zoom||.75,officeOverview.zoom||.13);
+        else if(time<110)v=fixed([officeOverview],officeOverview.zoom||.13);
+        else v=fixed([discard],1.5);
       }
       // The overview move crosses the shot boundary without changing the factory clock.
       if(time>=68.3&&time<70.8){
@@ -102,15 +103,15 @@
     if(time<64)return StoryNotes.at(time);
     if(time<70)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
     if(time<77)return{summary:'主角进入与自身边数匹配的多边形模腔。五边形主角对应五边模腔，各边模块沿轮廓合拢。',action:time<71.7?'主角沿传送带接近五边形套模工位。':'五条边对应的模腔模块沿边合拢，外层逐渐贴合主角轮廓。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
-    if(time<82)return{summary:'主角进入压实工位。按对应边数排列的成型压块沿各边法向合拢，实际接触后压实外层。',action:time<78.5?'五边形主角沿传送带移入五边排列的成型压块之间。':time<79.25?'五块成型压块沿各条边的法向靠近外壳。':time<79.65?'各块真实接触对应边界后施力压实。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，主角持续留在画面中。'};
+    if(time<82)return{summary:'主角进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿传送带移入五边排列的成型压块之间。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
     if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角沿传送带进入喷涂工位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
-    if(time<108)return{summary:'主角离开流水线，进入几何建筑围成的工作通道。',action:time<98?'主角离开流水线，沿连接通道进入工作区域。':'主角与两位居民沿闭合路线行进，在固定工位推送几何件后继续工作。',camera:'从喷涂工位连续移向工作区域并拉远，随后固定取景。'};
-    if(time<119)return{summary:'工作途中，同一团光数次靠近主角。主角转向光，逐渐离开原有路线。',action:time<111?'光在近处接连出现，主角停在路线右侧，头尖数次转向。':time<116?'主角从工作路线右侧沿开口通道移向光。':'主角继续移到通道外的汇合位置，光留在它的前方。',camera:time<111?'保持工作区域广角，主角和近处的光同框。':'预设取景从工作区域缓慢移向主角与光汇合的位置。'};
+    if(time<110)return{summary:'主角进入办公室，许多重复的办公室向四周展开。居民按下按钮，远处矫正所的闸门随之开合，随后办公外景渐黑。',action:time<98?'主角离开喷涂工位，沿连接通道进入自己的办公室。':time<104?'居民沿各自的闭合路线工作；按钮被压下时，矫正所闸门同步打开，松开后合拢。':'办公室里的动作继续，画面逐渐变暗。',camera:time<98?'从喷涂工位连续移向主角的办公室。':time<104?'由主角所在的办公室平滑拉远，逐渐展现重复办公单元与闸门。':'保持办公室全景，直至外景完全变暗。'};
+    if(time<119)return{summary:'画面从办公室进入主角内心。纠缠的暗线包住色带，金色光从缝隙中显现并飞向前方。',action:time<112?'内心窗口逐渐展开，办公室隐入暗处。':time<113.2?'暗色线网包裹翻卷的色带，中心有一小点金色微光。':time<116?'一道暖金光缝逐渐张开，切开包裹色带的暗线。':'同一团金色光从翻卷色层中飞出，移向主角前方。',camera:'内心视野占满画面，固定取景看色带、暗线与光的变化。'};
     if(time<132)return{summary:'光先在近处绕行，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<122?'光在近处绕行，主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；沿途小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方。'};
     return StoryNotes.at(time);
   }
   function notesFor(select){return{at:value=>select(clamp(Number(value)||0,0,138))};}
   const rhythm={id:'rhythm',label:'A · 四组夹具',duration:rhythmTiming.duration,factory:Factory,timing:rhythmTiming,camera:cameraFor('rhythm',rhythmShots),notes:notesFor(rhythmNotes),beats:[6.8,98,104,110,119,132,138].map(rhythmTiming.playbackAt),chaseStart:119,chaseEnd:132};
-  const routine={id:'routine',label:'B · 例行塑形',duration:routineTiming.duration,factory:RoutineFactory,timing:routineTiming,camera:cameraFor('routine',routineShots),notes:notesFor(routineNotes),beats:[6.8,108,119,132,138].map(routineTiming.playbackAt),chaseStart:119,chaseEnd:132};
+  const routine={id:'routine',label:'B · 例行塑形',duration:routineTiming.duration,factory:RoutineFactory,timing:routineTiming,camera:cameraFor('routine',routineShots),notes:notesFor(routineNotes),beats:[6.8,119,132,138].map(routineTiming.playbackAt),chaseStart:119,chaseEnd:132};
   return{get:id=>id==='routine'?routine:rhythm};
 });

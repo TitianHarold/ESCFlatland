@@ -23,7 +23,7 @@
   function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factory.frame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
-  function placeWorld(ctx,v){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
+  function placeWorld(ctx,v){const t=sceneTime(),jolt=version.id==='routine'&&t>=79.25&&t<79.65?factory.compactAt(t).recoil*1.6:0;ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2+jolt,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
   function world(ctx,v){screen(ctx);placeWorld(ctx,v);}
   function transform(ctx,b){ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);ctx.scale(b.sx??1,b.sy??1);}
   function cavityTransform(ctx,actor,body){
@@ -105,8 +105,23 @@
     if(glow){const gradient=top.createRadialGradient(light.x,light.y,r*.2,light.x,light.y,r*5);gradient.addColorStop(0,palette.gold+'88');gradient.addColorStop(1,palette.gold+'00');top.fillStyle=gradient;top.beginPath();top.arc(light.x,light.y,r*5*glow,0,Math.PI*2);top.fill();}
     top.fillStyle=light.phase==='notice'||light.phase==='enclosed'||light.phase==='slit'?palette.gold:glow?palette.cream:palette.gold;top.beginPath();top.arc(light.x,light.y,r,0,Math.PI*2);top.fill();top.restore();
   }
+  function drawRoutineInner(time){
+    const viewport={w:state.w,h:state.h,dpr:state.dpr},plant=factory.frame(time);
+    screen(low);low.fillStyle=palette.night;low.fillRect(0,0,state.w,state.h);
+    screen(top);top.fillStyle=palette.night;top.fillRect(0,0,state.w,state.h);
+    const startView=view(119),data=journeyData(119),point=dimension.journeyLightPoint(119,startView,viewport,data);
+    // The inner opening contracts into the very same light that leads the chase.
+    if(time>=118.2){
+      top.save();top.globalAlpha=clamp((time-118.2)/.6);
+      dimension.drawJourney(top,119,startView,viewport,state.ambient,data);top.restore();
+    }
+    const light=plant.light,screenLight={...light,x:point[0],y:point[1],r:(light.r||10)*point[3]};
+    const portal={x:state.w/2,y:state.h/2,radius:1.8*Math.hypot(state.w,state.h),seedRadius:10*Math.max(state.w/1280,state.h/760),angle:plant.hero.angle};
+    screenOverlay();window.FlatlandInner.draw(top,time,viewport,state.ambient,screenLight,portal);
+  }
   function draw(time,v){
     if(time>=132){screen(low);low.fillStyle='#ffffff';low.fillRect(0,0,state.w,state.h);screen(top);dimension.drawEnding(top,time,{w:state.w,h:state.h,dpr:state.dpr});return;}
+    if(version.id==='routine'&&time>=110&&time<119){drawRoutineInner(time);return;}
     world(low,v);window.FlatlandPossibility.draw(low,state.ambient);
     if(time>=119){
       screen(top);const data=journeyData(time),viewport={w:state.w,h:state.h,dpr:state.dpr};
@@ -125,6 +140,7 @@
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(version.id==='routine'){
       factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
+      if(plant.outsideDarkness){screenOverlay();top.save();top.globalAlpha=plant.outsideDarkness;top.fillStyle=palette.night;top.fillRect(0,0,state.w,state.h);top.restore();}
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
       top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time,bounds);top.restore();
@@ -166,7 +182,7 @@
       player.tick(dt);
       if(!reduced.matches)state.ambient+=dt;
     }
-    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=119?1:1-state.layer*.92;
+    state.layer=reduced.matches?Number(state.open):state.layer+(Number(state.open)-state.layer)*(1-Math.exp(-dt*6));upper.style.opacity=sceneTime()>=(version.id==='routine'?110:119)?1:1-state.layer*.92;
     // One absolute story time drives actors, the view and shot notes. Automatic
     // shot changes only select a camera; only explicit review controls call seek.
     const time=sceneTime(),v=view(time);draw(time,v);interfaceState(v,time);requestAnimationFrame(frame);
