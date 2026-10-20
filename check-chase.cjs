@@ -22,7 +22,7 @@ assert(point[0]>0&&point[0]<1280&&point[1]>0&&point[1]<760,'invitation light rem
 assert.deepEqual(Dimension.journeyLightPoint(119,camera,viewport,data),point,'projection is stable on paused scrubs');
 // Inspect the real world-space visibility gate, without adding diagnostics to the runtime API.
 const file=path.resolve('docs/dimension.js'),box={module:{exports:{}},require:createRequire(file)};
-vm.runInNewContext(fs.readFileSync(file,'utf8').replace('journeyPose,journeyLightPoint});','journeyPose,journeyLightPoint,__objects:journeyObjects,__alpha:distanceAlpha});'),box,{filename:file});
+vm.runInNewContext(fs.readFileSync(file,'utf8').replace('return Object.freeze({draw,drawJourney,','return Object.freeze({__objects:journeyObjects,__alpha:distanceAlpha,draw,drawJourney,'),box,{filename:file});
 const actual=box.module.exports,dwell=[];
 for(const index of[30,60,90]){
   const item=actual.__objects.find(item=>item.index===index);let first=Infinity,last=-Infinity;
