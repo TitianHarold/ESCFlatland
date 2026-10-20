@@ -56,3 +56,43 @@ assert.equal(Factory.frame(132).hero,null,'The sprint ends at the white POV stop
 console.log('Click episodes, continuous cuts, smooth input acceleration/release, uniform world chase and 90s autoplay passed.');
 
 for(let t=0;t<=90;t+=.25)assert(Math.abs(Timing.playbackAt(Timing.sceneAt(t))-t)<1e-8,'Edit clock round trips');
+
+// Version edits have separate clocks and cameras, while the input model stays shared.
+const Versions=require('./docs/story-versions.js'),A=Versions.get('rhythm'),B=Versions.get('routine');
+assert.equal(Versions.get().id,'rhythm');
+for(let raw=0;raw<=58;raw+=1)assert.equal(A.timing.playbackAt(raw),B.timing.playbackAt(raw),'Both openings share the same edit');
+assert.equal(A.factory.anchors.pressStations.length,4);
+for(const program of A.factory.pressProgram.programs){
+  assert(Math.abs(A.timing.playbackAt(program.closeEnd)-A.timing.playbackAt(program.start)-1)<1e-7,'Each A fixture descends for one playback second');
+  assert(Math.abs(A.timing.playbackAt(program.end)-A.timing.playbackAt(program.closeEnd)-3)<1e-7,'Each A fixture rises for three playback seconds');
+  assert.equal(program.windupDuration,0,'The first downward movement does not start with a lift');
+}
+assert.equal(A.timing.playbackAt(77)-A.timing.playbackAt(72),16);
+assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
+assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(70),16);
+assert.equal(B.timing.playbackAt(108)-B.timing.playbackAt(94),16);
+assert.equal(B.timing.playbackAt(119)-B.timing.playbackAt(108),10);
+for(const variant of[A,B]){
+  assert.equal(variant.timing.duration,90);assert.equal(variant.timing.playbackAt(138),90);
+  for(let seconds=0;seconds<=90;seconds+=.5)assert(Math.abs(variant.timing.playbackAt(variant.timing.sceneAt(seconds))-seconds)<1e-7);
+  const p=new StoryPlayer({timing:variant.timing,beats:variant.beats});
+  p.seek(variant.timing.playbackAt(77)-.01);p.tap();const target=p.target;
+  const before=variant.camera.shotAt(variant.timing.sceneAt(p.time));p.tick(.02);
+  assert.notEqual(variant.camera.shotAt(variant.timing.sceneAt(p.time)).id,before.id,'The camera crosses a real station cut');
+  assert(p.playing,'Camera cuts cannot end a version action');assert.equal(p.target,target);
+  p.seek(variant.timing.playbackAt(119));p.press();step(p,1);assert(p.playbackRate>1.79);
+  p.release();step(p,1);assert(p.playing);assert(p.playbackRate<1.004);
+  p.press();step(p,20);assert.equal(p.time,variant.timing.playbackAt(132));
+  assert(!p.playing,'The shared white stop remains an action boundary');
+  const startView=variant.camera.pose(119);assert.equal(startView.x,A.factory.anchors.discard.x);assert.equal(startView.y,A.factory.anchors.discard.y);
+  for(let raw=70;raw<119;raw+=.1){
+    const body=variant.factory.frame(raw).hero,view=variant.camera.pose(raw);
+    assert(Math.abs((body.x-view.x)*view.zoom)<600&&Math.abs((body.y-view.y)*view.zoom)<340,'The hero stays inside the shot while moving between stations and the work circuit');
+  }
+}
+const alternateTiming={duration:45,playbackAt:raw=>raw*45/138,sceneAt:seconds=>seconds*138/45};
+const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.playbackAt(132),45]});
+injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
+assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
+assert.equal(injected.target,alternateTiming.playbackAt(132));
+console.log('Version A/B: fixture 1s down + 3s up, 90s edits, shared opening, continuous cuts, injected clocks and chase hold passed.');

@@ -5,16 +5,17 @@
   const workbench=document.body.classList.contains('workbench');
   const stage=$('stage'),lower=$('possibility-world'),upper=$('outer-world');
   const low=lower.getContext('2d'),mainTop=upper.getContext('2d'),top=mainTop;
-  const cameraTrack=window.FlatlandCamera,characters=window.FlatlandCharacters,motion=window.FlatlandMotion;
-  const district=window.FlatlandDistrict,factory=window.FlatlandFactory,dimension=window.FlatlandDimension;
-  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),timing=window.FlatlandTiming,duration=timing.duration;
+  const params=new URLSearchParams(location.search),version=window.FlatlandStoryVersions.get(params.get('version'));
+  const cameraTrack=version.camera,characters=window.FlatlandCharacters,motion=window.FlatlandMotion;
+  const district=window.FlatlandDistrict,factory=version.factory,dimension=window.FlatlandDimension;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),timing=version.timing,duration=timing.duration;
   const palette=window.FlatlandPalette;
   // Paths are supplied with the final transparent hand assets; white remains until they load.
   dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open.png',flexedHands:'assets/pov-hands-flexed.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-  const mode=new URLSearchParams(location.search).get('mode')==='auto'?'auto':'interactive';
-  const player=new window.FlatlandStoryPlayer({duration,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
-  const initialTime=Number(new URLSearchParams(location.search).get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
+  const mode=params.get('mode')==='auto'?'auto':'interactive';
+  const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
+  const initialTime=Number(params.get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
   const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
@@ -62,9 +63,10 @@
       fracture(entry,damage,top);
       if(entry.blacken){top.globalAlpha=clamp(entry.blacken);top.fillStyle=palette.ink;top.fillRect(-100,-100,200,200);top.globalAlpha=1;}
       top.restore();
-      if(entry.core){top.save();top.globalAlpha=entry.coreReveal??1;top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();top.restore();}
     }
+    if(entry.core){top.save();top.globalAlpha=entry.coreReveal??1;top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();top.restore();}
     if(entry.label==='reject'&&entry.restraint?.attached!==false)drawFailureMark(top,entry.restraint);
+    factory.drawActorOverlay?.(top,entry);
     top.restore();
     if(entry.emotion){
       window.FlatlandEmotions.draw(top,entry.emotion,b.x+15,b.y-(actor.kind==='mother'?120:95),entry.emotionElapsed??.3,entry.emotionDuration??1.2);
@@ -88,7 +90,7 @@
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){
       const textureBody=time>=132?dimension.journeyPose(time,sample).raw:entry.body;
-      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:0,body:{...textureBody,x:0,y:0,angle:0}},ctx);
+      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:version.id==='routine'?entry.blacken:0,body:{...textureBody,x:0,y:0,angle:0}},ctx);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.clearRect(0,0,256,256);
       heroMaterialContext.setTransform(a,0,0,a,128-800*a,128-550*a);window.FlatlandPossibility.draw(heroMaterialContext,state.ambient);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.globalAlpha=darkness;heroMaterialContext.fillStyle=palette.night;heroMaterialContext.fillRect(0,0,256,256);heroMaterialContext.globalAlpha=1;
@@ -120,6 +122,8 @@
       const home=district.frame(time);home.actors.forEach(drawActor);
       if(time>=58)plant.actors.filter(actor=>actor.id==='hero').forEach(drawActor);
       window.FlatlandCityMap.drawGate(top,time,palette);
+    }else if(version.id==='routine'){
+      factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
       top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time,bounds);top.restore();
@@ -132,7 +136,7 @@
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
-    if(time>=110&&time<119){
+    if(version.id!=='routine'&&time>=110&&time<119){
       screenOverlay();const light=plant.light,portal={x:(plant.hero.x-v.x)*s+state.w/2,y:(plant.hero.y-v.y)*s+state.h/2,radius:50*s*motion.geometry.childScale,seedRadius:(light?.r||10)*s,angle:plant.hero.angle};
       const screenLight=light?{...light,x:(light.x-v.x)*s+state.w/2,y:(light.y-v.y)*s+state.h/2,r:(light.r||10)*s}:null;
       window.FlatlandInner.draw(top,time,viewport,state.ambient,screenLight,portal);
@@ -143,9 +147,9 @@
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
   function interfaceState(v,time=sceneTime()){
     const shot=cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot);
-    stage.dataset.phase=shot.id;stage.dataset.sceneTime=time.toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);
-    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?mode='+player.mode+'&t='+player.time.toFixed(2);return;}
-    const notes=window.FlatlandStoryNotes.at(time);
+    stage.dataset.phase=shot.id;stage.dataset.sceneTime=time.toFixed(2);stage.dataset.time=player.time.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
+    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+player.time.toFixed(2);return;}
+    const notes=version.notes.at(time);
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(player.time*100);$('progress').style.setProperty('--p',`${player.time/duration*100}%`);
@@ -153,7 +157,7 @@
     $('mode-interactive').setAttribute('aria-pressed',String(player.mode==='interactive'));
     $('mode-auto').setAttribute('aria-pressed',String(player.mode==='auto'));
     $('play').setAttribute('aria-label',player.mode==='interactive'?'推进下一动作':player.playing?'暂停':'播放');
-    const viewer=document.querySelector('.brand');if(viewer)viewer.href='./?mode='+player.mode+'&t='+player.time.toFixed(2);
+    const viewer=document.querySelector('.brand');if(viewer)viewer.href='./?version='+version.id+'&mode='+player.mode+'&t='+player.time.toFixed(2);
   }
   function frame(now){
     const dt=state.last?Math.min((now-state.last)/1000,.05):0;state.last=now;
@@ -170,6 +174,12 @@
   function seek(time){player.seek(time);}
   function togglePlay(){state.inputAt=performance.now();player.tap();}
   if(workbench){
+    $('story-version').value=version.id;
+    if(version.id==='routine')document.querySelectorAll('.timeline-marks span').forEach((mark,i)=>{mark.textContent=['家庭','查家','规整化','日常工作','追光','新维度'][i];});
+    on('story-version','change',e=>{
+      const next=window.FlatlandStoryVersions.get(e.target.value),url=new URL(location.href);
+      url.searchParams.set('version',next.id);url.searchParams.set('t',next.timing.playbackAt(sceneTime()).toFixed(2));url.searchParams.set('mode',player.mode);location.href=url.href;
+    });
     cameraTrack.shots.forEach(shot=>{const option=document.createElement('option');option.value=shot.id;option.textContent=shot.label;$('chapter').append(option);});
     on('chapter','change',e=>seek(timing.playbackAt(cameraTrack.shots.find(s=>s.id===e.target.value).start)));
     on('previous','click',()=>{const i=cameraTrack.shots.indexOf(cameraTrack.shotAt(sceneTime()));seek(timing.playbackAt(cameraTrack.shots[Math.max(0,i-1)].start));});

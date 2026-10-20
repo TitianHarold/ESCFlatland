@@ -6,12 +6,12 @@
   'use strict';
   if(!C||!P||!CityMap||!Portals||!Rules)throw new Error('Load characters, palette, city-map, portals and correction-rules before factory.');
   const origin={x:-4000,y:-2800},angle=.4,cs=Math.cos(angle),sn=Math.sin(angle),normal=[-sn,cs];
-  const rows=Array.from({length:15},(_,i)=>i<3?-390+i*260:i===3?650:1170+(i-4)*260),stations=[480,-120,-750];
+  const rows=Array.from({length:15},(_,i)=>i<3?-390+i*260:i===3?650:1170+(i-4)*260),pressStations=[480,145,-190,-525],stations=[480,-930,-1330],leftWall=-2000;
   const ink=P.industrial,correctedBlack=P.black||'#000000',paper=P.conveyor,colors=P.factory.workers,clamp=n=>Math.max(0,Math.min(1,n)),lerp=(a,b,u)=>a+(b-a)*u;
   const ease=n=>{const u=clamp(n);return u*u*u*(u*(u*6-15)+10);},between=(t,a,b)=>ease((t-a)/(b-a));
   const world=(x,y)=>({x:origin.x+x*cs-y*sn,y:origin.y+x*sn+y*cs});
   const local=p=>({x:(p.x-origin.x)*cs+(p.y-origin.y)*sn,y:-(p.x-origin.x)*sn+(p.y-origin.y)*cs});
-  const entrance={x:-3000,y:-2100},discard=world(-2200,390),chaseEnd={x:-800,y:discard.y-3300};
+  const entrance={x:-3000,y:-2100},discard=world(-2450,390),chaseEnd={x:-800,y:discard.y-3300};
   const heroActor=C.create('child'),backgroundActors=rows.map((_,row)=>Array.from({length:3},()=>C.create({sides:row+3,radius:45,regular:false})));
   const guards=Array.from({length:3},()=>new C.Character('guard',[[0,-60],[12,48],[-12,48]],0));
   function hardPose(actor,x,y,heading=angle-Math.PI){
@@ -37,14 +37,14 @@
   const entryStart=local(entrance),entryHeading=CityMap.gate.heading-angle;
   const entryCurves=[[[entryStart.x,entryStart.y],[entryStart.x+120*Math.cos(entryHeading),entryStart.y+120*Math.sin(entryHeading)],[1020,130],[900,130]]];
   const entryPath=makePath(entryCurves),entryPortal=CityMap.gate.portal;
-  const exitPoint=world(-1750,390),exitPortal={point:[exitPoint.x,exitPoint.y],heading:angle+Math.PI,halfWidth:110,halfDepth:12,wallSpan:180,opening:t=>between(t,100.9,101.45)};
+  const exitPoint=world(leftWall,390),exitPortal={point:[exitPoint.x,exitPoint.y],heading:angle+Math.PI,halfWidth:110,halfDepth:12,wallSpan:180,opening:t=>between(t,100.9,101.45)};
   const escortCurves=[
-    [[-150,130],[-350,130],[-550,130],[-750,130]],
-    [[-750,130],[-870,130],[-1040,130],[-1040,260]],
-    [[-1040,260],[-1040,390],[-1170,390],[-1300,390]],
-    [[-1300,390],[-1460,390],[-1640,390],[-1750,390]],
-    [[-1750,390],[-1780,390],[-1820,390],[-1850,390]],
-    [[-1850,390],[-1970,390],[-2090,390],[-2200,390]]
+    [[-730,130],[-930,130],[-1130,130],[-1330,130]],
+    [[-1330,130],[-1450,130],[-1620,130],[-1620,260]],
+    [[-1620,260],[-1620,390],[-1720,390],[-1800,390]],
+    [[-1800,390],[-1870,390],[-1940,390],[-2000,390]],
+    [[-2000,390],[-2030,390],[-2070,390],[-2100,390]],
+    [[-2100,390],[-2220,390],[-2340,390],[-2450,390]]
   ];
   const escortPath=makePath(escortCurves),escortStart=escortPath.segments[0].length,escortTimes=[[98.6,99.6],[99.6,100.8],[100.8,102],[102,102.8]];
   function escortDistance(t){let distance=escortStart;for(let i=0;i<escortTimes.length;i++){const[a,b]=escortTimes[i],length=escortPath.segments[i+1].length;if(t<b)return distance+length*between(t,a,b);distance+=length;}return distance;}
@@ -81,8 +81,18 @@
     const heading=initial+delta*between(t,119,119.22)*(1-between(t,121.8,122));
     return{...hardPose(heroActor,discard.x,discard.y,heading),speed:0,effort:0};
   }
-  const heroPressBody=lanePose(heroActor,480,130),heroProgram=Rules.pressProgram(heroActor,heroPressBody,{normal,startTime:72,material:Rules.materials.hero});
-  const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,startTime:5,material:Rules.materials.ordinary})));
+  // Raw 1.25 scene units play as four seconds: one down, three up, with no preparatory lift.
+  const pressConfig={normal,interval:1.25,windupDuration:0,strikeDuration:.28,impactDuration:.0325,holdDuration:0,releaseDuration:.9375,openGap:92,standbyGap:92,doseTimeScale:3.2};
+  const heroProgram=Rules.pressSequence(heroActor,pressStations.map(x=>lanePose(heroActor,x,130)),{...pressConfig,startTime:72,material:Rules.materials.hero});
+  const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressSequence(actor,pressStations.map(x=>lanePose(actor,x,rows[row])),{...pressConfig,startTime:5,material:Rules.materials.ordinary})));
+  function pressLineX(program,time){
+    if(time<=program.start)return pressStations[0];
+    for(let index=0;index<pressStations.length-1;index++){
+      const current=program.programs[index],next=program.programs[index+1];
+      if(time<next.start)return lerp(pressStations[index],pressStations[index+1],between(time,current.clearTime,next.start));
+    }
+    return pressStations.at(-1);
+  }
   function materialState(program,time,spin,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,spin.turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged,spin};}
   const heroSpin=t=>Rules.spinState(t,{start:80,end:87});
   function heroMaterial(t){return materialState(heroProgram,t,heroSpin(t),t>=94.5);}
@@ -90,11 +100,11 @@
     if(t<64){const pose=d=>pathPose(heroActor,entryPath,d),planned=entryPath.length*between(t,58,64),safe=Portals.clampTravel(heroActor,pose,0,planned,entryPortal,t);return pose(safe);}
     if(t<70)return lanePose(heroActor,900,130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
-    if(t<77)return lanePose(heroActor,480,130);
-    if(t<80)return lanePose(heroActor,lerp(480,-120,between(t,77,80)),130);
-    if(t<87)return lanePose(heroActor,-120,130,heroSpin(t).angle);
-    if(t<90)return lanePose(heroActor,lerp(-120,-750,between(t,87,90)),130,heroSpin(t).angle);
-    if(t<98.6)return lanePose(heroActor,-750,130,heroSpin(t).angle);
+    if(t<77)return lanePose(heroActor,pressLineX(heroProgram,t),130);
+    if(t<80)return lanePose(heroActor,lerp(pressStations.at(-1),stations[1],between(t,77,80)),130);
+    if(t<87)return lanePose(heroActor,stations[1],130,heroSpin(t).angle);
+    if(t<90)return lanePose(heroActor,lerp(stations[1],stations[2],between(t,87,90)),130,heroSpin(t).angle);
+    if(t<98.6)return lanePose(heroActor,stations[2],130,heroSpin(t).angle);
     if(t<102.8)return escortBody(heroActor,t);
     if(t<104)return pathPose(heroActor,throwPath,throwPath.length*between(t,102.8,104));
     if(t<119){
@@ -141,17 +151,17 @@
     return{x:releaseBody.x+Math.cos(releaseHeading)*along-Math.sin(releaseHeading)*side,y:releaseBody.y+Math.sin(releaseHeading)*along+Math.cos(releaseHeading)*side,angle:releaseBody.angle+turn*trail,z:4+22*Math.sin(u*Math.PI)-4*between(u,.8,1),opacity:1,scale:1.8,geometryState:{load:0,peel:1,release:1,stress:0,fracture:1,shiver:0,trail}};
   }
   function backgroundState(t,row,slot){
-    const raw=t-64+row*.83+slot*15,age=((raw%45)+45)%45,actor=backgroundActors[row][slot],spin=Rules.spinState(age,{start:14,end:22}),turns=spin.turns;let x=900,station=-1;
+    const raw=t-64+row*.83+slot*20,age=((raw%60)+60)%60,actor=backgroundActors[row][slot],spin=Rules.spinState(age,{start:14,end:22}),turns=spin.turns;let x=900,station=-1;
     if(age<5)x=lerp(900,480,between(age,0,5));
-    else if(age<10){x=480;station=0;}
-    else if(age<14)x=lerp(480,-120,between(age,10,14));
-    else if(age<22){x=-120;station=1;}
-    else if(age<26)x=lerp(-120,-750,between(age,22,26));
-    else if(age<32){x=-750;station=2;}
-    else x=lerp(-750,-1470,between(age,32,45));
+    else if(age<10){x=pressLineX(programs[row][slot],age);station=0;}
+    else if(age<14)x=lerp(pressStations.at(-1),stations[1],between(age,10,14));
+    else if(age<22){x=stations[1];station=1;}
+    else if(age<26)x=lerp(stations[1],stations[2],between(age,22,26));
+    else if(age<32){x=stations[2];station=2;}
+    else x=lerp(stations[2],leftWall+130,between(age,32,60));
     const state=materialState(programs[row][slot],age,spin,age>=30),body=lanePose(actor,x,rows[row],spin.angle);
     const corrected=age>=22&&state.result==='pass';
-    return makeEntry('worker-'+row+'-'+slot+'-'+Math.floor(raw/45),actor,body,corrected?correctedBlack:colors[row%colors.length],state,{row,slot,age,station,turns,cavity:!corrected});
+    return makeEntry('worker-'+row+'-'+slot+'-'+Math.floor(raw/60),actor,body,corrected?correctedBlack:colors[row%colors.length],state,{row,slot,age,station,turns,cavity:!corrected});
   }
   let backgroundTime=NaN,backgroundCache=[];
   function cachedBackground(t,row,slot){
@@ -169,7 +179,7 @@
     const corners=[[view.left,view.top],[view.right,view.top],[view.right,view.bottom],[view.left,view.bottom]].map(([x,y])=>local({x,y}));
     return{left:Math.min(...corners.map(p=>p.x)),right:Math.max(...corners.map(p=>p.x)),top:Math.min(...corners.map(p=>p.y)),bottom:Math.max(...corners.map(p=>p.y))};
   }
-  const visibleLane=(view,row)=>!view||view.right>=-1560&&view.left<=1000&&view.bottom>=rows[row]-160&&view.top<=rows[row]+160;
+  const visibleLane=(view,row)=>!view||view.right>=leftWall&&view.left<=1000&&view.bottom>=rows[row]-160&&view.top<=rows[row]+160;
   // Successful ordinary shells become wholly opaque; failure alone receives a visible label.
   function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,phase:state.phase,cycle:state.cycle,cycleCount:state.cycleCount,completedCycles:state.completedCycles,impact:state.impact,spin:state.spin,turns:state.spin.turns,angularSpeed:state.spin.angularSpeed,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
   function lightState(t,hero){
@@ -259,43 +269,46 @@
   }
   function drawBase(ctx,time,bounds){
     const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);const far=rows.at(-1)+400,view=localViewport(bounds),detail=pressDetail(ctx);
-    ctx.fillStyle=P.factory.floor;ctx.fillRect(-1750,-650,2650,far+650);
-    stroke(ctx,[[-1750,far],[-1750,500]],P.factory.outline,8);stroke(ctx,[[-1750,280],[-1750,-650],[900,-650]],P.factory.outline,8);
+    ctx.fillStyle=P.factory.floor;ctx.fillRect(leftWall,-650,900-leftWall,far+650);
+    stroke(ctx,[[leftWall,far],[leftWall,500]],P.factory.outline,8);stroke(ctx,[[leftWall,280],[leftWall,-650],[900,-650]],P.factory.outline,8);
     let wallY=-650;for(const y of rows){stroke(ctx,[[900,wallY],[900,y-80]],P.factory.outline,8);wallY=y+80;}stroke(ctx,[[900,wallY],[900,far]],P.factory.outline,8);
     for(let row=0;row<rows.length;row++){
       if(!visibleLane(view,row))continue;
-      const y=rows[row];belt(ctx,y,-1390,-555,t);belt(ctx,y,-345,900,t);
+      const y=rows[row];belt(ctx,y,leftWall+130,900,t);
+      for(const x of pressStations)drawPressBase(ctx,x,y,detail);
       for(let station=0;station<3;station++){
         const x=stations[station];
-        if(station===0){drawPressBase(ctx,x,y,detail);continue;}
+        if(station===0)continue;
         ctx.fillStyle=P.metal;ctx.fillRect(x-160,y-124,320,248);
         if(station===1){ctx.beginPath();ctx.arc(x,y,96,0,Math.PI*2);ctx.fillStyle=paper;ctx.fill();ctx.strokeStyle=ink;ctx.lineWidth=9;ctx.stroke();}
         else{ctx.fillStyle=paper;ctx.fillRect(x-120,y-78,240,156);stroke(ctx,[[x-143,y-80],[x-143,y-111],[x+143,y-111],[x+143,y-80]],ink,9);stroke(ctx,[[x-143,y+80],[x-143,y+111],[x+143,y+111],[x+143,y+80]],ink,9);}
       }
       identityMark(ctx,835,y-104,row+3);
     }
-    // These seams border real unbuilt gaps; no floor strip covers a belt or a machine.
-    stroke(ctx,[[-555,270],[-555,744]],P.factory.aisle,2);stroke(ctx,[[-345,270],[-345,744]],P.factory.aisle,2);
-    stroke(ctx,[[-1750,390],[-590,390]],P.factory.aisle,2);ctx.restore();receivingBay(ctx);drawPortal(ctx,entryPortal,t);drawPortal(ctx,exitPortal,t);
+    // The exit aisle stays between production lines, with no corridor across a belt.
+    stroke(ctx,[[leftWall,390],[-1480,390]],P.factory.aisle,2);ctx.restore();receivingBay(ctx);drawPortal(ctx,entryPortal,t);drawPortal(ctx,exitPortal,t);
   }
-  function pressForRow(t,row){
-    if(row===2)return Rules.pressState(heroProgram,t);
-    for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return item.machine;}
-    return{phase:'idle',impact:0,plannedGap:64,upperFace:-64,lowerFace:64,force:0,contact:false,headGap:64};
+  function pressForRow(t,row,index){
+    if(row===2)return Rules.pressState(heroProgram.programs[index],t);
+    for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return Rules.pressState(programs[row][slot].programs[index],item.age);}
+    return{phase:'idle',impact:0,plannedGap:92,upperFace:-92,lowerFace:92,force:0,contact:false,headGap:92};
   }
   function drawOverlay(ctx,time,bounds){
     const t=Number.isFinite(time)?time:0,view=localViewport(bounds);
     if(t>=58&&t<104){setup(ctx);
       for(let row=0;row<rows.length;row++){
         if(!visibleLane(view,row))continue;
-        const y=rows[row],press=pressForRow(t,row),x=stations[0];drawPressActuators(ctx,x,y,press,pressDetail(ctx));
-        if(press.impact>0){
+        const y=rows[row];
+        for(let index=0;index<pressStations.length;index++){
+          const press=pressForRow(t,row,index),x=pressStations[index];drawPressActuators(ctx,x,y,press,pressDetail(ctx));
+          if(press.impact>0){
           ctx.save();ctx.globalAlpha=press.impact;press.contactPoints.forEach((point,side)=>{
             const p=local({x:point[0],y:point[1]}),direction=side?1:-1;
             stroke(ctx,[[p.x-12,p.y+direction*3],[p.x-19,p.y+direction*8]],P.gold,2);
             stroke(ctx,[[p.x+10,p.y+direction*2],[p.x+18,p.y+direction*6]],P.gold,2.5);
             stroke(ctx,[[p.x+1,p.y+direction*5],[p.x-1,p.y+direction*13]],P.gold,1.5);
-          });ctx.restore();
+            });ctx.restore();
+          }
         }
         let spin=null,rotation=t*.14,scan=(t*.2+row)%1;
         if(row===2){spin=heroSpin(t);rotation=spin.angle;scan=between(t,90,94.5);}
@@ -311,6 +324,6 @@
       ctx.restore();drawPortal(ctx,entryPortal,t,true);drawPortal(ctx,exitPortal,t,true);
     }
   }
-  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(480,-130)),m2:Object.freeze(world(-120,-130)),m3:Object.freeze(world(-750,-130))}),heroStages:Object.freeze({m1:Object.freeze(world(480,130)),m2:Object.freeze(world(-120,130)),m3:Object.freeze(world(-750,130))}),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-1850,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:-800,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:-1750,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-40,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
+  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:-800,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
   return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram};
 });

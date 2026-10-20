@@ -15,7 +15,7 @@
     const openGap=config.openGap??92,targetGap=config.targetGap??22,standbyGap=config.standbyGap??Math.max(64,half+8);
     const windupDuration=config.windupDuration??1,strikeDuration=config.strikeDuration??.2,impactDuration=config.impactDuration??.07,holdDuration=config.holdDuration??.6,releaseDuration=config.releaseDuration??.43,pauseDuration=config.pauseDuration??.1,cycleCount=config.cycles??2;
     if(!(openGap>=standbyGap&&standbyGap>half&&targetGap<half))throw new Error('The press must open outside the shell and plan to load past both support faces.');
-    if(!Number.isInteger(cycleCount)||cycleCount<1||pauseDuration<0||[windupDuration,strikeDuration,impactDuration,holdDuration,releaseDuration].some(value=>!(value>0)))throw new Error('Each press round needs positive phases and a nonnegative pause.');
+    if(!Number.isInteger(cycleCount)||cycleCount<1||[pauseDuration,windupDuration,holdDuration].some(value=>value<0)||[strikeDuration,impactDuration,releaseDuration].some(value=>!(value>0)))throw new Error('Each press round needs positive travel phases and nonnegative waits.');
     const start=config.startTime??((config.contactTime??6.2)-windupDuration-strikeDuration),cycleDuration=windupDuration+strikeDuration+impactDuration+holdDuration+releaseDuration;
     const at=value=>Math.round(value*1e9)/1e9;
     const cycles=Object.freeze(Array.from({length:cycleCount},(_,i)=>{
@@ -25,7 +25,15 @@
     // One unbroken timeline drives both heads and the cumulative material integral.
     const gapFrames=Object.freeze(cycles.flatMap(c=>[[c.start,standbyGap],[c.strikeStart,openGap],[c.contactTime,half],[c.closeEnd,targetGap],[c.holdEnd,targetGap],[c.end,standbyGap]]).map(frame=>Object.freeze(frame)));
     const first=cycles[0],end=cycles.at(-1).end,contactTimes=Object.freeze(cycles.map(c=>c.contactTime));
-    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,pauseDuration,cycleCount,cycles,contactTimes,contactTime:first.contactTime,start,strikeStart:first.strikeStart,closeEnd:first.closeEnd,holdEnd:first.holdEnd,end,gapFrames,material:config.material||materials.ordinary});
+    const doseTimeScale=config.doseTimeScale??1;if(!(doseTimeScale>0))throw new Error('Pressure time scale must be positive.');
+    const clearTime=first.holdEnd+releaseDuration*clamp((half+8-targetGap)/(standbyGap-targetGap));
+    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,pauseDuration,cycleCount,cycles,contactTimes,contactTime:first.contactTime,start,strikeStart:first.strikeStart,closeEnd:first.closeEnd,holdEnd:first.holdEnd,end,clearTime,doseTimeScale,gapFrames,material:config.material||materials.ordinary});
+  }
+  function pressSequence(actor,bodies,config={}){
+    const interval=config.interval??1.25,start=config.startTime??0;
+    const programs=Object.freeze(bodies.map((body,index)=>pressProgram(actor,body,{...config,startTime:start+index*interval,cycles:1})));
+    const cycles=Object.freeze(programs.map((program,index)=>Object.freeze({...program.cycles[0],index:index+1,station:index,clearTime:program.clearTime})));
+    return Object.freeze({programs,cycles,cycleCount:programs.length,contactTimes:Object.freeze(programs.map(program=>program.contactTime)),contactTime:programs[0].contactTime,start,end:programs.at(-1).end,interval,material:programs[0].material});
   }
   function headDose(support,time,p){
     let dose=0;
@@ -41,12 +49,16 @@
     return dose;
   }
   function pressState(program,time){
+    if(program.programs){
+      const states=program.programs.map(item=>pressState(item,time)),index=Math.max(0,Math.min(states.length-1,Math.floor((time-program.start)/program.interval))),load=states.reduce((sum,state)=>sum+state.load,0);
+      return{...states[index],cycle:index+1,cycleCount:states.length,completedCycles:program.programs.filter(item=>time>=item.end).length,load,damage:clamp(load/program.material.pressureResistance),station:index};
+    }
     const p=program;let plannedGap=p.standbyGap;
     for(let i=1;i<p.gapFrames.length;i++){const[a,ga]=p.gapFrames[i-1],[b,gb]=p.gapFrames[i];if(time>=a&&time<b){plannedGap=ga+(gb-ga)*(time-a)/(b-a);break;}}
     const upperFace=Math.min(p.supportMid-plannedGap,p.supportMin),lowerFace=Math.max(p.supportMid+plannedGap,p.supportMax);
     const upperGap=p.supportMin-upperFace,lowerGap=lowerFace-p.supportMax,headGap=Math.max(0,upperGap,lowerGap);
     const denominator=p.half-p.targetGap,force=clamp(Math.max(0,p.half-plannedGap)/denominator);
-    const load=Math.max(0,headDose(p.half,time,p)/denominator),contact=headGap<1e-7;
+    const load=Math.max(0,headDose(p.half,time,p)/denominator*p.doseTimeScale),contact=headGap<1e-7;
     const active=p.cycles.find(c=>time>=c.start&&time<c.end),completedCycles=p.cycles.filter(c=>time>=c.end).length,cycle=active?.index||completedCycles;
     const phase=!active?(time<p.start?'idle':'open'):time<active.strikeStart?'windup':time<active.contactTime?'strike':time<active.closeEnd?'impact':time<active.holdEnd?'hold':'release';
     const impact=active&&contact&&time>=active.contactTime?Math.max(0,1-(time-active.contactTime)/.22):0;
@@ -68,5 +80,5 @@
     return {mixDose,blacken,windowOpen:1-blacken};
   }
   function judge(state,stamped){const result=state.windowOpen<.015?'pass':'reject';return{result,label:stamped?result:undefined};}
-  return {materials,pressProgram,pressState,spinState,mixState,judge};
+  return {materials,pressProgram,pressSequence,pressState,spinState,mixState,judge};
 });

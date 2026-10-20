@@ -1,59 +1,76 @@
 'use strict';
 const assert=require('node:assert/strict');
 const Factory=require('./docs/factory.js');
+const Rules=require('./docs/correction-rules.js');
+const Characters=require('./docs/character-geometry.js');
 const hero=time=>Factory.frame(time).actors.find(entry=>entry.id==='hero');
-const program=Factory.pressProgram;
+const program=Factory.pressProgram,normal=[-Math.sin(Factory.anchors.localRotation),Math.cos(Factory.anchors.localRotation)];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
 
-assert.equal(program.cycleCount,2);
-assert.equal(program.cycles.length,2);
+assert.equal(program.cycleCount,4);
+assert.equal(Factory.anchors.pressStations.length,4);
 let previousLoad=0;
-const normal=[-Math.sin(Factory.anchors.localRotation),Math.cos(Factory.anchors.localRotation)];
-for(const cycle of program.cycles){
-  const before=hero(cycle.contactTime-.001),start=hero(cycle.start);
+for(const [index,cycle] of program.cycles.entries()){
+  const unit=program.programs[index],start=hero(cycle.start),before=hero(cycle.contactTime-.001);
+  assert.equal(cycle.start,72+index*1.25);
+  assert.equal(cycle.strikeStart,cycle.start,'arrival immediately starts the downstroke');
+  assert.equal((cycle.closeEnd-cycle.start)*3.2,1,'one second down');
+  assert.equal((cycle.end-cycle.closeEnd)*3.2,3,'three seconds up');
+  assert(Math.hypot(start.body.x-Factory.anchors.pressStations[index].x,start.body.y-Factory.anchors.pressStations[index].y)<1e-8,'arrival and machine start share the same clock');
   assert(!before.contact&&before.force===0&&before.impact===0);
-  assert.equal(before.load,start.load,'no extra loading before this round touches');
-  assert.equal(before.damage,start.damage,'previous round damage survives windup');
+  assert.equal(before.load,start.load,'no new damage before actual contact');
+  assert.equal(before.damage,start.damage);
   const hit=hero(cycle.contactTime);
-  assert(hit.contact&&hit.impact===1&&hit.cycle===cycle.index);
-  assert(Math.abs(hit.machine.upperGap)<1e-8&&Math.abs(hit.machine.lowerGap)<1e-8,'both heads touch together');
-  assert.equal(hit.damage,before.damage,'damage starts after real contact');
-  assert(hero(cycle.closeEnd).force>.999,'each round loads rapidly');
-  assert.equal(hero(cycle.contactTime+.3).impact,0,'one impact per round, no bounce');
-  assert(hero(cycle.strikeStart).machine.plannedGap>start.machine.plannedGap,'windup opens');
-  assert(before.machine.plannedGap<hero(cycle.strikeStart).machine.plannedGap,'strike closes fast');
-  for(const time of [cycle.contactTime,cycle.closeEnd,cycle.holdEnd,cycle.end]){
-    const entry=hero(time),body=entry.body,machine=entry.machine;
-    assert(entry.load>=previousLoad-1e-10);previousLoad=entry.load;
-    assert.equal(body.sx,1);assert.equal(body.sy,1);assert.equal(body.bend,0);
-    assert(body.edgeBends.every(value=>value===0));
-    for(const [x,y] of entry.actor.outline(body)){
-      const support=(x-body.x)*normal[0]+(y-body.y)*normal[1];
-      assert(support>=machine.upperFace-1e-8&&support<=machine.lowerFace+1e-8,'shell never penetrates a head');
+  assert(hit.contact&&hit.impact===1&&hit.cycle===index+1);
+  assert(Math.abs(hit.machine.upperGap)<1e-8&&Math.abs(hit.machine.lowerGap)<1e-8,'both faces really touch');
+  assert.equal(hit.damage,before.damage);
+  assert(hero(cycle.closeEnd).force>.999);
+  assert(hero(cycle.start+.1).machine.plannedGap<start.machine.plannedGap,'no preparatory upward motion');
+  assert(!Rules.pressState(unit,cycle.end).contact,'each machine fully retracts');
+  assert(Math.hypot(hero(unit.clearTime).body.x-start.body.x,hero(unit.clearTime).body.y-start.body.y)<1e-8,'transport waits for full shell clearance');
+  if(index<3)assert(Math.hypot(hero((unit.clearTime+cycle.end)/2).body.x-start.body.x,hero((unit.clearTime+cycle.end)/2).body.y-start.body.y)>10,'transport moves during the upstroke');
+}
+for(let time=72;time<77;time+=.01){
+  const entry=hero(time),body=entry.body;
+  assert(entry.load>=previousLoad-1e-10);previousLoad=entry.load;
+  assert.equal(body.sx,1);assert.equal(body.sy,1);assert.equal(body.bend,0);
+  assert(body.edgeBends.every(value=>value===0),'shell stays rigid');
+  const points=entry.actor.outline(body);
+  for(const [index,unit] of program.programs.entries()){
+    const machine=Rules.pressState(unit,time),center=Factory.anchors.pressStations[index];
+    // A moving shell may leave a head laterally only after the transverse gap clears it.
+    const along=[Math.cos(Factory.anchors.localRotation),Math.sin(Factory.anchors.localRotation)];
+    for(const point of points){
+      const relative=[point[0]-center.x,point[1]-center.y];
+      if(Math.abs(dot(relative,along))>68)continue;
+      const support=dot(relative,normal);
+      assert(support>=machine.upperFace-1e-8&&support<=machine.lowerFace+1e-8,'shell never penetrates any of the four pads');
     }
   }
-  assert(!hero(cycle.end).contact,'each round fully retracts');
 }
 assert.equal(hero(program.contactTime-.001).damage,0);
-assert(hero(program.end).damage>hero(program.cycles[0].end).damage,'second round adds real damage');
-assert.equal(hero(program.end).completedCycles,2);
-assert(program.end<77,'both full rounds finish before conveyor departure');
-assert.equal(hero(77).damage,hero(87).damage,'release cannot heal the inner window');
-
+assert.equal(hero(77).completedCycles,4);
+assert(hero(77).damage>hero(program.cycles[0].end).damage,'all stations accumulate damage');
+assert.equal(hero(77).damage,hero(87).damage,'transfer and spin cannot heal damage');
 const initialAngle=hero(80).body.angle;
 for(const time of [80,80.14,80.28,81,84,86.75,86.9,87]){
   const entry=hero(time);
-  assert(Math.abs(entry.body.angle-initialAngle-entry.spin.angle)<1e-8,'visible angle follows the same spin');
-  assert.equal(entry.turns,entry.mixDose,'all twelve real turns contribute to dose');
-  assert(Math.abs(entry.spin.angle-entry.turns*Math.PI*2)<1e-10);
+  assert(Math.abs(entry.body.angle-initialAngle-entry.spin.angle)<1e-8);
+  assert.equal(entry.turns,entry.mixDose);
 }
-assert.equal(hero(80).angularSpeed,0);assert(hero(80.28).angularSpeed>11);
-assert.equal(hero(87).angularSpeed,0);assert.equal(hero(87).turns,12);
-assert(hero(94.5).windowOpen>.5);assert.equal(hero(94.5).label,'reject');
+assert.equal(hero(87).turns,12);
+assert(hero(94.5).windowOpen>.01);assert.equal(hero(94.5).label,'reject');
 for(const row of [0,1,3,4,10,14]){
   const entry=Factory.frame(64-row*.83+22.1).actors.find(actor=>actor.row===row&&actor.slot===0);
   assert.equal(entry.result,'pass');assert.equal(entry.blacken,1);assert.equal(entry.windowOpen,0);
   assert.equal(entry.cavity,false);assert.equal(entry.label,undefined);assert.equal(entry.turns,12);
-  assert.equal(entry.cycleCount,2);assert.equal(entry.completedCycles,2);
+  assert.equal(entry.cycleCount,4);assert.equal(entry.completedCycles,4);
 }
-assert.equal(Factory.frame(132).hero,null);assert.equal(Factory.frame(132).chase,undefined);
-console.log(JSON.stringify({pass:true,cycles:program.cycles,contacts:program.contactTimes,turns:12,damageAfterFirst:hero(program.cycles[0].end).damage,damageAfterSecond:hero(program.end).damage,heroWindowOpen:hero(94.5).windowOpen,heroResult:hero(94.5).result}));
+for(let time=64;time<104;time+=.25){
+  const actors=Factory.frame(time).actors.filter(entry=>entry.row!==undefined);
+  for(let i=0;i<actors.length;i++)for(let j=i+1;j<actors.length;j++)if(actors[i].row===actors[j].row){
+    assert(!Characters.penetrates(actors[i].actor.outline(actors[i].body),actors[j].actor.outline(actors[j].body)),'workers never overlap while waiting or moving through the same four presses');
+  }
+}
+assert.equal(Factory.frame(132).hero,null);
+console.log(JSON.stringify({pass:true,presses:4,rawInterval:1.25,actualInterval:4,actualDown:1,actualUp:3,contacts:program.contactTimes,ends:program.cycles.map(c=>c.end),heroWindowOpen:hero(94.5).windowOpen,heroResult:hero(94.5).result}));

@@ -1,8 +1,8 @@
 /* World-anchored growth and thin XYZ actors share one perspective renderer. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'),require('./motion.js'));
-  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint,root.FlatlandMotion);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint,Motion) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'),require('./motion.js'),require('./factory.js'));
+  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint,root.FlatlandMotion,root.FlatlandFactory);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint,Motion,Factory) {
   'use strict';
   const anchor = Object.freeze({x: 0, y: 0, z: 0});
   const defaultProjection = Object.freeze({x: 0, y: 0, zoom: 1.25, tilt: 0, yaw: 0, focal: 1600, screenY: .57});
@@ -330,7 +330,7 @@
     }
   }
   // The fixed world-to-city bridge keeps paused scrubs independent of prior frames.
-  const journeyStart={x:-6178.207340306721,y:-3297.506565417906},journeyEnd={x:-800,y:-6597.506565417906};
+  const journeyStart=Factory.anchors.discard,journeyEnd=Factory.anchors.chaseEnd;
   const journeyDX=journeyEnd.x-journeyStart.x,journeyDY=journeyEnd.y-journeyStart.y;
   const endHeading=Math.atan2(journeyDY*.35,journeyDX*.40),endSpeed=Math.hypot(journeyDX*.40,journeyDY*.35)*3*Motion.chaseProgress(132).qSpeed;
   const headAngle=Characters.actors.child.headAxis({strain:1}).angle,bridgeAngle=headAngle-endHeading;
