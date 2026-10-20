@@ -293,7 +293,7 @@
     const accesses=routeAccesses(targets),polygons=streets.flatMap(s=>strokePolygons(s.points,s.width));
     polygons.push(...strokePolygons(artery.map(s=>s.point),artery.map(s=>s.width)),plaza,...forecourts,forecourtPolygon,
       ...strokePolygons(sampleCurves([straight(at(-1080,0),at(210,0))]),300),courtFloor,
-      ...strokePolygons(sampleCurves([courtEntry]),150),...houseBoundaries.map(h=>h.polygon));
+      ...strokePolygons(sampleCurves([courtEntry]),150));
     accesses.forEach(access=>polygons.push(...strokePolygons(access.points,access.width)));
     const points=polygons.flat(),step=8,closeRadius=88,openRadius=24,pad=closeRadius*3;
     const bounds={minX:Math.floor((Math.min(...points.map(p=>p[0]))-pad)/step)*step,minY:Math.floor((Math.min(...points.map(p=>p[1]))-pad)/step)*step,maxX:Math.ceil((Math.max(...points.map(p=>p[0]))+pad)/step)*step,maxY:Math.ceil((Math.max(...points.map(p=>p[1]))+pad)/step)*step};
@@ -400,8 +400,10 @@
   }
   initializeWallMasses();
   function house(ctx,h,p){
-    shape(ctx,h.boundary.polygon,p.paper);
-    shape(ctx,h.wallMass.polygon,p.ink);
+    // The courtyard is a cutout in the continuous block, rather than a separate outlined symbol.
+    shape(ctx,h.wallMass.inner,p.paper);
+    shape(ctx,h.wallMass.opening,p.paper);
+    shape(ctx,h.wallMass.polygon,p.blue);
   }
   function localRect(ctx,s0,t0,s1,t1,color){shape(ctx,[at(s0,t0),at(s0,t1),at(s1,t1),at(s1,t0)],color);}
   function institution(ctx,p){

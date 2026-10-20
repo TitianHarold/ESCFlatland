@@ -462,7 +462,7 @@
   });
   function addSpeedRibbons(list,hero,time,data){
     const speed=clamp((data.chase?.speed||0)/1150,0,1),kick=clamp(data.chase?.effort||0,0,1);
-    const amount=ease(time,122.15,124.2)*(1-ease(time,132,137));
+    const amount=ease(time,122,122.3)*(1-ease(time,132,137));
     if(amount<=0)return;
     for(const item of speedRibbons){
       const alpha=distanceAlpha(item.center,hero)*amount*(.18+.62*speed+.18*kick);if(alpha<.005)continue;

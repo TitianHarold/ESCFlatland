@@ -13,11 +13,19 @@
     const supportMin=Math.min(...projection),supportMax=Math.max(...projection),supportMid=(supportMin+supportMax)/2,half=(supportMax-supportMin)/2;
     const contactPoints=Object.freeze([outline[projection.indexOf(supportMin)],outline[projection.indexOf(supportMax)]].map(point=>Object.freeze([...point])));
     const openGap=config.openGap??92,targetGap=config.targetGap??22,standbyGap=config.standbyGap??Math.max(64,half+8);
-    const windupDuration=config.windupDuration??1.76,strikeDuration=config.strikeDuration??.24,impactDuration=config.impactDuration??.08,holdDuration=config.holdDuration??1.5,releaseDuration=config.releaseDuration??1.1;
+    const windupDuration=config.windupDuration??1,strikeDuration=config.strikeDuration??.2,impactDuration=config.impactDuration??.07,holdDuration=config.holdDuration??.6,releaseDuration=config.releaseDuration??.43,pauseDuration=config.pauseDuration??.1,cycleCount=config.cycles??2;
     if(!(openGap>=standbyGap&&standbyGap>half&&targetGap<half))throw new Error('The press must open outside the shell and plan to load past both support faces.');
-    const contactTime=config.contactTime??7,strikeStart=contactTime-strikeDuration,start=strikeStart-windupDuration,closeEnd=contactTime+impactDuration,holdEnd=closeEnd+holdDuration,end=holdEnd+releaseDuration;
-    const gapFrames=Object.freeze([[start,standbyGap],[strikeStart,openGap],[contactTime,half],[closeEnd,targetGap],[holdEnd,targetGap],[end,standbyGap]].map(frame=>Object.freeze(frame)));
-    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,contactTime,start,strikeStart,closeEnd,holdEnd,end,gapFrames,material:config.material||materials.ordinary});
+    if(!Number.isInteger(cycleCount)||cycleCount<1||pauseDuration<0||[windupDuration,strikeDuration,impactDuration,holdDuration,releaseDuration].some(value=>!(value>0)))throw new Error('Each press round needs positive phases and a nonnegative pause.');
+    const start=config.startTime??((config.contactTime??6.2)-windupDuration-strikeDuration),cycleDuration=windupDuration+strikeDuration+impactDuration+holdDuration+releaseDuration;
+    const at=value=>Math.round(value*1e9)/1e9;
+    const cycles=Object.freeze(Array.from({length:cycleCount},(_,i)=>{
+      const begin=at(start+i*(cycleDuration+pauseDuration)),strikeStart=at(begin+windupDuration),contactTime=at(strikeStart+strikeDuration),closeEnd=at(contactTime+impactDuration),holdEnd=at(closeEnd+holdDuration);
+      return Object.freeze({index:i+1,start:begin,strikeStart,contactTime,closeEnd,holdEnd,end:at(holdEnd+releaseDuration)});
+    }));
+    // One unbroken timeline drives both heads and the cumulative material integral.
+    const gapFrames=Object.freeze(cycles.flatMap(c=>[[c.start,standbyGap],[c.strikeStart,openGap],[c.contactTime,half],[c.closeEnd,targetGap],[c.holdEnd,targetGap],[c.end,standbyGap]]).map(frame=>Object.freeze(frame)));
+    const first=cycles[0],end=cycles.at(-1).end,contactTimes=Object.freeze(cycles.map(c=>c.contactTime));
+    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,pauseDuration,cycleCount,cycles,contactTimes,contactTime:first.contactTime,start,strikeStart:first.strikeStart,closeEnd:first.closeEnd,holdEnd:first.holdEnd,end,gapFrames,material:config.material||materials.ordinary});
   }
   function headDose(support,time,p){
     let dose=0;
@@ -39,9 +47,10 @@
     const upperGap=p.supportMin-upperFace,lowerGap=lowerFace-p.supportMax,headGap=Math.max(0,upperGap,lowerGap);
     const denominator=p.half-p.targetGap,force=clamp(Math.max(0,p.half-plannedGap)/denominator);
     const load=Math.max(0,headDose(p.half,time,p)/denominator),contact=headGap<1e-7;
-    const phase=time<p.start?'idle':time<p.strikeStart?'windup':time<p.contactTime?'strike':time<p.closeEnd?'impact':time<p.holdEnd?'hold':time<p.end?'release':'open';
-    const impact=contact&&time>=p.contactTime?Math.max(0,1-(time-p.contactTime)/.22):0;
-    return {phase,impact,plannedGap,upperFace,lowerFace,supportMin:p.supportMin,supportMax:p.supportMax,supportMid:p.supportMid,half:p.half,contactPoints:p.contactPoints,upperGap,lowerGap,headGap,contact,force:contact?force:0,load,damage:clamp(load/p.material.pressureResistance),held:phase==='hold'};
+    const active=p.cycles.find(c=>time>=c.start&&time<c.end),completedCycles=p.cycles.filter(c=>time>=c.end).length,cycle=active?.index||completedCycles;
+    const phase=!active?(time<p.start?'idle':'open'):time<active.strikeStart?'windup':time<active.contactTime?'strike':time<active.closeEnd?'impact':time<active.holdEnd?'hold':'release';
+    const impact=active&&contact&&time>=active.contactTime?Math.max(0,1-(time-active.contactTime)/.22):0;
+    return {phase,cycle,cycleCount:p.cycleCount,completedCycles,impact,plannedGap,upperFace,lowerFace,supportMin:p.supportMin,supportMax:p.supportMax,supportMid:p.supportMid,half:p.half,contactPoints:p.contactPoints,upperGap,lowerGap,headGap,contact,force:contact?force:0,load,damage:clamp(load/p.material.pressureResistance),held:phase==='hold'};
   }
   function spinState(time,config={}){
     const start=config.start??0,end=config.end??7,totalTurns=config.turns??12,duration=end-start;

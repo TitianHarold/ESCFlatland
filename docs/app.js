@@ -79,7 +79,11 @@
   const heroMaterial=document.createElement('canvas');heroMaterial.width=heroMaterial.height=256;
   const heroMaterialContext=heroMaterial.getContext('2d');
   function journeyData(time){
-    const sample=factory.frame(Math.min(time,131.999999)),entry=sample.actors.find(a=>a.id==='hero');
+    const base=factory.frame(Math.min(time,131.999999)),rate=player.playbackRate,boost=clamp((rate-1)/.8);
+    const original=base.actors.find(a=>a.id==='hero'),sprinting=time>=122&&time<132;
+    const body=original&&sprinting?{...original.body,speed:original.body.speed*rate,axialStretch:original.body.axialStretch+.12*boost,strain:clamp(original.body.strain+.2*boost),effort:boost}:original?.body;
+    const entry=original?{...original,body}:undefined;
+    const sample=sprinting?{...base,hero:body,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
     const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){

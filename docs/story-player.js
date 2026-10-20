@@ -1,4 +1,4 @@
-/* Input changes story time; it never changes a camera or a character pose. */
+/* Input changes story time; the same chase rate also drives visible speed cues. */
 (function(root,factory){
   if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'));
   else root.FlatlandStoryPlayer=factory(root.FlatlandTiming);
@@ -10,10 +10,10 @@
   class StoryPlayer{
     constructor({duration=Timing.duration,mode='interactive',playing=false}={}){
       this.duration=duration;this.time=0;this.target=0;this.mode=mode;
-      this.playing=playing;this.pressed=false;this.pressAge=0;this.pressChase=false;
+      this.playing=playing;this.pressed=false;this.pressAge=0;this.pressChase=false;this.chaseRate=1;
     }
-    seek(value){this.time=Math.max(0,Math.min(this.duration,Number(value)||0));this.target=this.time;this.playing=false;this.pressed=false;this.pressChase=false;}
-    setMode(mode){this.mode=mode==='auto'?'auto':'interactive';this.pressed=false;this.pressChase=false;this.target=this.time;this.playing=this.mode==='auto'&&this.time<this.duration;}
+    seek(value){this.time=Math.max(0,Math.min(this.duration,Number(value)||0));this.target=this.time;this.playing=false;this.pressed=false;this.pressChase=false;this.chaseRate=1;}
+    setMode(mode){this.chaseRate=1;this.mode=mode==='auto'?'auto':'interactive';this.pressed=false;this.pressChase=false;this.target=this.time;this.playing=this.mode==='auto'&&this.time<this.duration;}
     tap(){
       if(this.mode==='auto'){if(this.time>=this.duration)this.seek(0);this.playing=!this.playing;return;}
       if(this.playing&&this.time<this.target)return;
@@ -33,12 +33,18 @@
       if(!cancelled&&!wasChase)this.tap();
     }
     get accelerating(){return this.mode==='interactive'&&this.pressed&&this.pressChase&&this.pressAge>=.18&&this.time<Timing.playbackAt(132);}
+    get playbackRate(){return this.mode==='interactive'&&this.time>=Timing.playbackAt(119)&&this.time<Timing.playbackAt(132)?this.chaseRate:1;}
     tick(delta){
       const dt=Math.max(0,Math.min(.1,Number(delta)||0));
       if(this.pressed)this.pressAge+=dt;
       if(!this.playing)return this.time;
       const end=this.mode==='auto'?this.duration:this.target;
-      this.time=Math.min(end,this.time+dt*(this.accelerating?1.8:1));
+      const inChase=this.mode==='interactive'&&this.time>=Timing.playbackAt(119)&&this.time<Timing.playbackAt(132);
+      const target=inChase&&this.accelerating?1.8:1,old=inChase?this.chaseRate:1,tau=target>old?.10:.18,decay=Math.exp(-dt/tau);
+      this.chaseRate=target+(old-target)*decay;
+      // Integrate the smooth rate instead of snapping between two time multipliers.
+      const travel=target*dt+(old-target)*tau*(1-decay);
+      this.time=Math.min(end,this.time+travel);
       if(this.time>=end){this.playing=false;if(end===this.duration)this.pressed=false;}
       return this.time;
     }

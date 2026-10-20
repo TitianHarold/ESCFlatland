@@ -55,15 +55,15 @@
   const thrownFrom=pathPoint(escortPath,escortDistance(102.8)),throwHeading=angle+Math.PI;
   const throwPath=makePath([[[thrownFrom.x,thrownFrom.y],[thrownFrom.x+90*Math.cos(throwHeading),thrownFrom.y+90*Math.sin(throwHeading)],[discard.x-160,discard.y],[discard.x,discard.y]]],false);
   // One diagonal curve: both world coordinates advance throughout the chase.
-  // The sprint begins after the nearby invitation; its final velocity still matches the existing coast.
+  // Uniform arc distance prevents the curved path itself from introducing acceleration.
   const chaseCurve=[[discard.x,discard.y],[lerp(discard.x,chaseEnd.x,.25),lerp(discard.y,chaseEnd.y,.30)],[lerp(discard.x,chaseEnd.x,.60),lerp(discard.y,chaseEnd.y,.65)],[chaseEnd.x,chaseEnd.y]];
+  const chasePath=makePath([chaseCurve],false);
   function chasePoint(t,lead=0){
-    const progress=Motion.chaseProgress(t),p=cubic(chaseCurve,Math.min(1,progress.q+lead));
-    p.heading=Math.atan2(p.dy,p.dx);p.speed=Math.hypot(p.dx,p.dy)*progress.qSpeed;
+    const progress=Motion.chaseProgress(t),p=pathPoint(chasePath,Math.min(1,progress.q+lead)*chasePath.length);
+    p.speed=chasePath.length*progress.qSpeed;
     return Object.assign(p,progress);
   }
 
-  function actionPulse(t,a,b){const u=clamp((t-a)/(b-a));return{value:t>a&&t<b?Math.sin(Math.PI*u)**2:0,velocity:t>a&&t<b?Math.PI*Math.sin(2*Math.PI*u)/(b-a):0};}
   function struggleAt(t){
     const wave=(a,b)=>{const u=clamp((t-a)/(b-a));return t>a&&t<b?Math.sin(4*Math.PI*u)*between(t,a,a+.12)*(1-between(t,b-.12,b)):0;};
     const x=wave(104.35,105.625),y=wave(105.625,106.9);
@@ -77,16 +77,12 @@
   ];
   function invitationLight(t){const index=t<119.9?0:t<120.9?1:2,a=[119,119.9,120.9][index],b=[119.9,120.9,122][index];return cubic(invitationCurves[index],between(t,a,b));}
   function probingBody(t){
-    const first=actionPulse(t,119.35,120.25),second=actionPulse(t,120.4,121.3),ready=actionPulse(t,121.55,122);
-    const x=discard.x-18*first.value+26*second.value-6*ready.value,y=discard.y-15*first.value-17*second.value+4*ready.value;
-    const light=invitationLight(t),initial=chasePoint(122).heading,look=Math.atan2(light.y-y,light.x-x),delta=Math.atan2(Math.sin(look-initial),Math.cos(look-initial));
-    const heading=initial+delta*between(t,119,119.22)*(1-between(t,121.8,122)),body=hardPose(heroActor,x,y,heading);
-    body.speed=Math.hypot(-18*first.velocity+26*second.velocity-6*ready.velocity,-15*first.velocity-17*second.velocity+4*ready.velocity);
-    body.strain=.18*(first.value+second.value)+.28*ready.value;body.axialStretch=.05*(first.value+second.value)-.08*ready.value;body.bend=.08*(first.value-second.value);
-    body.effort=.3*(first.value+second.value)+.6*ready.value;body.angle=heading-heroActor.headAxis(body).angle;return body;
+    const light=invitationLight(t),initial=chasePoint(122).heading,look=Math.atan2(light.y-discard.y,light.x-discard.x),delta=Math.atan2(Math.sin(look-initial),Math.cos(look-initial));
+    const heading=initial+delta*between(t,119,119.22)*(1-between(t,121.8,122));
+    return{...hardPose(heroActor,discard.x,discard.y,heading),speed:0,effort:0};
   }
-  const heroPressBody=lanePose(heroActor,480,130),heroProgram=Rules.pressProgram(heroActor,heroPressBody,{normal,contactTime:74,material:Rules.materials.hero});
-  const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,contactTime:7,material:Rules.materials.ordinary})));
+  const heroPressBody=lanePose(heroActor,480,130),heroProgram=Rules.pressProgram(heroActor,heroPressBody,{normal,startTime:72,material:Rules.materials.hero});
+  const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressProgram(actor,lanePose(actor,480,rows[row]),{normal,startTime:5,material:Rules.materials.ordinary})));
   function materialState(program,time,spin,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,spin.turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged,spin};}
   const heroSpin=t=>Rules.spinState(t,{start:80,end:87});
   function heroMaterial(t){return materialState(heroProgram,t,heroSpin(t),t>=94.5);}
@@ -109,7 +105,7 @@
     if(t<122)return probingBody(t);
     if(t>=132){const p=chasePoint(132),body=hardPose(heroActor,p.x,p.y,p.heading);body.speed=0;body.effort=0;body.bounce=0;body.strain=0;body.axialStretch=0;return body;}
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
-    body.speed=p.speed;body.axialStretch=.12*clamp(p.speed/1150)+.12*p.effort-.10*p.preload;body.strain=clamp(p.speed/1100+.08*p.effort);body.bend=.06*p.effort;body.bounce=.012*p.effort;body.effort=p.effort;
+    body.speed=p.speed;body.axialStretch=.12*clamp(p.speed/1150);body.strain=clamp(p.speed/1100);body.bend=0;body.bounce=0;body.effort=0;
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
   }
   const tagReleaseTime=127.25;
@@ -175,7 +171,7 @@
   }
   const visibleLane=(view,row)=>!view||view.right>=-1560&&view.left<=1000&&view.bottom>=rows[row]-160&&view.top<=rows[row]+160;
   // Successful ordinary shells become wholly opaque; failure alone receives a visible label.
-  function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,phase:state.phase,impact:state.impact,spin:state.spin,turns:state.spin.turns,angularSpeed:state.spin.angularSpeed,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
+  function makeEntry(id,actor,body,color,state,extra={}){return{id,actor,body,color,cavity:true,damage:state.damage,blacken:state.blacken,windowOpen:state.windowOpen,contact:state.contact,headGap:state.headGap,force:state.force,load:state.load,phase:state.phase,cycle:state.cycle,cycleCount:state.cycleCount,completedCycles:state.completedCycles,impact:state.impact,spin:state.spin,turns:state.spin.turns,angularSpeed:state.spin.angularSpeed,mixDose:state.mixDose,label:state.label==='reject'?'reject':undefined,result:state.result,compression:0,residual:0,machine:state,core:0,...extra};}
   function lightState(t,hero){
     if(t<108.3)return undefined;
     if(t<116){
