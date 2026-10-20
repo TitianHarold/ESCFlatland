@@ -9,6 +9,7 @@
   const cameraTrack=version.camera,characters=window.FlatlandCharacters,motion=window.FlatlandMotion;
   const district=window.FlatlandDistrict,factory=version.factory,dimension=window.FlatlandDimension;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)'),timing=version.timing,duration=timing.duration;
+  factory.setPlaybackClock?.(timing.playbackAt);
   const palette=window.FlatlandPalette;
   // Paths are supplied with the final transparent hand assets; white remains until they load.
   dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open.png',flexedHands:'assets/pov-hands-flexed.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
@@ -174,6 +175,7 @@
   function seek(time){player.seek(time);}
   function togglePlay(){state.inputAt=performance.now();player.tap();}
   if(workbench){
+    $('progress').max=String(duration*100);
     $('story-version').value=version.id;
     if(version.id==='routine')document.querySelectorAll('.timeline-marks span').forEach((mark,i)=>{mark.textContent=['家庭','查家','规整化','日常工作','追光','新维度'][i];});
     on('story-version','change',e=>{

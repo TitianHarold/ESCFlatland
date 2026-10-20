@@ -30,10 +30,15 @@
   function shellPolygon(actor){return vertices(actor);}
   function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),fitted=between(t,71.7,76.7),release=Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,vertices:shellPolygon(actor),radius:71};}
   function compactAt(t,start=78.5,end=81.6,actor=heroActor,body=pose(heroActor,-170,130)){
-    const relative=body.angle-angle,c=Math.cos(relative),s=Math.sin(relative),support=shellPolygon(actor).map(([x,y])=>x*s+y*c),upperSupport=Math.min(...support),lowerSupport=Math.max(...support);
-    const closing=between(t,start,start+.75),reopen=between(t,start+1.15,end),u=t<start?0:t<start+.75?closing:t<start+1.15?1:1-reopen;
-    const upperFace=lerp(-108,upperSupport,u),lowerFace=lerp(108,lowerSupport,u),contact=t>=start+.75&&t<start+1.15;
-    return{gap:(lowerFace-upperFace)/2,upperFace,lowerFace,upperSupport,lowerSupport,contact,force:contact?1:0};
+    const relative=body.angle-angle,c=Math.cos(relative),s=Math.sin(relative),centerline=shellPolygon(actor).map(([x,y])=>[x*c-y*s,x*s+y*c]);
+    // The frame is drawn with a 12px stroke. Its outer support planes, not its
+    // centre lines, are the die's contact boundary. Every die face uses this shell.
+    const n=centerline.length,frameHalfWidth=6,outerScale=1+frameHalfWidth/(71*Math.cos(Math.PI/n)),shell=centerline.map(([x,y])=>[x*outerScale,y*outerScale]);
+    const closing=between(t,start,start+.75),reopen=between(t,start+1.15,end),u=t<start?0:t<start+.75?closing:t<start+1.15?1:1-reopen,clearance=24*(1-u),thickness=20;
+    const faces=shell.map((a,i)=>{const b=shell[(i+1)%n],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],move=(p,d)=>[p[0]+normal[0]*d,p[1]+normal[1]*d],from=move(a,clearance),to=move(b,clearance),support=a[0]*normal[0]+a[1]*normal[1];
+      return{index:i,normal,shellFrom:a,shellTo:b,from,to,point:[(from[0]+to[0])/2,(from[1]+to[1])/2],support,faceSupport:support+clearance,gap:clearance,thickness,polygon:[from,to,move(to,thickness),move(from,thickness)],pad:[from,to,move(to,3),move(from,3)]};});
+    const contact=t>=start+.75&&t<start+1.15&&faces.every(face=>face.gap<1e-8),upperSupport=Math.min(...shell.map(p=>p[1])),lowerSupport=Math.max(...shell.map(p=>p[1])),upperFace=Math.min(...faces.flatMap(face=>[face.from[1],face.to[1]])),lowerFace=Math.max(...faces.flatMap(face=>[face.from[1],face.to[1]]));
+    return{faces,shell,centerline,clearance,thickness,gap:(lowerFace-upperFace)/2,upperFace,lowerFace,upperSupport,lowerSupport,contact,force:contact?1:0};
   }
   // Constant-distance sampling keeps the work rhythm separate from the camera.
   const loopSamples=Array.from({length:257},(_,i)=>{const a=i/256*Math.PI*2;return{x:workCenter.x+430*Math.cos(a),y:workCenter.y+240*Math.sin(a),a};}),loopLengths=[0];
@@ -92,8 +97,8 @@
   function drawBase(ctx,t){if(t<58||t>=119)return;if(t<64)Base.drawEntry(ctx,t);if(t>=94)drawWork(ctx,t);if(t<97)drawFactory(ctx,t);}
   function drawEntry(ctx,t,bounds){if(t<64)Base.drawEntry(ctx,t,bounds);else drawBase(ctx,t,bounds);}
   function drawOverlay(ctx,t){if(t<64||t>=94)return;setup(ctx);for(let r=0;r<lanes.length;r++){
-    const y=lanes[r],entry=r===2?heroAt(t):[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x+170)<1),press=compactAt(r===2?t:entry?.routine.time??0,78.5,81.6,entry?.actor||ordinary[r][0],entry?.body||pose(ordinary[r][0],-170,y));const x=-170;
-    ctx.save();ctx.beginPath();ctx.rect(x-154,y-124,308,248);ctx.clip();for(let side of [-1,1]){rounded(ctx,x-82,y+(side<0?press.upperFace:press.lowerFace)+(side<0?-42:0),164,42,7,P.industrial);rounded(ctx,x-65,y+(side<0?press.upperFace:press.lowerFace)+(side<0?-7:0),130,7,2,P.coral);}ctx.restore();
+    const y=lanes[r],entry=r===2&&t>=78.5&&t<82?heroAt(t):r===2?null:[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x+170)<1),actor=entry?.actor||(r===2?heroActor:ordinary[r][0]),press=compactAt(entry?.routine.time??0,78.5,81.6,actor,entry?.body||pose(actor,-170,y));const x=-170;
+    ctx.save();ctx.translate(x,y);for(const face of press.faces){poly(ctx,face.polygon,P.industrial);poly(ctx,face.pad,P.coral);}ctx.restore();
     const painting=r===2?heroAt(t):[worker(t,r,0),worker(t,r,1)].find(e=>e.routine.time>=83.2&&e.routine.time<94&&Math.abs(local(e.body).x+890)<1),paint=painting?paintAt(painting.routine.time,painting.actor.vertices.length,83.2,94,painting.actor):{spraying:false};if(paint.spraying){ctx.save();ctx.globalAlpha=.32;poly(ctx,[[-915,y-113],[-865,y-113],[-841,y-30],[-939,y-30]],P.ink);ctx.restore();}
   }ctx.restore();}
   function drawActorOverlay(ctx,entry){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;

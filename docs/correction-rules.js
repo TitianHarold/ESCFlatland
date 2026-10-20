@@ -13,25 +13,33 @@
     const supportMin=Math.min(...projection),supportMax=Math.max(...projection),supportMid=(supportMin+supportMax)/2,half=(supportMax-supportMin)/2;
     const contactPoints=Object.freeze([outline[projection.indexOf(supportMin)],outline[projection.indexOf(supportMax)]].map(point=>Object.freeze([...point])));
     const openGap=config.openGap??92,targetGap=config.targetGap??22,standbyGap=config.standbyGap??Math.max(64,half+8);
-    const windupDuration=config.windupDuration??1,strikeDuration=config.strikeDuration??.2,impactDuration=config.impactDuration??.07,holdDuration=config.holdDuration??.6,releaseDuration=config.releaseDuration??.43,pauseDuration=config.pauseDuration??.1,cycleCount=config.cycles??2;
+    const windupDuration=config.windupDuration??1,strikeDuration=config.strikeDuration??.2,impactDuration=config.impactDuration??.07,holdDuration=config.holdDuration??.6,releaseDuration=config.releaseDuration??.43,waitDuration=config.waitDuration??0,pauseDuration=config.pauseDuration??.1,cycleCount=config.cycles??2;
     if(!(openGap>=standbyGap&&standbyGap>half&&targetGap<half))throw new Error('The press must open outside the shell and plan to load past both support faces.');
-    if(!Number.isInteger(cycleCount)||cycleCount<1||[pauseDuration,windupDuration,holdDuration].some(value=>value<0)||[strikeDuration,impactDuration,releaseDuration].some(value=>!(value>0)))throw new Error('Each press round needs positive travel phases and nonnegative waits.');
-    const start=config.startTime??((config.contactTime??6.2)-windupDuration-strikeDuration),cycleDuration=windupDuration+strikeDuration+impactDuration+holdDuration+releaseDuration;
+    if(!Number.isInteger(cycleCount)||cycleCount<1||[pauseDuration,windupDuration,holdDuration,waitDuration].some(value=>value<0)||[strikeDuration,impactDuration,releaseDuration].some(value=>!(value>0)))throw new Error('Each press round needs positive travel phases and nonnegative waits.');
+    const start=config.startTime??((config.contactTime??6.2)-windupDuration-strikeDuration),cycleDuration=windupDuration+strikeDuration+impactDuration+holdDuration+releaseDuration+waitDuration;
     const at=value=>Math.round(value*1e9)/1e9;
     const cycles=Object.freeze(Array.from({length:cycleCount},(_,i)=>{
       const begin=at(start+i*(cycleDuration+pauseDuration)),strikeStart=at(begin+windupDuration),contactTime=at(strikeStart+strikeDuration),closeEnd=at(contactTime+impactDuration),holdEnd=at(closeEnd+holdDuration);
-      return Object.freeze({index:i+1,start:begin,strikeStart,contactTime,closeEnd,holdEnd,end:at(holdEnd+releaseDuration)});
+      const returnEnd=at(holdEnd+releaseDuration),end=at(returnEnd+waitDuration);
+      return Object.freeze({index:i+1,start:begin,strikeStart,contactTime,closeEnd,dropEnd:closeEnd,holdEnd,returnEnd,waitEnd:end,cycleEnd:end,end});
     }));
     // One unbroken timeline drives both heads and the cumulative material integral.
-    const gapFrames=Object.freeze(cycles.flatMap(c=>[[c.start,standbyGap],[c.strikeStart,openGap],[c.contactTime,half],[c.closeEnd,targetGap],[c.holdEnd,targetGap],[c.end,standbyGap]]).map(frame=>Object.freeze(frame)));
+    const quickClearDuration=config.quickClearDuration,clearGap=Math.min(standbyGap,half+8);
+    if(quickClearDuration!==undefined&&!(quickClearDuration>0&&quickClearDuration<releaseDuration))throw new Error('The clearance lift must fit inside the full return.');
+    const gapFrames=Object.freeze(cycles.flatMap(c=>{
+      const down=config.acceleratedStrike?[.25,.5,.75].map(q=>[c.strikeStart+strikeDuration*q,openGap+(half-openGap)*q*q*q]):[];
+      const clearance=quickClearDuration===undefined?[]:[[c.holdEnd+quickClearDuration,clearGap]];
+      return[[c.start,standbyGap],[c.strikeStart,openGap],...down,[c.contactTime,half],[c.closeEnd,targetGap],[c.holdEnd,targetGap],...clearance,[c.returnEnd,standbyGap],[c.end,standbyGap]];
+    }).map(frame=>Object.freeze(frame)));
     const first=cycles[0],end=cycles.at(-1).end,contactTimes=Object.freeze(cycles.map(c=>c.contactTime));
     const doseTimeScale=config.doseTimeScale??1;if(!(doseTimeScale>0))throw new Error('Pressure time scale must be positive.');
-    const clearTime=first.holdEnd+releaseDuration*clamp((half+8-targetGap)/(standbyGap-targetGap));
-    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,pauseDuration,cycleCount,cycles,contactTimes,contactTime:first.contactTime,start,strikeStart:first.strikeStart,closeEnd:first.closeEnd,holdEnd:first.holdEnd,end,clearTime,doseTimeScale,gapFrames,material:config.material||materials.ordinary});
+    const clearTime=first.holdEnd+(quickClearDuration??releaseDuration*clamp((half+8-targetGap)/(standbyGap-targetGap))),arrivalTime=config.arrivalTime??start,pressureGain=config.pressureGain??1;
+    if(!(pressureGain>0))throw new Error('Pressure strength must be positive.');
+    return Object.freeze({supportMin,supportMax,supportMid,half,contactPoints,openGap,standbyGap,targetGap,windupDuration,strikeDuration,impactDuration,closeDuration:strikeDuration+impactDuration,holdDuration,releaseDuration,waitDuration,pauseDuration,cycleCount,cycles,contactTimes,contactTime:first.contactTime,start,strikeStart:first.strikeStart,closeEnd:first.closeEnd,dropEnd:first.closeEnd,holdEnd:first.holdEnd,returnEnd:first.returnEnd,waitEnd:first.end,cycleEnd:first.end,end,clearTime,arrivalTime,period:cycleDuration,repeat:!!config.repeat,pressureGain,doseTimeScale,gapFrames,material:config.material||materials.ordinary});
   }
   function pressSequence(actor,bodies,config={}){
     const interval=config.interval??1.25,start=config.startTime??0;
-    const programs=Object.freeze(bodies.map((body,index)=>pressProgram(actor,body,{...config,startTime:start+index*interval,cycles:1})));
+    const programs=Object.freeze(bodies.map((body,index)=>{const begin=start+index*interval;return pressProgram(actor,body,{...config,startTime:begin,arrivalTime:begin+(index?(config.arrivalDelay??0):0),cycles:1});}));
     const cycles=Object.freeze(programs.map((program,index)=>Object.freeze({...program.cycles[0],index:index+1,station:index,clearTime:program.clearTime})));
     return Object.freeze({programs,cycles,cycleCount:programs.length,contactTimes:Object.freeze(programs.map(program=>program.contactTime)),contactTime:programs[0].contactTime,start,end:programs.at(-1).end,interval,material:programs[0].material});
   }
@@ -48,21 +56,24 @@
     }
     return dose;
   }
-  function pressState(program,time){
+  function pressState(program,time,options={}){
     if(program.programs){
-      const states=program.programs.map(item=>pressState(item,time)),index=Math.max(0,Math.min(states.length-1,Math.floor((time-program.start)/program.interval))),load=states.reduce((sum,state)=>sum+state.load,0);
-      return{...states[index],cycle:index+1,cycleCount:states.length,completedCycles:program.programs.filter(item=>time>=item.end).length,load,damage:clamp(load/program.material.pressureResistance),station:index};
+      const states=program.programs.map(item=>pressState(item,time)),occupied=states.findIndex(state=>state.contact),arrived=program.programs.findLastIndex(item=>time>=item.arrivalTime),index=occupied<0?Math.max(0,arrived):occupied,load=states.reduce((sum,state)=>sum+state.load,0);
+      return{...states[index],cycle:index+1,cycleCount:states.length,completedCycles:program.programs.filter(item=>time>=item.clearTime).length,force:states.reduce((sum,state)=>sum+state.force,0),contact:states.some(state=>state.contact),impact:Math.max(...states.map(state=>state.impact)),load,damage:clamp(load/program.material.pressureResistance),station:index};
     }
-    const p=program;let plannedGap=p.standbyGap;
-    for(let i=1;i<p.gapFrames.length;i++){const[a,ga]=p.gapFrames[i-1],[b,gb]=p.gapFrames[i];if(time>=a&&time<b){plannedGap=ga+(gb-ga)*(time-a)/(b-a);break;}}
-    const upperFace=Math.min(p.supportMid-plannedGap,p.supportMin),lowerFace=Math.max(p.supportMid+plannedGap,p.supportMax);
+    const p=program,clock=p.repeat?p.start+((time-p.start)%p.period+p.period)%p.period:time;
+    const occupied=options.occupied??(time>=p.arrivalTime&&time<=p.clearTime);let plannedGap=p.standbyGap;
+    for(let i=1;i<p.gapFrames.length;i++){const[a,ga]=p.gapFrames[i-1],[b,gb]=p.gapFrames[i];if(clock>=a&&clock<b){plannedGap=ga+(gb-ga)*(clock-a)/(b-a);break;}}
+    const upperFace=occupied?Math.min(p.supportMid-plannedGap,p.supportMin):p.supportMid-plannedGap,lowerFace=occupied?Math.max(p.supportMid+plannedGap,p.supportMax):p.supportMid+plannedGap;
     const upperGap=p.supportMin-upperFace,lowerGap=lowerFace-p.supportMax,headGap=Math.max(0,upperGap,lowerGap);
-    const denominator=p.half-p.targetGap,force=clamp(Math.max(0,p.half-plannedGap)/denominator);
-    const load=Math.max(0,headDose(p.half,time,p)/denominator*p.doseTimeScale),contact=headGap<1e-7;
-    const active=p.cycles.find(c=>time>=c.start&&time<c.end),completedCycles=p.cycles.filter(c=>time>=c.end).length,cycle=active?.index||completedCycles;
-    const phase=!active?(time<p.start?'idle':'open'):time<active.strikeStart?'windup':time<active.contactTime?'strike':time<active.closeEnd?'impact':time<active.holdEnd?'hold':'release';
-    const impact=active&&contact&&time>=active.contactTime?Math.max(0,1-(time-active.contactTime)/.22):0;
-    return {phase,cycle,cycleCount:p.cycleCount,completedCycles,impact,plannedGap,upperFace,lowerFace,supportMin:p.supportMin,supportMax:p.supportMax,supportMid:p.supportMid,half:p.half,contactPoints:p.contactPoints,upperGap,lowerGap,headGap,contact,force:contact?force:0,load,damage:clamp(load/p.material.pressureResistance),held:phase==='hold'};
+    const denominator=p.half-p.targetGap,force=clamp(Math.max(0,p.half-plannedGap)/denominator)*p.pressureGain;
+    // Only the body's first real residence loads it; later empty machine cycles cannot add damage.
+    const load=Math.max(0,(headDose(p.half,Math.min(time,p.clearTime),p)-headDose(p.half,p.arrivalTime,p))/denominator*p.doseTimeScale*p.pressureGain),contact=occupied&&headGap<1e-7;
+    const active=p.cycles.find(c=>clock>=c.start&&clock<c.end),completedCycles=p.cycles.filter(c=>time>=c.end).length,cycle=active?.index||completedCycles;
+    const phase=!active?(clock<p.start?'idle':'open'):clock<active.strikeStart?'windup':clock<active.contactTime?'strike':clock<active.closeEnd?'impact':clock<active.holdEnd?'hold':clock<active.returnEnd?'release':'upper-wait';
+    const operationPhase=phase==='release'?'rising':phase==='upper-wait'?'upper-wait':phase==='strike'||phase==='impact'?'closing':phase;
+    const impact=active&&contact&&clock>=active.contactTime?Math.max(0,1-(clock-active.contactTime)/.08):0;
+    return {phase,operationPhase,cycle,cycleCount:p.cycleCount,completedCycles,impact,plannedGap,upperFace,lowerFace,supportMin:p.supportMin,supportMax:p.supportMax,supportMid:p.supportMid,half:p.half,contactPoints:p.contactPoints,upperGap,lowerGap,headGap,contact,force:contact?force:0,load,damage:clamp(load/p.material.pressureResistance),held:phase==='hold',occupied,machineCycle:Math.floor((time-p.start)/p.period)};
   }
   function spinState(time,config={}){
     const start=config.start??0,end=config.end??7,totalTurns=config.turns??12,duration=end-start;

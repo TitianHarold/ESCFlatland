@@ -14,6 +14,12 @@
   const entrance={x:-3000,y:-2100},discard=world(-2450,390),chaseEnd={x:-800,y:discard.y-3300};
   const heroActor=C.create('child'),backgroundActors=rows.map((_,row)=>Array.from({length:3},()=>C.create({sides:row+3,radius:45,regular:false})));
   const guards=Array.from({length:3},()=>new C.Character('guard',[[0,-60],[12,48],[-12,48]],0));
+  let playbackClock=time=>time;
+  const heroClock=time=>72+playbackClock(time)-playbackClock(72);
+  function setPlaybackClock(map){
+    if(typeof map!=='function')throw new Error('Factory playback clock must be a scene-to-seconds function.');
+    playbackClock=map;memoTime=NaN;memoFrame=undefined;backgroundTime=NaN;backgroundCache=[];
+  }
   function hardPose(actor,x,y,heading=angle-Math.PI){
     const body={x,y,angle:0,sx:1,sy:1,bend:0,strain:0,bounce:0,edgeBends:actor.vertices.map(()=>0),edgeStretch:actor.vertices.map(()=>1)};
     body.angle=heading-actor.headAxis(body).angle;return body;
@@ -81,27 +87,27 @@
     const heading=initial+delta*between(t,119,119.22)*(1-between(t,121.8,122));
     return{...hardPose(heroActor,discard.x,discard.y,heading),speed:0,effort:0};
   }
-  // Raw 1.25 scene units play as four seconds: one down, three up, with no preparatory lift.
-  const pressConfig={normal,interval:1.25,windupDuration:0,strikeDuration:.28,impactDuration:.0325,holdDuration:0,releaseDuration:.9375,openGap:92,standbyGap:92,doseTimeScale:3.2};
+  // Each unit keeps its own five-second clock; transport needs only the first clearance lift.
+  const pressConfig={normal,interval:.5,arrivalDelay:.44,windupDuration:0,strikeDuration:.475,impactDuration:.025,holdDuration:0,releaseDuration:3,quickClearDuration:.07,waitDuration:1.5,repeat:true,acceleratedStrike:true,openGap:92,standbyGap:92,pressureGain:8};
   const heroProgram=Rules.pressSequence(heroActor,pressStations.map(x=>lanePose(heroActor,x,130)),{...pressConfig,startTime:72,material:Rules.materials.hero});
   const programs=backgroundActors.map((line,row)=>line.map(actor=>Rules.pressSequence(actor,pressStations.map(x=>lanePose(actor,x,rows[row])),{...pressConfig,startTime:5,material:Rules.materials.ordinary})));
   function pressLineX(program,time){
     if(time<=program.start)return pressStations[0];
     for(let index=0;index<pressStations.length-1;index++){
       const current=program.programs[index],next=program.programs[index+1];
-      if(time<next.start)return lerp(pressStations[index],pressStations[index+1],between(time,current.clearTime,next.start));
+      if(time<next.arrivalTime)return lerp(pressStations[index],pressStations[index+1],between(time,current.clearTime,next.arrivalTime));
     }
-    return pressStations.at(-1);
+    return lerp(pressStations.at(-1),-730,between(time,program.programs.at(-1).clearTime,program.start+5));
   }
   function materialState(program,time,spin,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,spin.turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged,spin};}
   const heroSpin=t=>Rules.spinState(t,{start:80,end:87});
-  function heroMaterial(t){return materialState(heroProgram,t,heroSpin(t),t>=94.5);}
+  function heroMaterial(t){return materialState(heroProgram,heroClock(t),heroSpin(t),t>=94.5);}
   function baseHeroBody(t){
     if(t<64){const pose=d=>pathPose(heroActor,entryPath,d),planned=entryPath.length*between(t,58,64),safe=Portals.clampTravel(heroActor,pose,0,planned,entryPortal,t);return pose(safe);}
     if(t<70)return lanePose(heroActor,900,130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
-    if(t<77)return lanePose(heroActor,pressLineX(heroProgram,t),130);
-    if(t<80)return lanePose(heroActor,lerp(pressStations.at(-1),stations[1],between(t,77,80)),130);
+    if(t<77)return lanePose(heroActor,pressLineX(heroProgram,heroClock(t)),130);
+    if(t<80)return lanePose(heroActor,lerp(-730,stations[1],between(t,77,80)),130);
     if(t<87)return lanePose(heroActor,stations[1],130,heroSpin(t).angle);
     if(t<90)return lanePose(heroActor,lerp(stations[1],stations[2],between(t,87,90)),130,heroSpin(t).angle);
     if(t<98.6)return lanePose(heroActor,stations[2],130,heroSpin(t).angle);
@@ -151,10 +157,10 @@
     return{x:releaseBody.x+Math.cos(releaseHeading)*along-Math.sin(releaseHeading)*side,y:releaseBody.y+Math.sin(releaseHeading)*along+Math.cos(releaseHeading)*side,angle:releaseBody.angle+turn*trail,z:4+22*Math.sin(u*Math.PI)-4*between(u,.8,1),opacity:1,scale:1.8,geometryState:{load:0,peel:1,release:1,stress:0,fracture:1,shiver:0,trail}};
   }
   function backgroundState(t,row,slot){
-    const raw=t-64+row*.83+slot*20,age=((raw%60)+60)%60,actor=backgroundActors[row][slot],spin=Rules.spinState(age,{start:14,end:22}),turns=spin.turns;let x=900,station=-1;
+    const raw=playbackClock(t)-playbackClock(64)+row*.83+slot*20,age=((raw%60)+60)%60,actor=backgroundActors[row][slot],spin=Rules.spinState(age,{start:14,end:22}),turns=spin.turns;let x=900,station=-1;
     if(age<5)x=lerp(900,480,between(age,0,5));
     else if(age<10){x=pressLineX(programs[row][slot],age);station=0;}
-    else if(age<14)x=lerp(pressStations.at(-1),stations[1],between(age,10,14));
+    else if(age<14)x=lerp(-730,stations[1],between(age,10,14));
     else if(age<22){x=stations[1];station=1;}
     else if(age<26)x=lerp(stations[1],stations[2],between(age,22,26));
     else if(age<32){x=stations[2];station=2;}
@@ -274,7 +280,7 @@
     let wallY=-650;for(const y of rows){stroke(ctx,[[900,wallY],[900,y-80]],P.factory.outline,8);wallY=y+80;}stroke(ctx,[[900,wallY],[900,far]],P.factory.outline,8);
     for(let row=0;row<rows.length;row++){
       if(!visibleLane(view,row))continue;
-      const y=rows[row];belt(ctx,y,leftWall+130,900,t);
+      const y=rows[row];belt(ctx,y,leftWall+130,900,playbackClock(t));
       for(const x of pressStations)drawPressBase(ctx,x,y,detail);
       for(let station=0;station<3;station++){
         const x=stations[station];
@@ -289,9 +295,9 @@
     stroke(ctx,[[leftWall,390],[-1480,390]],P.factory.aisle,2);ctx.restore();receivingBay(ctx);drawPortal(ctx,entryPortal,t);drawPortal(ctx,exitPortal,t);
   }
   function pressForRow(t,row,index){
-    if(row===2)return Rules.pressState(heroProgram.programs[index],t);
+    if(row===2)return Rules.pressState(heroProgram.programs[index],heroClock(t));
     for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return Rules.pressState(programs[row][slot].programs[index],item.age);}
-    return{phase:'idle',impact:0,plannedGap:92,upperFace:-92,lowerFace:92,force:0,contact:false,headGap:92};
+    return Rules.pressState(programs[row][0].programs[index],playbackClock(t)-playbackClock(64)+row*.83,{occupied:false});
   }
   function drawOverlay(ctx,time,bounds){
     const t=Number.isFinite(time)?time:0,view=localViewport(bounds);
@@ -325,5 +331,5 @@
     }
   }
   const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:-800,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
-  return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram};
+  return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock};
 });

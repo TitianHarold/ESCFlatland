@@ -25,3 +25,25 @@ let minimum=Infinity;for(let t=98;t<108;t+=.02){const es=Routine.frame(t).actors
 for(const n of [3,4,5,6,7,8,9,10]){const actor=C.create({sides:n,radius:42,regular:false}),span=10.8/n;for(let i=0;i<n;i++){const p=Routine.paintAt(83.2+(i+.7)*span,n,83.2,94,actor),a0=Math.atan2(actor.vertices[0][1],actor.vertices[0][0]),a=a0+(p.sideIndex+.5)*Math.PI*2/n-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle+p.angle;assert(Math.abs(Math.cos(a))<1e-8&&Math.sin(a)<0,'every polygon edge faces the actual nozzle when sprayed');const body={x:0,y:0,angle:Routine.anchors.localRotation-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle,sx:1,sy:1},press=Routine.compactAt(79.3,78.5,81.6,actor,body);assert.equal(press.upperFace,press.upperSupport);assert.equal(press.lowerFace,press.lowerSupport);}}
 
 for(const t of [94,97,108,111,119]){const a=hero(t-1e-6).body.angle,b=hero(t).body.angle;assert(Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<.01,'heading remains continuous at '+t);}
+
+// Each compacting head is a real matching polygon face with an outward thickness.
+for(const n of [3,4,5,6,7,8,9,10]){
+  const actor=C.create({sides:n,radius:42,regular:false}),body={x:0,y:0,angle:Routine.anchors.localRotation-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle,sx:1,sy:1};
+  for(let t=78.4;t<=81.7;t+=.025){
+    const press=Routine.compactAt(t,78.5,81.6,actor,body);assert.equal(press.faces.length,n);assert.equal(press.shell.length,n);
+    for(const face of press.faces){
+      const dot=p=>p[0]*face.normal[0]+p[1]*face.normal[1],tangent=[face.shellTo[0]-face.shellFrom[0],face.shellTo[1]-face.shellFrom[1]];
+      assert(Math.abs(Math.hypot(...face.normal)-1)<1e-10);assert(Math.abs(tangent[0]*face.normal[0]+tangent[1]*face.normal[1])<1e-8);
+      assert(Math.abs(dot(face.shellFrom)-face.support)<1e-8&&Math.abs(dot(face.shellTo)-face.support)<1e-8);
+      assert(press.shell.every(p=>dot(p)<=face.support+1e-8),'outward die normal is a true shell support');
+      assert(Math.abs(dot(press.centerline[face.index])+6-face.support)<1e-8,'die touches the visible outer frame, including its stroke');
+      assert(face.polygon.every(p=>dot(p)>=face.support-1e-8),'no head material ever penetrates the shell');
+      assert(Math.abs(dot(face.from)-face.support-face.gap)<1e-8&&Math.abs(dot(face.to)-face.support-face.gap)<1e-8);
+      assert(Math.abs(dot(face.polygon[2])-dot(face.to)-20)<1e-8,'each matching head has actual outward thickness');
+      if(press.force){assert(face.gap<1e-8);assert(Math.abs(dot(face.point)-face.support)<1e-8);}
+      else if(t<79.25)assert(face.gap>0,'no force before all matching faces make contact');
+      assert(face.polygon.every(p=>Math.abs(p[0])<154&&Math.abs(p[1])<124),'all heads stay inside their own line footprint');
+    }
+  }
+}
+console.log(JSON.stringify({matchingDieFaces:'3..10',trueOuterFrameContact:true,noHeadPenetration:true}));

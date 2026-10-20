@@ -59,22 +59,44 @@ for(let t=0;t<=90;t+=.25)assert(Math.abs(Timing.playbackAt(Timing.sceneAt(t))-t)
 
 // Version edits have separate clocks and cameras, while the input model stays shared.
 const Versions=require('./docs/story-versions.js'),A=Versions.get('rhythm'),B=Versions.get('routine');
+Factory.setPlaybackClock(A.timing.playbackAt);
+try {
 assert.equal(Versions.get().id,'rhythm');
 for(let raw=0;raw<=58;raw+=1)assert.equal(A.timing.playbackAt(raw),B.timing.playbackAt(raw),'Both openings share the same edit');
 assert.equal(A.factory.anchors.pressStations.length,4);
-for(const program of A.factory.pressProgram.programs){
-  assert(Math.abs(A.timing.playbackAt(program.closeEnd)-A.timing.playbackAt(program.start)-1)<1e-7,'Each A fixture descends for one playback second');
-  assert(Math.abs(A.timing.playbackAt(program.end)-A.timing.playbackAt(program.closeEnd)-3)<1e-7,'Each A fixture rises for three playback seconds');
-  assert.equal(program.windupDuration,0,'The first downward movement does not start with a lift');
+for(const [index,program] of A.factory.pressProgram.programs.entries()){
+  assert.equal(program.start,72+index*.5,'Adjacent fixtures start half a second apart');
+  assert(Math.abs(A.timing.playbackAt(program.closeEnd)-A.timing.playbackAt(program.start)-.5)<1e-7,'Each visible descent takes half a playback second');
+  assert(Math.abs(A.timing.playbackAt(program.returnEnd)-A.timing.playbackAt(program.closeEnd)-3)<1e-7,'Each visible return takes three playback seconds');
+  assert(Math.abs(program.cycleEnd-program.start-5)<1e-7,'Each fixture has a five-second mechanical cycle');
+  assert(Math.abs(program.waitEnd-program.returnEnd-1.5)<1e-7,'The upper position waits for one and a half mechanical seconds');
+  assert.equal(program.windupDuration,0,'The downward movement does not start with a lift');
 }
-assert.equal(A.timing.playbackAt(77)-A.timing.playbackAt(72),16);
+assert.equal(A.timing.playbackAt(77)-A.timing.playbackAt(72),5);
+const firstFixtureAt=A.timing.playbackAt(72),entryAt=seconds=>Factory.frame(A.timing.sceneAt(seconds)).actors.find(entry=>entry.id==='hero');
+for(const [offset,phase] of[[5.01,'upper-wait'],[6.49,'upper-wait'],[6.51,'closing'],[11.51,'closing']]){
+  assert.equal(entryAt(firstFixtureAt+offset).machine.operationPhase,phase,'The fourth fixture keeps its real-time phase after the camera leaves');
+}
+const departedDamage=entryAt(firstFixtureAt+5.01).damage;
+for(const offset of[6.51,11.51,13]){
+  const entry=entryAt(firstFixtureAt+offset);
+  assert.equal(entry.damage,departedDamage,'Empty fixture cycles cannot keep damaging the departed hero');
+  assert.equal(entry.machine.contact,false,'A later empty closure cannot contact the departed hero');
+}
+assert.equal(A.timing.duration,79);assert.equal(B.timing.duration,90);
+assert.equal(A.duration,79);assert.equal(B.duration,90);
+assert.equal(A.timing.playbackAt(98)-A.timing.playbackAt(77),9.5,'The post-fixture factory actions retain their previous speed');
+assert.equal(A.timing.playbackAt(119)-A.timing.playbackAt(104),13,'The struggle and inner sequence are not stretched');
+assert.equal(A.timing.playbackAt(138)-A.timing.playbackAt(119),17,'Chase and POV retain their previous speed');
+assert(A.notes.at(74.1).action.includes('第一、第二、第三、第四组夹具同时回升'),'Notes show concurrent fixture motion, not a single current group');
 assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
 assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(70),16);
 assert.equal(B.timing.playbackAt(108)-B.timing.playbackAt(94),16);
 assert.equal(B.timing.playbackAt(119)-B.timing.playbackAt(108),10);
 for(const variant of[A,B]){
-  assert.equal(variant.timing.duration,90);assert.equal(variant.timing.playbackAt(138),90);
-  for(let seconds=0;seconds<=90;seconds+=.5)assert(Math.abs(variant.timing.playbackAt(variant.timing.sceneAt(seconds))-seconds)<1e-7);
+  Factory.setPlaybackClock(variant.timing.playbackAt);
+  assert.equal(variant.timing.playbackAt(138),variant.duration);
+  for(let seconds=0;seconds<=variant.duration;seconds+=.5)assert(Math.abs(variant.timing.playbackAt(variant.timing.sceneAt(seconds))-seconds)<1e-7);
   const p=new StoryPlayer({timing:variant.timing,beats:variant.beats});
   p.seek(variant.timing.playbackAt(77)-.01);p.tap();const target=p.target;
   const before=variant.camera.shotAt(variant.timing.sceneAt(p.time));p.tick(.02);
@@ -95,4 +117,6 @@ const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.pl
 injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
 assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
 assert.equal(injected.target,alternateTiming.playbackAt(132));
-console.log('Version A/B: fixture 1s down + 3s up, 90s edits, shared opening, continuous cuts, injected clocks and chase hold passed.');
+console.log('Version A/B: real-time offset fixtures .5s down + 3s up + 1.5s upper wait, no empty-cycle damage, 79s/90s edits, continuous cuts, containment and chase hold passed.');
+
+} finally {Factory.setPlaybackClock(time=>time);}

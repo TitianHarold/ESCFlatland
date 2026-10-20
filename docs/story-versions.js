@@ -12,10 +12,10 @@
       for(let i=1;i<cuts.length;i++)if(t<=cuts[i][from]){const a=cuts[i-1],b=cuts[i];return a[to]+(b[to]-a[to])*(t-a[from])/(b[from]-a[from]);}
       return cuts.at(-1)[to];
     }
-    return Object.freeze({duration:90,sceneAt:t=>map(t,1,0),playbackAt:t=>map(t,0,1)});
+    return Object.freeze({duration:cuts.at(-1)[1],sceneAt:t=>map(t,1,0),playbackAt:t=>map(t,0,1)});
   }
   const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,18],[58,25],[64,28]];
-  const rhythmTiming=edit([...opening,[70,30.5],[72,31.5],[77,47.5],[87,52],[90,53],[98,57],[104,60],[110,65],[119,73],[122,76],[132,86],[138,90]]);
+  const rhythmTiming=edit([...opening,[70,30.5],[72,31.5],[77,36.5],[87,41],[90,42],[98,46],[104,49],[110,54],[119,62],[122,65],[132,75],[138,79]]);
   const routineTiming=edit([...opening,[70,31],[77,36],[82,40],[94,47],[108,63],[119,73],[122,76],[132,86],[138,90]]);
   const point=(value,fallback)=>Array.isArray(value)?{x:value[0],y:value[1]}:value||fallback;
   function fixed(points,zoom=.6){
@@ -79,9 +79,18 @@
     if(time<64)return StoryNotes.at(time);
     if(time<70)return{summary:'多条身份专线持续运转，四组夹具沿主角所在的传送带排列。',action:'居民沿带前进，四组夹具依次开合。',camera:'工厂全景，显示传送带与夹具的排列。'};
     if(time<77){
-      const index=clamp(Math.floor((time-72)/1.25),0,3),start=72+index*1.25,names=['第一','第二','第三','第四'];
-      return{summary:'同一五边形主角沿传送带依次经过四组夹具。每组下落1秒、回升3秒。',
-        action:time<72?'主角沿传送带接近第一组夹具。':time<start+.3125?names[index]+'组夹具从上位直接下落，压向经过的主角。':names[index]+'组夹具持续回升，主角继续沿带前进。',camera:'独立的固定俯视中景，将四组夹具和传送带收入画面；角色行进持续。'};
+      const groups={closing:[],rising:[],waiting:[],ready:[]},names=['第一','第二','第三','第四'];
+      Factory.pressProgram.programs.forEach((program,index)=>{
+        const phase=time<program.start?'ready':time<program.closeEnd?'closing':time<program.returnEnd?'rising':'waiting';
+        groups[phase].push(names[index]);
+      });
+      const actions=[];
+      if(groups.closing.length)actions.push(groups.closing.join('、')+'组夹具'+(groups.closing.length>1?'同时':'')+'夹紧');
+      if(groups.rising.length)actions.push(groups.rising.join('、')+'组夹具'+(groups.rising.length>1?'同时':'')+'回升');
+      if(groups.waiting.length)actions.push(groups.waiting.join('、')+'组夹具在上位等待');
+      if(groups.ready.length)actions.push(groups.ready.join('、')+'组保持上位，等待错相落下');
+      return{summary:'四组错相流水线：各0.5秒夹紧、3秒回升、1.5秒上位等待，相邻组间隔0.5秒落下。孩子在夹具收回时已沿带转运。',
+        action:time<72?'主角沿传送带接近第一组夹具。':actions.join('；')+'。孩子沿传送带向下一组转运。',camera:'保持四组夹具与传送带同框的预设中景，多个夹具可以同时回升。'};
     }
     if(time<87)return{summary:'主角离开四组夹具，进入旋转工位。破损内窗仍露出颜色。',action:time<80?'主角沿传送带移向旋转工位。':'旋转盘和主角一同转动，内窗颜色逐渐混暗。',camera:'固定俯视中景，容纳旋转和判定工位。'};
     if(time<90)return{summary:'主角从旋转工位送往判定工位。',action:'同一五边形沿传送带前进，破损内窗仍然透色。',camera:'保持同一固定中景。'};
@@ -92,8 +101,8 @@
   function routineNotes(time){
     if(time<64)return StoryNotes.at(time);
     if(time<70)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
-    if(time<77)return{summary:'五边形主角进入套模工位，外侧模具合拢。',action:time<71.7?'主角沿传送带接近套模工位。':'模具沿五边轮廓合拢，外层逐渐套住主角。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
-    if(time<82)return{summary:'套模后的主角进入压实工位。',action:time<78.5?'主角沿传送带移入压实工位。':time<79.65?'压块合拢，压实包住身体边界的外层。':'压块退开，传送带保留净空。',camera:'沿带平移至压实工位，主角持续留在画面中。'};
+    if(time<77)return{summary:'主角进入与自身边数匹配的多边形模腔。五边形主角对应五边模腔，各边模块沿轮廓合拢。',action:time<71.7?'主角沿传送带接近五边形套模工位。':'五条边对应的模腔模块沿边合拢，外层逐渐贴合主角轮廓。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
+    if(time<82)return{summary:'主角进入压实工位。按对应边数排列的成型压块沿各边法向合拢，实际接触后压实外层。',action:time<78.5?'五边形主角沿传送带移入五边排列的成型压块之间。':time<79.25?'五块成型压块沿各条边的法向靠近外壳。':time<79.65?'各块真实接触对应边界后施力压实。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，主角持续留在画面中。'};
     if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角沿传送带进入喷涂工位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
     if(time<108)return{summary:'主角离开流水线，进入几何建筑围成的工作通道。',action:time<98?'主角离开流水线，沿连接通道进入工作区域。':'主角与两位居民沿闭合路线行进，在固定工位推送几何件后继续工作。',camera:'从喷涂工位连续移向工作区域并拉远，随后固定取景。'};
     if(time<119)return{summary:'工作途中，同一团光数次靠近主角。主角转向光，逐渐离开原有路线。',action:time<111?'光在近处接连出现，主角停在路线右侧，头尖数次转向。':time<116?'主角从工作路线右侧沿开口通道移向光。':'主角继续移到通道外的汇合位置，光留在它的前方。',camera:time<111?'保持工作区域广角，主角和近处的光同框。':'预设取景从工作区域缓慢移向主角与光汇合的位置。'};
@@ -101,7 +110,7 @@
     return StoryNotes.at(time);
   }
   function notesFor(select){return{at:value=>select(clamp(Number(value)||0,0,138))};}
-  const rhythm={id:'rhythm',label:'A · 四组夹具',factory:Factory,timing:rhythmTiming,camera:cameraFor('rhythm',rhythmShots),notes:notesFor(rhythmNotes),beats:[6.8,98,104,110,119,132,138].map(rhythmTiming.playbackAt),chaseStart:119,chaseEnd:132};
-  const routine={id:'routine',label:'B · 例行塑形',factory:RoutineFactory,timing:routineTiming,camera:cameraFor('routine',routineShots),notes:notesFor(routineNotes),beats:[6.8,108,119,132,138].map(routineTiming.playbackAt),chaseStart:119,chaseEnd:132};
+  const rhythm={id:'rhythm',label:'A · 四组夹具',duration:rhythmTiming.duration,factory:Factory,timing:rhythmTiming,camera:cameraFor('rhythm',rhythmShots),notes:notesFor(rhythmNotes),beats:[6.8,98,104,110,119,132,138].map(rhythmTiming.playbackAt),chaseStart:119,chaseEnd:132};
+  const routine={id:'routine',label:'B · 例行塑形',duration:routineTiming.duration,factory:RoutineFactory,timing:routineTiming,camera:cameraFor('routine',routineShots),notes:notesFor(routineNotes),beats:[6.8,108,119,132,138].map(routineTiming.playbackAt),chaseStart:119,chaseEnd:132};
   return{get:id=>id==='routine'?routine:rhythm};
 });
