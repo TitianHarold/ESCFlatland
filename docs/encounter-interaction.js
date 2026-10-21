@@ -1,8 +1,8 @@
 /* Character intent is independent of the camera/story clock. All modified poses use the same silhouette solver. */
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./district.js'),require('./character-geometry.js'),require('./motion.js'),require('./city-map.js'),require('./collision-world.js'));
-  else root.FlatlandEncounterInteraction=factory(root.FlatlandDistrict,root.FlatlandCharacters,root.FlatlandMotion,root.FlatlandCityMap,root.FlatlandCollisionWorld);
-})(typeof globalThis!=='undefined'?globalThis:this,function(District,C,Motion,CityMap,CollisionWorld){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./district.js'),require('./character-geometry.js'),require('./motion.js'),require('./city-map.js'),require('./collision-world.js'),require('./family-navigation.js'));
+  else root.FlatlandEncounterInteraction=factory(root.FlatlandDistrict,root.FlatlandCharacters,root.FlatlandMotion,root.FlatlandCityMap,root.FlatlandCollisionWorld,root.FlatlandFamilyNavigation);
+})(typeof globalThis!=='undefined'?globalThis:this,function(District,C,Motion,CityMap,CollisionWorld,Navigation){
   'use strict';
   const contactEnd=District.timing.contactEnd,familyEnd=District.timing.familyEnd,clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),ease=u=>{u=clamp(u);return u*u*(3-2*u);};
   const shortest=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
@@ -10,21 +10,27 @@
   class EncounterController{
     constructor(options={}){this.world=new CollisionWorld(CityMap.houseBoundaries);this.seek(options.sceneTime||0);}
     seek(raw=0){
-      this.sceneTime=Math.max(0,Number(raw)||0);this.ambient=0;this.action=null;this.wait=0;this.previous=null;this.automatic=false;
+      this.sceneTime=Math.max(0,Number(raw)||0);this.navigation=null;this.familyBridge=null;this.ambient=0;this.action=null;this.wait=0;this.previous=null;this.automatic=false;
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
       this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
       this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
       this.reactions={};this.resistanceFacing=null;this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
+    ensureFamily(){
+      if(this.navigation)return this.navigation;
+      const frame=this.previous?.time===this.sceneTime?this.previous:District.frame(this.sceneTime),visited=this.sceneTime>=contactEnd?['father','mother']:this.sceneTime>=6.8?['father']:[];
+      this.navigation=new Navigation.FamilyNavigation(frame,{visited,center:District.timing.homeCenter,handoffAngle:District.frame(familyEnd).hero.body.angle});return this.navigation;
+    }
+    hitTest(point,tolerance=20){return this.stage==='done'?null:this.ensureFamily().hitTest(point,tolerance);}
+    activatePoint(point){
+      if(this.stage==='done')return false;
+      const accepted=this.ensureFamily().activatePoint(point);if(accepted){this.action=this.navigation.intent;this.stage='explore';this.mark=this.navigation.mark;this.markAtAmbient=this.ambient;this.epoch++;}return accepted;
+    }
     activate(target){
       if(this.stage!=='done'){
-        if(this.action||this.stage==='return'||target!==this.stage)return false;
-        const phaseStart=this.stage==='father'?1.2:6.8,end=this.stage==='father'?6.8:contactEnd,start=Math.min(end,Math.max(phaseStart,this.sceneTime));
-        // A workbench scrub resumes the remaining action; only the short body join returns from idle to its route.
-        const duration=(target==='father'?1.75:2.45)*(end-start)/(end-phaseStart);
-        const contact=Motion.contactTimes[target]*Motion.duration,touched=start>=contact,reactionDuration=.58*(1-clamp((start-contact)/1.05));if(touched)this.reactions[target]=Math.max(0,(start-contact)/1.05*.5);
-        this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),reactionDuration,touched,from:this.previous?.hero?.body};this.mark=touched?'exclamation':'curiosity';this.markAtAmbient=this.ambient;this.wait=0;this.epoch++;return true;
+        if(target!=='father'&&target!=='mother')return false;
+        const parent=this.ensureFamily().parents.find(p=>p.id===target);return this.activatePoint({x:parent.body.x,y:parent.body.y});
       }
       if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
       if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
@@ -38,23 +44,17 @@
       this.automatic=!!options.automatic;
       this.shiver=Math.max(0,this.shiver-dt);this.poke=Math.max(0,this.poke-dt);
       if(this.automatic&&Number.isFinite(options.sceneTime)){
-        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;this.reactions={};return this.snapshot();
+        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;this.reactions={};this.navigation=null;this.familyBridge=null;return this.snapshot();
       }
       if(this.stage!=='done'){
         if(options.advance===false)return this.snapshot();
-        for(const kind of Object.keys(this.reactions))this.reactions[kind]+=(dt);
-        if(this.stage==='return'){
-          this.sceneTime=Math.min(familyEnd,this.sceneTime+dt*(familyEnd-contactEnd)/2.15);
-          if(this.sceneTime>=familyEnd-1e-8){this.sceneTime=familyEnd;this.stage='done';}
-        }else if(this.action){
-          const action=this.action;action.elapsed+=dt;
-          const before=this.sceneTime,contact=Motion.contactTimes[action.target]*Motion.duration;
-          const touchAt=action.duration*clamp((contact-action.start)/(action.end-action.start)),age=Math.max(0,action.elapsed-.24);
-          const travelAge=age<=touchAt?age:age<touchAt+action.reactionDuration?touchAt:age-action.reactionDuration;
-          this.sceneTime=action.start+(action.end-action.start)*clamp(travelAge/action.duration);
-          if(!action.touched&&this.sceneTime>=contact-1e-8){if(before<contact)this.sceneTime=contact;action.touched=true;this.reactions[action.target]=0;this.mark='exclamation';this.markAtAmbient=this.ambient;}
-          if(action.elapsed>=action.duration+action.reactionDuration+.24-1e-8){this.sceneTime=action.end;this.stage=action.target==='father'?'mother':'return';this.action=null;this.wait=0;}
-        }
+        const nav=this.ensureFamily();nav.tick(dt);const state=nav.snapshot();
+        this.action=nav.intent;this.mark=state.mark;this.markAtAmbient=this.ambient-(state.clock-state.markAt);
+        if(state.state==='return'||state.state==='breath'){
+          this.stage='return';this.sceneTime=Math.max(this.sceneTime,contactEnd+(familyEnd-contactEnd)*(state.state==='breath'?.8+.2*clamp(state.breathAge/.9):.8*state.returnProgress));
+        }else this.sceneTime=Math.max(this.sceneTime,Math.min(contactEnd-.01,state.visited.length*6.8));
+        if(state.done){this.stage='done';this.sceneTime=familyEnd;this.familyBridge=state.parents.map(p=>({id:p.id,body:p.body}));}
+
       }else{
         if(Number.isFinite(options.sceneTime))this.sceneTime=Math.max(familyEnd,options.sceneTime);
         const resisting=this.resistance>0&&this.sceneTime<54&&this.fatigue<4.2;
@@ -72,7 +72,8 @@
       const father=Motion.contactTimes.father*Motion.duration,mother=Motion.contactTimes.mother*Motion.duration;
       return time<father||time>6.8&&time<mother?'curiosity':'exclamation';
     }
-    snapshot(){return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&this.stage!=='return'&&!this.action,familyDone:this.stage==='done',familyTarget:this.stage==='done'?null:this.stage,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke}};}
+    snapshot(){const family=this.navigation?.snapshot();return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&(family?family.waiting:this.stage!=='return'&&!this.action),familyDone:this.stage==='done',familyTarget:family?.target||(this.stage==='return'?'return':null),familyVisited:family?.visited||[],familyMoving:family?.moving||false,familyBody:family?.body||null,familyStage:family?.state||null,familyLastContact:family?.lastContact||null,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke}};}
+
     applyFrame(input){
       if(!input?.actors)return input;
       if(this.sceneTime>=58)return input;
@@ -80,15 +81,8 @@
       const frame={...input,actors:input.actors.map(entry=>({...entry,body:{...entry.body}}))},hero=frame.actors.find(entry=>entry.id==='hero');
       if(!hero)return frame;
       if(this.stage!=='done'&&!this.automatic){
-        for(const kind of Object.keys(this.reactions)){const parent=frame.actors.find(entry=>entry.id===kind),age=this.reactions[kind];if(parent){parent.body=Motion.parentReaction(kind,age,.5);delete parent.emotion;if(age<1.25)Object.assign(parent,{emotion:'exclamation',emotionElapsed:age,emotionDuration:1.25,emotionStrength:.9});}}
-        if(this.action&&this.action.elapsed<.24&&this.action.from){
-          const destination=District.frame(this.action.start).hero.body;
-          hero.body=blend(this.action.from,destination,ease(this.action.elapsed/.24));
-        }else if(!this.action&&this.stage!=='return'){
-          const t=this.ambient,base=District.frame(this.sceneTime).hero.body;
-          hero.body={...base,x:base.x+14*Math.sin(t*.62),y:base.y+19*Math.sin(t*.47),angle:base.angle+.2*Math.sin(t*.75),speed:12,strain:.08};
-          // Idle exploration never invents a new emotion mark.
-        }
+        const family=this.ensureFamily().snapshot();hero.body=family.body;
+        for(const source of family.parents){const parent=frame.actors.find(entry=>entry.id===source.id);if(!parent)continue;parent.body=source.body;delete parent.emotion;if(source.reactionAge!==undefined&&source.reactionAge<1.25)Object.assign(parent,{emotion:'exclamation',emotionElapsed:source.reactionAge,emotionDuration:1.25,emotionStrength:.9});}
       }else if(this.sceneTime<58){
         if(this.shiver>0){const age=.58-this.shiver;hero.body.x+=5*Math.sin(age*78)*Math.sin(Math.PI*age/.58);hero.body.edgeBends=C.actors.child.vertices.map((_,i)=>.25+.12*Math.sin(age*54+i));hero.body.fear=.35;}
         if(this.sceneTime>=District.timing.firstMove&&this.lag>0){
@@ -109,6 +103,7 @@
           }
         }
       }
+      if(this.familyBridge&&!this.automatic&&this.sceneTime<20){const u=ease((this.sceneTime-familyEnd)/(20-familyEnd));for(const source of this.familyBridge){const parent=frame.actors.find(a=>a.id===source.id);if(parent)parent.body=blend(source.body,parent.body,u);}}
       if(this.sceneTime<District.timing.firstMove){
         delete hero.emotion;delete hero.emotionElapsed;delete hero.emotionDuration;delete hero.emotionStrength;
         if(this.mark){hero.emotion=this.mark;hero.emotionElapsed=Math.max(.16,this.ambient-this.markAtAmbient);hero.emotionDuration=1e6;hero.emotionStrength=1;}

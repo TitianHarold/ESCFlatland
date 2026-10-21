@@ -5,7 +5,7 @@
   'use strict';
   const duration=138, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const frame=(time,x,y,zoom,tilt=0,yaw=0)=>({time,x,y,zoom,tilt,yaw});
-  // Preset views are independent of actor positions; cut marks a fixed-view switch.
+  // Editorial framing and zoom; story-versions.track anchors travelling views to the live hero.
   const factoryPoint=(x,y)=>({x:-4000+x*Math.cos(.4)-y*Math.sin(.4),y:-2800+x*Math.sin(.4)+y*Math.cos(.4)});
   const medium=factoryPoint(-120,130),exitView=factoryPoint(-1200,260),discard=factoryPoint(-2200,390);
   const factoryMedium=time=>frame(time,medium.x,medium.y,.6);
@@ -36,8 +36,7 @@
     const view={space:shot.space||'flat',shotId:shot.id};
     if(shot.follow)view.follow=shot.follow;
     for(const key of ['x','y','zoom','tilt','yaw'])view[key]=a[key]+(b[key]-a[key])*q;
-    // An independent camera preset holds the doorway view, then rejoins the
-    // original wide shot. Character and collision clocks keep running through it.
+    // This editorial framing also remains available for deterministic shot previews.
     if(time>=15&&time<42){
       let from=departureFrames[0],to=from;
       for(const next of departureFrames){if(next.time<=time)from=next;else{to=next;break;}to=from;}

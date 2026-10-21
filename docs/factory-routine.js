@@ -10,7 +10,7 @@
   const world=(x,y)=>({x:origin.x+x*cs-y*sn,y:origin.y+x*sn+y*cs});
   const local=p=>({x:(p.x-origin.x)*cs+(p.y-origin.y)*sn,y:-(p.x-origin.x)*sn+(p.y-origin.y)*cs});
   const discard=Base.anchors.discard,workCenter=Office.cellAt(0,0);
-  const heroActor=C.create('child'),lanes=[-390,-130,130,390,650,910,1170,1430],stations=[220,-880,-2080],beltStart=900,beltEnd=-2850,leftWall=-2880;
+  const heroActor=C.create('child'),lanes=Array.from({length:12},(_,i)=>-390+i*260),stations=[0,-1500,-3100],beltStart=900,beltEnd=-3850,leftWall=-3880;
   const ordinary=lanes.map((_,i)=>[C.create({sides:i+3,radius:42,regular:false}),C.create({sides:i+3,radius:42,regular:false})]);
   // Each open transfer has its own real travel distance and playback allocation.
   // The tool clocks stay fixed; input only adds bounded motion on these clear spans.
@@ -94,7 +94,7 @@
   function machine(ctx,x,y,kind){rounded(ctx,x-154,y-124,308,248,18,P.metal);rounded(ctx,x-142,y-114,284,228,13,P.blue);rounded(ctx,x-120,y-91,240,182,10,P.paper);
     if(kind===2){ctx.beginPath();ctx.arc(x,y,100,0,Math.PI*2);ctx.strokeStyle=P.ink;ctx.lineWidth=7;ctx.stroke();rounded(ctx,x-13,y-124,26,31,5,P.industrial);}
   }
-  function drawFactory(ctx,t){setup(ctx);rounded(ctx,leftWall,-650,beltStart-leftWall,2360,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j);}line(ctx,[[leftWall,-650],[leftWall,43]],P.outside.wall,22);line(ctx,[[leftWall,217],[leftWall,1710]],P.outside.wall,22);ctx.restore();}
+  function drawFactory(ctx,t){setup(ctx);rounded(ctx,leftWall,-650,beltStart-leftWall,lanes.at(-1)+930,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j);}line(ctx,[[leftWall,-650],[leftWall,43]],P.outside.wall,22);line(ctx,[[leftWall,217],[leftWall,lanes.at(-1)+280]],P.outside.wall,22);ctx.restore();}
   function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=96)Office.draw(ctx,t,bounds);else drawFactory(ctx,t);}
   function drawEntry(ctx,t,bounds){if(t<64)Base.drawEntry(ctx,t,bounds);else drawBase(ctx,t,bounds);}
   function drawOverlay(ctx,t,bounds){if(t>=96||t<64)return;setup(ctx);for(let r=0;r<lanes.length;r++){
@@ -128,15 +128,16 @@
     if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();if(awakening){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   const anchor=(x,y,zoom)=>Object.freeze({...world(x,y),zoom});
-  const anchors=Object.freeze({...Base.anchors,overview:anchor(-950,560,.17),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
+  const anchors=Object.freeze({...Base.anchors,overview:anchor(-1490,1050,.11),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),lanes:Object.freeze([...lanes]),floorBounds:Object.freeze({left:leftWall,right:beltStart,top:-650,bottom:lanes.at(-1)+280}),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
   function sceneTransition(t){return{cover:t<95.65||t>=96.35?0:t<96?between(t,95.65,96):1-between(t,96,96.35),phase:t<96?'factory':'office'};}
-  function resistanceWindow(t){const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(340,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
+  function resistanceWindow(t){if(t>=58&&t<64)return Base.resistanceWindow(t);const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(340,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
   function withResistance(data,offset,t,effort={}){
-    const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0));
-    if(!data.hero||!appliedOffset)return{...data,appliedOffset};
-    const dx=-window.tangent.x*appliedOffset,dy=-window.tangent.y*appliedOffset,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*clearance,gait=Math.sin((effort.stride||0)*Math.PI*2);
+    if(t>=58&&t<64)return Base.withResistance(data,offset,t,effort);
+    const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0)),preload=clamp(effort.preload||0);
+    if(!data.hero||(!appliedOffset&&(!preload||!window.active)))return{...data,appliedOffset};
+    const dx=-window.tangent.x*appliedOffset,dy=-window.tangent.y*appliedOffset,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*Math.max(clearance,preload),gait=Math.sin((effort.stride||0)*Math.PI*2);
     // Backward effort changes travel and outline, never the body's authored heading.
-    const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,bend:.045*gait*strength,strain:.12*strength,axialStretch:.07*strength},resistance:{strength,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
+    const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,bend:.1*preload+.045*gait*strength,strain:.12*strength,axialStretch:-.09*preload+.07*strength*(1-preload)},resistance:{strength,preload,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
     return{...data,actors,hero,appliedOffset};
   }
   return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,transferProgram,setWorkTime:Office.setWorkTime};

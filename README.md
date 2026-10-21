@@ -1,6 +1,6 @@
 # ESCFlatland
 
-最长90秒的平面国交互短片。追光在全白视野中结束，最后以静止第一人称观察自己的双手。观看页任意点击画面，依次让孩子靠近父亲、母亲；不操作时孩子在家观察走动。点击时出现好奇符号，接触后变为叹号，直到下一次点击；父母在接触瞬间快速非线性内凹收紧，再连续退开，叹号保留到反应之后；母亲退开后，孩子保持原朝向受挫退回房间中心，再让检察官进入。执政官到来后流程持续前进，点击可让孩子颤抖、押送时迟疑、在传送带上保持朝向短暂逆行；重复反抗会疲惫，最终仍被送入工位。工作时点击逐次加快所有工位的循环并拉远镜头；拉到最远后再点击一次，开始连续变黑，此后无需继续点击。基础连续变黑约4.5秒完成，更密集的点击会平滑加快变黑。追光时松手保持基础低速，长按明显加速并蓄满圆环，持续长按4.5秒后才进入白场双手；松手0.6秒圆环退空。两版追光路程扩大为原来的4.75倍，沿途图形加速后掠，角色与两侧参考图形共同随实际速度沿行进方向拉伸。右上几何图标打开工作台，工作台左上可返回观看页。
+最长90秒的平面国交互短片。追光在全白视野中结束，最后以静止第一人称观察自己的双手。家庭内点击地面，孩子从当前位置实时寻路；点击父亲或母亲则绕开障碍前往接触，顺序自由，可途中改点。只有双方均实际接触并完成回应后才进入下一幕；不操作时孩子在家观察走动。点击时出现好奇符号，接触后变为叹号，直到下一次点击；父母在接触瞬间快速非线性内凹收紧，再连续退开，叹号保留到反应之后；双方退开后，孩子保持原朝向受挫退回房间中心，停留0.9秒，再让检察官进入。执政官到来后流程持续前进，点击可让孩子颤抖、押送时迟疑、在传送带上保持朝向短暂逆行；入厂与逆行先收紧、沿行进轴左右向后摆动，再克服传送带阻力退行；体力圆环随反抗消耗而填满，满耗瞬间变红、失力回带，2.2秒内连续点击不能重新发力。工厂全景分别有19排与12排轨道，转运开放段加长。镜头读取主角经过碰撞求解的实际位置，跟随停步和逆行。工作时点击逐次加快所有工位的循环并拉远镜头；拉到最远后再点击一次，开始连续变黑，此后无需继续点击。基础连续变黑约4.5秒完成，更密集的点击会平滑加快变黑。追光时松手保持基础低速，长按明显加速并蓄满圆环，持续长按4.5秒后才进入白场双手；松手0.6秒圆环退空。两版追光路程扩大为原来的4.75倍，沿途图形加速后掠，角色与两侧参考图形共同随实际速度沿行进方向拉伸。白场双手旁保留同一颗金色光种子。观看页右上是重新播放按钮，完整清空本次交互；工作台左上可返回观看页。
 
 两版的内心世界都从黑暗和微光开始。点击微光后局部色带持续可见，六处发现积累后，亮区沿真实捕捉位置的轮廓扩散连通、照亮整个内心；随后收回身体内的同一颗光种子，再飞出引导追光；点空处不推进剧情，等待时暗线继续运动，亮点带着短光迹游动，可按实时位置捕捉。空格或回车可点亮下一处微光。自动播放沿同一发现顺序预览；交互等待时长不限。
 
@@ -18,7 +18,7 @@ Published with GitHub Pages from `main` / `docs`.
 - `portals.js` / `city-map.js`：同一房屋资产生成开口、墙体及绘制几何。
 - `collision-world.js`：移动、旋转和形变沿途检查墙体及其他角色。
 - `district.js`：生成移动意图与共用出口队列，再以固定步长求解碰撞；缓存使拖动回看可重复。
-- `factory.js` / `restraint.js` / `inner-world.js` / `dimension.js`：表演、束缚、暗层与光种子、空间转换；`camera.js` 独立控制取景。`inner-discovery.js`：内心发现状态、光点命中与局部破雾；其行动时钟与剧情时钟分离。
-- `correction-rules.js`：夹具接触、受力与四工位累计处理；`factory-routine.js`：第二版外壳、逐边喷漆和工作轨迹，与第一版的失败判定分开。`office-world.js`：固定世界格网、通行墙体、同一工作时钟与远景绘制。`encounter-interaction.js` / `action-input.js`：角色意图、反抗与疲劳、工作速度；`interaction-progress.js`：工作点击进度与追光长按圆环，保持环境循环和叙事推进独立。镜头独立运行。
+- `factory.js` / `restraint.js` / `inner-world.js` / `dimension.js`：表演、束缚、暗层与光种子、空间转换；`story-versions.js` 中的 `camera.track` 用实际角色位置取景，全景、办公拉远和追光保留各自构图。`inner-discovery.js`：内心发现状态、光点命中与局部破雾；其行动时钟与剧情时钟分离。
+- `correction-rules.js`：夹具接触、受力与四工位累计处理；`factory-routine.js`：第二版外壳、逐边喷漆和工作轨迹，与第一版的失败判定分开。`office-world.js`：固定世界格网、通行墙体、同一工作时钟与远景绘制。`family-navigation.js`：房屋内实时寻路和真实接触，复用轮廓碰撞；`encounter-interaction.js` / `action-input.js`：角色意图、反抗与疲劳、工作速度；`interaction-progress.js`：工作点击进度与追光长按圆环，保持环境循环和叙事推进独立。机器持续运行，跟随镜头不代替角色运动。
 
-本轮定向检查：`node check-mechanics.cjs`、`node check-routine.cjs`、`node check-office.cjs`、`node check-chase.cjs`、`node check-player.cjs`、`node check-inner-player.cjs`、`node check-inner-discovery.cjs`、`node check-action-input.cjs`、`node check-encounter.cjs`、`node check-speed-response.cjs`、`node check-reference-sides.cjs`、`node check-interaction-progress.cjs`。街区碰撞检查：`node check-collision-world.cjs`。
+本轮定向检查：`node check-mechanics.cjs`、`node check-routine.cjs`、`node check-office.cjs`、`node check-chase.cjs`、`node check-player.cjs`、`node check-inner-player.cjs`、`node check-inner-discovery.cjs`、`node check-action-input.cjs`、`node check-encounter.cjs`、`node check-speed-response.cjs`、`node check-reference-sides.cjs`、`node check-interaction-progress.cjs`。实时交互与镜头检查：`node check-family-navigation.cjs`、`node check-hero-camera.cjs`、`node check-factory-effort.cjs`、`node check-app-interaction.cjs`（应用级Canvas检查需本机已配置的 `@napi-rs/canvas`）。街区碰撞检查：`node check-collision-world.cjs`。

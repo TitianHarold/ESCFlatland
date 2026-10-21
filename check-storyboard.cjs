@@ -2,6 +2,13 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'docs/storyboard-r2'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),data=JSON.parse(html.match(/<script id="board-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
 for(const v of data.versions){assert.equal(v.shots.length,35);assert(Math.abs(v.shots.reduce((n,s)=>n+s.duration,0)-v.duration)<1e-6);for(let i=0;i<v.shots.length;i++){const s=v.shots[i];if(i)assert.equal(v.shots[i-1].sceneEnd,s.sceneStart);assert(!s.id.endsWith('004A')&&!s.id.endsWith('004B'));for(const p of Object.values(s.prompts)){assert.deepEqual([...p.matchAll(/【([^】]+)】/g)].map(m=>m[1]),data.headings);assert(!/西侧队伍入屋|其他孩子被押出|西北侧两个孩子|转身向后跑|0\.8秒连续后退/.test(p));}for(const img of [s.firstImage,s.lastImage])assert(fs.existsSync(path.join(root,img)));}}
+for(const v of data.versions){
+  for(const shot of v.shots.filter(s=>s.sceneStart<17.3))assert(shot.interaction.includes('实时寻路')&&shot.interaction.includes('顺序自由'),'family movement and contact order use real targets');
+  for(const shot of v.shots.filter(s=>s.sceneStart<119))assert(!/不改变镜头时钟|镜头和押送流程始终前进/.test(shot.fullPrompt),'travelling cameras follow actual motion');
+  const hands=v.shots.find(s=>s.keywords[0]==='hands');assert(hands.lastFrameDescription.includes('同一颗黄金光种子')&&hands.interaction.includes('重新播放'));
+  const overview=v.shots.find(s=>s.artSourceShotId==='006A');assert(overview.content.includes(v.id==='routine'?'12排':'19排'));
+}
+for(const id of ['B-007A','B-008A','B-009A']){const shot=data.versions.find(v=>v.id==='routine').shots.find(s=>s.id===id);assert(shot.action.includes('阻尼')&&shot.action.includes('圆环满格')&&shot.action.includes('变红'));}
 const routine=data.versions.find(v=>v.id==='routine'),overview=routine.shots.find(s=>s.id==='B-006A'),fade=routine.shots.find(s=>s.id==='B-010D');
 assert(Math.abs(overview.duration-3)<1e-9);assert(Math.abs(fade.duration-4.5)<1e-9);assert(fade.action.includes('不再点击'));
 const versions=require('./docs/story-versions.js');
@@ -17,4 +24,4 @@ assert.equal(el('version-select').value,'routine');assert.equal(el('palette-sele
 el('overview-body').children[1].click();el('palette-select').listeners.change({target:{value:'F3'}});el('source-select').listeners.change({target:{value:'F3-001B'}});
 assert(el('first-image').src.includes('F3'));assert(el('full-prompt').value.startsWith('B-001B'));assert(el('full-prompt').value.includes('0.09秒快速'));assert(el('full-prompt').value.includes('叹号保留约1.25秒'));
 el('version-select').listeners.change({target:{value:'rhythm'}});assert.equal(el('overview-body').children.length,35);assert(el('full-prompt').value.startsWith('001A'));assert(new URL(el('animation-link').href).searchParams.get('version')==='rhythm');
-console.log('PASS storyboard: 35 shots per A/B version, removed escort side branch, nonlinear parent reaction, 3-second B overview and 4.5-second fade; materials and independent prompts preserved.');
+console.log('PASS storyboard: 35 shots per A/B version; real family paths, actual-position camera, longer 19/12-lane factories, fatigue feedback and POV seed; complete independent prompts and materials preserved.');

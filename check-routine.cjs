@@ -105,8 +105,8 @@ for(const t of[79.65,80,94,124.5]){const strokes=frameStrokes(t);assert(strokes.
 console.log(JSON.stringify({frameMaterial:'gray with black center before compact; solid black after compact and during release'}));
 
 // Longer travel is a shared physical route, not extra background behind a fixed actor.
-assert.deepEqual(Routine.anchors.stationX,[220,-880,-2080]);
-for(const [start,end,minimumDistance]of[[67.4,71.7,680],[76.7,78.5,1100],[81.6,83.2,1200]]){
+assert.deepEqual(Routine.anchors.stationX,[0,-1500,-3100]);
+for(const [start,end,minimumDistance]of[[67.4,71.7,900],[76.7,78.5,1500],[81.6,83.2,1600]]){
   const a=hero(start).body,b=hero(end).body,distance=Math.hypot(a.x-b.x,a.y-b.y);
   assert(Math.abs(distance-minimumDistance)<1e-8);
   let available=0;const begin=timing.playbackAt(start),finish=timing.playbackAt(end);
@@ -115,4 +115,4 @@ for(const [start,end,minimumDistance]of[[67.4,71.7,680],[76.7,78.5,1100],[81.6,8
 }
 // The joined outline has exact polygon corners: only the inner seed uses an arc.
 for(const t of[77,80,94]){let arcs=0;const ctx={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},fill(){},translate(){},rotate(){},stroke(){},arc(){arcs++;}};Routine.drawActorOverlay(ctx,hero(t));assert.equal(arcs,1,'the standard frame has no circular vertex locks');}
-console.log(JSON.stringify({longTransferDistance:[680,1100,1200],transferPlaybackSeconds:[2.7,3,3],noCircularCornerLocks:true}));
+console.log(JSON.stringify({longTransferDistance:[900,1500,1600],transferPlaybackSeconds:[2.7,3,3],noCircularCornerLocks:true}));

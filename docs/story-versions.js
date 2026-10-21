@@ -79,11 +79,36 @@
       }
       return{...v,shotId:current.id};
     }
-    return{duration:138,shots,shotAt,pose};
+    function track(value,actualHero){
+      const time=clamp(Number(value)||0,0,138),v=pose(time),hero=actualHero?.body||actualHero;
+      if(!hero||!Number.isFinite(hero.x)||!Number.isFinite(hero.y)||time>=119)return v;
+      // The house, office pullback and inner view keep their established framing.
+      if(time<17.3||id==='routine'&&time>=98||id==='rhythm'&&time>=104)return v;
+      if(time<64)return{...v,x:hero.x,y:hero.y-160};
+      const factory=id==='routine'?RoutineFactory:Factory,a=factory.anchors;
+      const wideEnd=id==='routine'?67.4:68.3;
+      if(time<wideEnd)return v;
+      const firstEnd=id==='routine'?71.7:72;
+      if(time<firstEnd){
+        const from=point(a.approach||Factory.frame(70).hero),to=point(a.mold,a.heroStages.m1);
+        const dx=to.x-from.x,dy=to.y-from.y,length2=dx*dx+dy*dy;
+        const progress=length2?((hero.x-from.x)*dx+(hero.y-from.y)*dy)/length2:1;
+        // The overview dolly advances with actual belt travel, including a retreat.
+        const u=ease(progress/(id==='routine'?.49:1)),overview=a.overview;
+        const zoom=id==='routine'?(a.mold?.zoom||.95):.65;
+        return{...v,x:overview.x+(hero.x-overview.x)*u,y:overview.y+(hero.y-overview.y)*u,zoom:overview.zoom+(zoom-overview.zoom)*u};
+      }
+      if(id==='routine'&&time>=96){
+        const entryEnd=RoutineFactory.frame(98).hero,work=Office.anchors.work;
+        return{...v,x:hero.x+work.x-entryEnd.x,y:hero.y+work.y-entryEnd.y};
+      }
+      return{...v,x:hero.x,y:hero.y};
+    }
+    return{duration:138,shots,shotAt,pose,track};
   }
   function rhythmNotes(time){
     if(time<64)return StoryNotes.at(time);
-    if(time<70)return{summary:'多条身份专线持续运转，四组夹具沿主角所在的传送带排列。',action:'居民沿带前进，四组夹具依次开合。',camera:'工厂全景，显示传送带与夹具的排列。'};
+    if(time<70)return{summary:'19排身份专线持续运转，四组夹具沿主角所在的加长传送带排列。',action:'居民沿带前进，四组夹具依次开合。',camera:'工厂全景，显示传送带与夹具的排列。'};
     if(time<77){
       const groups={closing:[],rising:[],waiting:[],ready:[]},names=['第一','第二','第三','第四'];
       Factory.pressProgram.programs.forEach((program,index)=>{
@@ -96,21 +121,21 @@
       if(groups.waiting.length)actions.push(groups.waiting.join('、')+'组夹具在上位等待');
       if(groups.ready.length)actions.push(groups.ready.join('、')+'组保持上位，等待错相落下');
       return{summary:'四组错相流水线：各0.5秒夹紧、3秒回升、1.5秒上位等待，相邻组间隔0.5秒落下。孩子在夹具收回时已沿带转运。',
-        action:time<72?'主角沿传送带接近第一组夹具。':actions.join('；')+'。孩子沿传送带向下一组转运。',camera:'保持四组夹具与传送带同框的预设中景，多个夹具可以同时回升。'};
+        action:time<72?'主角沿传送带接近第一组夹具。':actions.join('；')+'。孩子沿传送带向下一组转运。',camera:'俯视中景围绕主角实际位置移动，停步与逆行时同样跟随，多个夹具可以同时回升。'};
     }
-    if(time<87)return{summary:'主角离开四组夹具，进入旋转工位。破损内窗仍露出颜色。',action:time<80?'主角沿传送带移向旋转工位。':'旋转盘和主角一同转动，内窗颜色逐渐混暗。',camera:'固定俯视中景，容纳旋转和判定工位。'};
-    if(time<90)return{summary:'主角从旋转工位送往判定工位。',action:'同一五边形沿传送带前进，破损内窗仍然透色。',camera:'保持同一固定中景。'};
-    if(time<98)return{summary:'判定工位检查主角，两条金属链交叉锁住身体。',action:time<94.5?'主角停在判定工位，破损内窗仍露出流动色域。':'链节组成的两条锁链交叉缠住主角，形成X。三角兵从安全通道靠近。',camera:'保持固定中景，判定工位位于画面一侧。'};
-    if(time<104)return{summary:'三角兵从判定工位押走主角，经出口将它扔到墙外。',action:time<102.8?'队伍沿机器之间的安全通道走向出口。':'主角通过墙门，被扔到墙外的落点。',camera:time<102.8?'固定出口全景，同时保留判定工位和墙门。':'切到墙外落点，主角落入画面。'};
+    if(time<87)return{summary:'主角离开四组夹具，进入旋转工位。破损内窗仍露出颜色。',action:time<80?'主角沿传送带移向旋转工位。':'旋转盘和主角一同转动，内窗颜色逐渐混暗。',camera:'转运中镜头跟随主角真实位置，停步或逆行时同步停止或回退；旋转工位保持稳定中景。'};
+    if(time<90)return{summary:'主角从旋转工位送往判定工位。',action:'同一五边形沿传送带前进，破损内窗仍然透色。',camera:'保持俯视中景，位置随主角实际移动，逆行时同步后退。'};
+    if(time<98)return{summary:'判定工位检查主角，两条金属链交叉锁住身体。',action:time<94.5?'主角停在判定工位，破损内窗仍露出流动色域。':'链节组成的两条锁链交叉缠住主角，形成X。三角兵从安全通道靠近。',camera:'以主角真实位置为中心保持稳定俯视中景。'};
+    if(time<104)return{summary:'三角兵从判定工位押走主角，经出口将它扔到墙外。',action:time<102.8?'队伍沿机器之间的安全通道走向出口。':'主角通过墙门，被扔到墙外的落点。',camera:time<102.8?'出口全景围绕实际主角跟随，迟疑停步或倒退均同步反映在镜头位置。':'切到墙外落点，主角落入画面。'};
     return StoryNotes.at(time);
   }
   function routineNotes(time){
     if(time<64)return StoryNotes.at(time);
-    if(time<67.4)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
-    if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿传送带接近张开的五边套模工位。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
-    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长的传送带移入成型压块；点击会保持原朝向直接向后退，失力后继续被输送。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
-    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长的输送段上向喷涂工位移动；点击可逆向挣扎，接近机器前重新归位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
-    if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'从喷涂工位平移到工厂出口。':time<98?'经过门口遮挡切入办公室，平滑移向主角工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
+    if(time<67.4)return{summary:'12排并行轨道上，居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'完整保持3秒工厂全景，显示12排并行轨道与三道工序的排列。'};
+    if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿加长传送带接近张开的五边套模工位；点击会收紧并向左后、右后摆动，保持朝向逆行，体力消耗满格变红后失力。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'相机按主角实际输送位置从全景推近，停步时不再前推，后退时同步后退；套模时保持俯视中景。'};
+    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长传送带移向成型压块；点击收紧并交替向左后、右后摆动，逆行受向前输送的阻尼，体力消耗圆环满格变红后卸力，被继续带走。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'镜头跟随主角真实位置移向压实工位，主角倒退时同步退回；机构在压紧接触后短促左右震动。'};
+    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长输送段上向喷涂工位移动；点击可保持朝向收紧并逆向挣扎，体力消耗累积满后突然变红、失力，再被传送带带走。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿主角实际位置跟至喷涂工位，停步和逆行同步跟随，喷涂时五边轮廓完整可见。'};
+    if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'跟随主角实际位置从喷涂工位移到工厂出口。':time<98?'经过门口遮挡切入办公室，跟随主角实际位置移向工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
     if(time<119)return StoryNotes.at(time);
     if(time<132)return{summary:'身体内的同一颗光种子飞出，在近处引导，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<119.6?'光种子暂留主角身体内。':time<122?'同一颗光种子从体内飞出，再近身绕行；主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；两侧图形沿速度函数拉伸，从小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方；冲刺两侧持续保留参照物。'};
     return StoryNotes.at(time);

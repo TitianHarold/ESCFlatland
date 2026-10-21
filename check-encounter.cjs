@@ -13,8 +13,8 @@ for(let i=0;i<180;i++){controller.tick(1/60);frame=controller.applyFrame(Distric
 assert.equal(controller.sceneTime,0,'idle observation must not advance the family event clock');
 assert(!actor(frame,'hero').emotion,'idle observation must not invent a curiosity mark');
 assert(Math.hypot(frame.hero.x-first.x,frame.hero.y-first.y)>10,'the child keeps exploring while the event waits');
-assert.equal(controller.activate('mother'),false,'clicking the second target must not skip the first encounter');
-for(const target of ['father','mother']){
+assert(controller.hitTest({x:1090,y:470})==='mother','either visible parent can be targeted first');
+for(const target of ['mother','father']){
   assert(controller.activate(target));assert.equal(controller.mark,'curiosity');let minimum=Infinity,touched=false,touchAt=null,reactionFrames=0,peakDent=0,firstRetreat=null,settledRetreat=null;const baseline=actor(District.frame(0),target).body;
   for(let i=0;i<360;i++){
     const state=controller.tick(1/60);frame=controller.applyFrame(District.frame(state.sceneTime));noOverlap(frame);
@@ -34,7 +34,7 @@ assert(controller.snapshot().familyDone);assert.equal(controller.sceneTime,famil
 assert(Math.hypot(frame.hero.x-District.timing.homeCenter.x,frame.hero.y-District.timing.homeCenter.y)<.01,'the child must return to the actual room center before the inspector enters');
 for(let raw=contactEnd;raw<familyEnd-.02;raw+=.04){const f=District.frame(raw);noOverlap(f);assert(!actor(f,'inspector'),'the inspector must stay outside throughout recovery');assert(Math.abs(f.hero.body.angle-District.frame(contactEnd).hero.body.angle)<1e-8,'hurt child retreats without turning around');}
 const paused=new EncounterController({sceneTime:15});const pausedPose=paused.applyFrame(District.frame(15)).hero;paused.tick(1/30,{advance:false});assert.equal(paused.sceneTime,15);assert.equal(paused.snapshot().familyTarget,'return');assert.equal(paused.snapshot().familyWaiting,false);assert.equal(paused.applyFrame(District.frame(15)).hero.x,pausedPose.x);
-const resume=new EncounterController({sceneTime:15});for(let i=0;i<150;i++)resume.tick(1/30);assert(resume.snapshot().familyDone,'recovery completes without a third click');
+const resume=new EncounterController({sceneTime:15});for(let i=0;i<300;i++)resume.tick(1/30);assert(resume.snapshot().familyDone,'recovery completes without a third click');
 const arrivalTime=District.timing.inspectorSettled-.05,arrival=District.frame(arrivalTime);assert(actor(arrival,'inspector'));assert(!actor(arrival,'guard-1'),'the inspector must enter before the guards');
 const timing=District.timing,settled=actor(District.frame(timing.inspectorSettled+.01),'inspector').body;
 for(let t=timing.inspectorSettled+.02;t<timing.guardsEntry[0];t+=.1){
@@ -61,5 +61,5 @@ assert(maxLag>60,'clicking must visibly resist instead of merely delaying the st
 assert.equal(controller.snapshot().effects.lag,0,'resistance must end before the factory handoff');
 const ending=District.frame(58);controller.tick(1/60,{sceneTime:58});assert.equal(controller.applyFrame(ending),ending);
 const auto=new EncounterController();for(const raw of [0,4.3,6.8,13.7,20])assert.equal(auto.tick(1/60,{automatic:true,sceneTime:raw}).sceneTime,raw,'automatic preview keeps the canonical scene clock');
-for(const [raw,target] of [[3,'father'],[12,'mother']]){const review=new EncounterController({sceneTime:raw});review.applyFrame(District.frame(raw));assert(review.activate(target));assert(review.tick(1/60).sceneTime>=raw,'resuming a partly reviewed action must not rewind it');}
-console.log('PASS encounters: moving idle, target order, real father/mother contacts, inspector lead, child shiver, bounded resistance, real guard contact, collision-safe escort and exact handoff.');
+for(const [raw,target] of [[3,'father'],[12,'mother']]){const review=new EncounterController({sceneTime:raw});const pose=review.applyFrame(District.frame(raw)).hero;assert(review.activate(target));assert(Math.hypot(review.navigation.body.x-pose.x,review.navigation.body.y-pose.y)<.001,'resuming a review route starts at the actual displayed position');}
+console.log('PASS encounters: moving idle, free parent order, real father/mother contacts, inspector lead, child shiver, bounded resistance, real guard contact, collision-safe escort and exact handoff.');

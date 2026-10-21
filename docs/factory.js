@@ -6,7 +6,7 @@
   'use strict';
   if(!C||!P||!CityMap||!Portals||!Rules)throw new Error('Load characters, palette, city-map, portals and correction-rules before factory.');
   const origin={x:-4000,y:-2800},angle=.4,cs=Math.cos(angle),sn=Math.sin(angle),normal=[-sn,cs];
-  const rows=Array.from({length:15},(_,i)=>i<3?-390+i*260:i===3?650:1170+(i-4)*260),pressStations=[480,145,-190,-525],stations=[480,-930,-1330],leftWall=-2000;
+  const rows=Array.from({length:19},(_,i)=>i<3?-390+i*260:i===3?650:1170+(i-4)*260),pressStations=[480,145,-190,-525],stations=[480,-1180,-1630],leftWall=-2000;
   const ink=P.industrial,correctedBlack=P.black||'#000000',paper=P.conveyor,colors=P.factory.workers,clamp=n=>Math.max(0,Math.min(1,n)),lerp=(a,b,u)=>a+(b-a)*u;
   const ease=n=>{const u=clamp(n);return u*u*u*(u*(u*6-15)+10);},between=(t,a,b)=>ease((t-a)/(b-a));
   const world=(x,y)=>({x:origin.x+x*cs-y*sn,y:origin.y+x*sn+y*cs});
@@ -45,10 +45,10 @@
   const entryPath=makePath(entryCurves),entryPortal=CityMap.gate.portal;
   const exitPoint=world(leftWall,390),exitPortal={point:[exitPoint.x,exitPoint.y],heading:angle+Math.PI,halfWidth:110,halfDepth:12,wallSpan:180,opening:t=>between(t,100.9,101.45)};
   const escortCurves=[
-    [[-730,130],[-930,130],[-1130,130],[-1330,130]],
-    [[-1330,130],[-1450,130],[-1620,130],[-1620,260]],
-    [[-1620,260],[-1620,390],[-1720,390],[-1800,390]],
-    [[-1800,390],[-1870,390],[-1940,390],[-2000,390]],
+    [[-730,130],[-1030,130],[-1330,130],[-1630,130]],
+    [[-1630,130],[-1710,130],[-1820,130],[-1820,260]],
+    [[-1820,260],[-1820,390],[-1850,390],[-1900,390]],
+    [[-1900,390],[-1940,390],[-1970,390],[-2000,390]],
     [[-2000,390],[-2030,390],[-2070,390],[-2100,390]],
     [[-2100,390],[-2220,390],[-2340,390],[-2450,390]]
   ];
@@ -102,8 +102,17 @@
   function materialState(program,time,spin,stamped){const press=Rules.pressState(program,time),mixed=Rules.mixState(press.damage,spin.turns,program.material),judged=Rules.judge(mixed,stamped);return{...press,...mixed,...judged,spin};}
   const heroSpin=t=>Rules.spinState(t,{start:80,end:87});
   function heroMaterial(t){return materialState(heroProgram,heroClock(t),heroSpin(t),t>=94.5);}
+  function entranceState(t){
+    const planned=entryPath.length*between(t,58,64),beats=[[58.25,59.1,18],[59.9,60.9,55],[61.5,62.4,38]];
+    let lag=0,force=0,locked=null;
+    for(const [start,end,amount]of beats)if(t>start&&t<end){const u=(t-start)/(end-start),wave=Math.sin(Math.PI*u)**2;lag=amount*wave;force=wave;locked=pathPose(heroActor,entryPath,entryPath.length*between(start,58,64)).angle;}
+    const pose=d=>pathPose(heroActor,entryPath,d),distance=Portals.clampTravel(heroActor,pose,0,Math.max(0,planned-lag),entryPortal,t),body=pose(distance);
+    if(locked!==null)body.angle+=Math.atan2(Math.sin(locked-body.angle),Math.cos(locked-body.angle))*force;
+    body.axialStretch=-.08*force;body.bend=.18*force;body.strain=.12*force;
+    return{body,distance,planned,lag,force};
+  }
   function baseHeroBody(t){
-    if(t<64){const pose=d=>pathPose(heroActor,entryPath,d),planned=entryPath.length*between(t,58,64),safe=Portals.clampTravel(heroActor,pose,0,planned,entryPortal,t);return pose(safe);}
+    if(t<64)return entranceState(t).body;
     if(t<70)return lanePose(heroActor,900,130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
     if(t<77)return lanePose(heroActor,pressLineX(heroProgram,heroClock(t)),130);
@@ -219,6 +228,7 @@
   function resistanceWindow(time){
     const t=Number.isFinite(time)?time:0,clock=heroClock(t);
     let phase=null,direction=Math.sign(480-900);
+    if(t>=58&&t<64){const state=entranceState(t),p=pathPoint(entryPath,state.distance),maxOffset=Math.min(160,state.distance)*(1-between(t,63.1,64));return{allowed:maxOffset>.001,maxOffset,tangent:{x:Math.cos(p.heading),y:Math.sin(p.heading)},phase:(t-58)/6,entry:true,distance:state.distance};}
     if(t>=70&&t<72)phase=(t-70)/2;
     else if(t>=72&&t<77){
       for(let i=0;i<heroProgram.programs.length;i++){
@@ -227,16 +237,19 @@
       }
     }else if(t>=77&&t<80){phase=(t-77)/3;direction=Math.sign(stations[1]-(-730));}
     else if(t>=87&&t<90){phase=(t-87)/3;direction=Math.sign(stations[2]-stations[1]);}
-    const tangent={x:cs*direction,y:sn*direction},maxOffset=phase===null?0:110*Math.sin(Math.PI*phase)**2;
+    const tangent={x:cs*direction,y:sn*direction},maxOffset=phase===null?0:(t>=77?240:t<72?180:110)*Math.sin(Math.PI*phase)**2;
     return{allowed:maxOffset>.001,maxOffset,tangent,direction:tangent,phase};
   }
-  function withResistance(source,offset,time){
-    const window=resistanceWindow(time),requested=Number.isFinite(offset)?Math.max(0,offset):0,appliedOffset=Math.min(requested,window.maxOffset);
-    if(!source.hero||!appliedOffset)return{...source,appliedOffset:0,resistance:window};
-    // Reverse along the belt while retaining the authored body angle and shape.
-    const body={...source.hero,x:source.hero.x-window.tangent.x*appliedOffset,y:source.hero.y-window.tangent.y*appliedOffset};
-    const actors=source.actors.map(entry=>entry.id==='hero'?{...entry,body}:entry);
-    return{...source,hero:body,actors,appliedOffset,resistance:window};
+  function withResistance(source,offset,time,effort={}){
+    const window=resistanceWindow(time),requested=Number.isFinite(offset)?Math.max(0,offset):0,appliedOffset=Math.min(requested,window.maxOffset),preload=clamp(effort.preload||0),strength=clamp(effort.effort||0);
+    if(!source.hero||(!appliedOffset&&(!preload||!window.allowed)))return{...source,appliedOffset:0,resistance:window};
+    let actualOffset=appliedOffset;
+    const body={...source.hero,axialStretch:(source.hero.axialStretch||0)-.09*preload+.06*strength*(1-preload),bend:Math.max(source.hero.bend||0,.12*preload),strain:Math.max(source.hero.strain||0,.14*strength)};
+    if(window.entry){
+      const pose=d=>{const p=pathPoint(entryPath,d);return{...body,x:p.x,y:p.y};},distance=Portals.clampTravel(heroActor,pose,window.distance,Math.max(0,window.distance-appliedOffset),entryPortal,time),p=pathPoint(entryPath,distance);body.x=p.x;body.y=p.y;actualOffset=window.distance-distance;
+    }else{body.x-=window.tangent.x*appliedOffset;body.y-=window.tangent.y*appliedOffset;}
+    const actors=source.actors.map(entry=>entry.id==='hero'?{...entry,body,resistance:{strength,preload,exhausted:!!effort.exhausted}}:entry);
+    return{...source,hero:body,actors,appliedOffset:actualOffset,resistance:window};
   }
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}
   function stroke(ctx,points,color,width=1){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
@@ -352,6 +365,6 @@
       ctx.restore();drawPortal(ctx,entryPortal,t,true);drawPortal(ctx,exitPortal,t,true);
     }
   }
-  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
+  const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,2280),zoom:.085}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
   return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,resistanceWindow,withResistance};
 });

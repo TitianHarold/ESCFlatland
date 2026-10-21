@@ -593,12 +593,19 @@
     ctx.drawImage(texture,-wrist[0]*width,-wrist[1]*height,width,height);
     ctx.restore();
   }
+  function endingLight(time,viewport={}){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760),t=clamp(time-132,0,6),settle=ease(time,132,134.4);
+    return{entityId:'hero-seed',x:w*mix(.70,.52,settle)+Math.sin(t*1.2)*w*.006,y:h*mix(.28,.40,settle)+Math.sin(t*1.7)*h*.008,r:Math.max(3.8,Math.min(w,h)*.008),phase:'pov'};
+  }
   function drawEnding(ctx,time,viewport={}){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760),pose=endingPose(time);
     ctx.save();ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
     // An unloaded asset leaves the deliberate white stop; no schematic hands are substituted.
     if(endingAssets.open){drawEndingHand(ctx,'left',pose.left,w,h);drawEndingHand(ctx,'right',pose.right,w,h);}
-    ctx.restore();return{...pose,assetStatus:endingAssets.status};
+    const light=endingLight(time,{w,h}),halo=ctx.createRadialGradient(light.x,light.y,light.r*.25,light.x,light.y,light.r*4.5);
+    halo.addColorStop(0,'rgba(229,181,82,.45)');halo.addColorStop(1,'rgba(229,181,82,0)');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(light.x,light.y,light.r*4.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e5b552';ctx.beginPath();ctx.arc(light.x,light.y,light.r,0,Math.PI*2);ctx.fill();
+    ctx.restore();return{...pose,light,assetStatus:endingAssets.status};
   }
   function seedLight(time,entry,guide){
     if(!entry?.body||!guide)return guide;
@@ -657,5 +664,5 @@
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,seedLight});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,endingLight,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,seedLight});
 });

@@ -29,7 +29,7 @@ function makeRenderer(preset,width,height,version='routine'){
   const sandbox={console,document,localStorage,Path2D,DOMMatrix,FlatlandEndingAssets:endingAssets,URLSearchParams,location:{search:'?mode=auto&version='+version,href:'https://titianharold.github.io/ESCFlatland/?version='+version},performance:{now:()=>0},devicePixelRatio:1,matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}},requestAnimationFrame(){},OffscreenCanvas:class{constructor(w,h){return createCanvas(w,h);}},setTimeout,clearTimeout};
   sandbox.window=sandbox;sandbox.globalThis=sandbox;const context=vm.createContext(sandbox);
   for(const filename of scripts){
-    const source=sources[filename],executable=filename==='app.js'?source.replace(/\}\)\(\);\s*$/,`window.__renderScene=(scene,ambient)=>{player.seek(timing.playbackAt(scene));encounter.seek(scene);encounter.tick(0,{automatic:true,sceneTime:scene});actions.seek(scene);factory.setWorkTime?.(null);state.reviewPaused=true;state.ambient=ambient;state.last=0;const v=view();draw(sceneTime(),v);return{sceneTime:sceneTime(),playbackSeconds:player.time,camera:v};};\n})();`):source;
+    const source=sources[filename],executable=filename==='app.js'?source.replace(/\}\)\(\);\s*$/,`window.__renderScene=(scene,ambient)=>{player.seek(timing.playbackAt(scene));syncInner(true);encounter.seek(scene);encounter.tick(0,{automatic:true,sceneTime:scene});actions.seek(scene);factory.setWorkTime?.(null);state.reviewPaused=true;state.ambient=ambient;state.last=0;const v=view();draw(sceneTime(),v);return{sceneTime:sceneTime(),playbackSeconds:player.time,camera:v};};\n})();`):source;
     vm.runInContext(executable,context,{filename});
   }
   if(typeof sandbox.__renderScene!=='function')throw Error('app.js capture injection failed');
@@ -78,12 +78,12 @@ function renderPalettePreview(){
 function refreshInnerEnding(){
   const out=path.join(workspace,'frames/detailed'),manifest=JSON.parse(fs.readFileSync(path.join(out,'manifest.json')));
   for(const version of detailed.versions){const renderer=makeRenderer('F2',1280,760,version.id);
-    for(const shot of version.shots.filter(s=>['inner','chase','hands'].includes(s.keywords[0])))for(const position of ['start','end']){
+    for(const shot of version.shots.filter(s=>['inner','hands'].includes(s.keywords[0])))for(const position of ['start','end']){
       const scene=position==='start'?shot.sceneStart:Math.max(shot.sceneStart,shot.sceneEnd-.01),result=renderer.renderScene(scene),filename=`shot-${shot.id}-${position}.png`;
       const f=saveFrame(out,filename,result,{id:shot.id+'-'+position,shot:shot.id,shotId:shot.id,parentId:shot.parentId,version:version.id,shotTitle:shot.title,position,palette:'F2',declaredStart:shot.start,declaredEnd:shot.end},1280,760),index=manifest.frames.findIndex(v=>v.shotId===shot.id&&v.position===position);if(index<0)throw Error('Unknown '+shot.id);manifest.frames[index]=f;
     }
   }
-  manifest.shotsSHA256=sha(fs.readFileSync(shotsFile));manifest.sourceModuleSHA256=moduleSHA;manifest.generatedAt=new Date().toISOString();fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');console.log('Refreshed inner/chase/ending frames');
+  manifest.shotsSHA256=sha(fs.readFileSync(shotsFile));manifest.sourceModuleSHA256=moduleSHA;manifest.generatedAt=new Date().toISOString();fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');console.log('Refreshed reconstructed inner and ending frames; chase frames retained');
 }
 function refreshHands(){
   for(const [folder,width,height,selected] of [['detailed',1280,760,f=>f.sceneTime>=132],['palette-preview',640,380,f=>f.moment==='dimension']]){

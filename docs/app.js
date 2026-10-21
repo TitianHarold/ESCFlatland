@@ -1,4 +1,4 @@
-/* Rendering reads story time and a preset camera track independently. */
+/* Scene clocks drive the machinery; camera tracking reads the resolved actor pose. */
 (() => {
   'use strict';
   const $=id=>document.getElementById(id),on=(id,event,fn)=>$(id)?.addEventListener(event,fn);
@@ -24,9 +24,18 @@
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
   function familyPhase(time=sceneTime()){return time<encounterAPI.familyEnd-1e-7;}
-  function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factoryFrame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function view(time=sceneTime()){
+    if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};
+    if(time<119&&cameraTrack.track){
+      const hero=time<58?homeFrame(time).hero:factoryFrame(time).hero;
+      return cameraTrack.track(time,hero);
+    }
+    const v=cameraTrack.pose(time);
+    if(v.follow==='hero'){const hero=factoryFrame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}
+    return v;
+  }
   function workPhase(time=sceneTime()){return version.id==='routine'&&time>=98&&time<110;}
-  function factoryPhase(time=sceneTime()){return time>=64&&time<(version.id==='routine'?94:98);}
+  function factoryPhase(time=sceneTime()){return time>=58&&time<(version.id==='routine'?94:98);}
   function chasePhase(time=sceneTime()){return time>=119&&time<132;}
   function inputPhase(){const t=sceneTime();return inInner(t)?'inner':familyPhase(t)?'family':t<district.timing.firstMove?'authority':t<58?'escort':factoryPhase(t)?'factory':workPhase(t)?'work':t>=132?'ending':t>=119?'chase':'transfer';}
   function homeFrame(time=sceneTime()){return encounter.applyFrame(district.frame(time));}
@@ -34,7 +43,7 @@
     const base=factory.frame(time,bounds);
     if(!factoryPhase(time))return base;
     const effort=actions.snapshot().factory,frame=factory.withResistance?.(base,effort.offset,time,effort)||base;
-    frame.actors=frame.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse}:entry);
+    frame.actors=frame.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse,resistanceExhausted:effort.exhausted}:entry);
     return frame;
   }
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
@@ -84,7 +93,7 @@
     if(entry.core){top.save();top.globalAlpha=entry.coreReveal??1;top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();top.restore();}
     if(entry.label==='reject'&&entry.restraint?.attached!==false)drawFailureMark(top,entry.restraint);
     factory.drawActorOverlay?.(top,entry);
-    if(entry.resistancePulse){top.save();top.globalAlpha=entry.resistancePulse*.65;top.strokeStyle=palette.gold;top.lineWidth=2.5;top.stroke(outline);top.restore();}
+    if(entry.resistancePulse){top.save();top.globalAlpha=entry.resistancePulse*.65;top.strokeStyle=entry.resistanceExhausted?'#e74b47':palette.gold;top.lineWidth=2.5;top.stroke(outline);top.restore();}
     top.restore();
     if(entry.emotion){
       window.FlatlandEmotions.draw(top,entry.emotion,b.x+15,b.y-(actor.kind==='mother'?120:95),entry.emotionElapsed??.3,entry.emotionDuration??1.2);
@@ -194,7 +203,7 @@
   function actionNotes(time,base){
     if(player.mode!=='interactive'||inInner(time))return base;
     const e=encounter.snapshot(),a=actions.snapshot();
-    if(familyPhase(time))return{summary:'点击画面，孩子依次靠近父亲、母亲。点击时出现好奇符号，接触后变成叹号并保留；母亲退开后，孩子收紧边线，退回房间中心。',action:e.familyTarget==='return'?'孩子受挫后收紧边线，慢慢退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻走动，保留上次接触后的符号，等待下一次点击。':e.familyTarget==='father'?'孩子靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子转向母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
+    if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子留在当前位置，保留上次接触后的符号，等待下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'孩子向输送的反方向用力，尝试向后退；输送带与机器继续运行。'};
@@ -205,9 +214,10 @@
   function interfaceState(v,time=sceneTime()){
     const indicator=$('hold-indicator'),charge=chaseProgress.snapshot();
     if(indicator){indicator.dataset.visible=String(player.mode==='interactive'&&chasePhase(time)&&(player.pressed||charge.charge>0));indicator.style.setProperty('--hold-progress',String(charge.charge));indicator.style.setProperty('--hold-color',palette.gold);}
+    updateEffortIndicator(v,time);
     const shot=inInner(time)?cameraTrack.shots.find(s=>s.id==='inner'):cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot),displayTime=innerDisplayTime();
     stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
-    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&palette='+palette.getConfig().preset+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
+    if(!workbench)return;
     const snapshot=inInner(time)?innerState():null;
     const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；照亮后缩回身体，光种子再从体内飞出，引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
@@ -218,6 +228,18 @@
     $('mode-auto').setAttribute('aria-pressed',String(player.mode==='auto'));
     $('play').setAttribute('aria-label',player.mode==='interactive'?(inInner(time)?'点亮下一处微光':'推进下一动作'):player.playing?'暂停':'播放');
     const viewer=document.querySelector('.brand');if(viewer)viewer.href='./?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);
+  }
+  function updateEffortIndicator(v,time){
+    const node=$('effort-indicator');if(!node)return;
+    const effort=actions.snapshot().factory,visible=player.mode==='interactive'&&factoryPhase(time)&&(effort.fatigue>.015||effort.pulse>.03||effort.exhausted);
+    node.dataset.visible=String(visible);node.dataset.state=effort.exhausted?'exhausted':'ready';
+    node.style.setProperty('--effort-progress',String(effort.exhausted?1:effort.fatigue));
+    node.style.setProperty('--effort-color',palette.gold);
+    stage.dataset.fatigue=effort.fatigue.toFixed(3);stage.dataset.exhausted=String(effort.exhausted);
+    if(!visible)return;
+    const hero=factoryFrame(time).hero;if(!hero)return;
+    const s=scale(v),x=state.w/2+(hero.x-v.x)*s,y=state.h/2+(hero.y-v.y)*s;
+    node.style.left=clamp(x+62,36,state.w-36)+'px';node.style.top=clamp(y+50,36,state.h-36)+'px';
   }
   function frame(now){
     const dt=state.last?Math.min((now-state.last)/1000,.05):0;state.last=now;
@@ -272,6 +294,12 @@
     workProgress.seek(sceneTime());chaseProgress.seek(sceneTime());state.workActive=false;state.chaseActive=false;state.chaseOrigin=Math.max(119,sceneTime());
     syncInner(true);state.pointer=null;state.innerPointer=false;state.scenePointer=false;state.reviewPaused=true;
   }
+  function restart(){
+    seek(0);state.ambient=0;state.last=0;state.open=false;state.layer=0;state.modalResume=false;state.reviewPaused=false;state.inputAt=-Infinity;
+    $('layers')?.setAttribute('aria-pressed','false');upper.style.opacity=1;
+    player.playing=player.mode==='auto';
+    const url=new URL(location.href);url.searchParams.set('t','0.00');history.replaceState(null,'',url);
+  }
   function resumeInner(){player.target=Math.max(player.target,timing.playbackAt(119));player.playing=true;}
   function touchInner(x,y){
     if(['break','done'].includes(innerState().phase)){resumeInner();return true;}
@@ -283,7 +311,7 @@
     const time=sceneTime();
     if(inInner(time)){touchInner(point.x,point.y);return;}
     if(familyPhase(time)){
-      state.reviewPaused=false;encounter.activate(encounter.snapshot().familyTarget);return;
+      state.reviewPaused=false;encounter.activatePoint(worldPoint(point));return;
     }
     if(time<58){encounter.activate(time<district.timing.firstMove?'authority':'escort');resumeFlow();return;}
     if(factoryPhase(time)){actions.resist();resumeFlow();return;}
@@ -297,7 +325,7 @@
     if(inInner()){
       const point=innerState().points.find(p=>p.visible&&!p.collected);
       if(point)touchInner(point.x,point.y);else resumeInner();
-    }else if(familyPhase()){state.reviewPaused=false;encounter.activate(encounter.snapshot().familyTarget);}
+    }else if(familyPhase()){state.reviewPaused=false;const visited=encounter.snapshot().familyVisited;encounter.activate(visited.includes('father')?'mother':'father');}
     else if(chasePhase()){state.reviewPaused=false;}
     else localTap({x:state.w/2,y:state.h/2});
   }
@@ -324,7 +352,7 @@
   }
   on('mode-interactive','click',()=>setMode('interactive'));
   on('mode-auto','click',()=>setMode('auto'));
-  on('play','click',togglePlay);on('restart','click',()=>seek(0));
+  on('play','click',togglePlay);on('restart','click',restart);on('replay','click',restart);
   on('progress','input',e=>seek(Number(e.target.value)/100));
   on('layers','click',()=>{state.open=!state.open;$('layers').setAttribute('aria-pressed',String(state.open));});
   stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat){if(player.mode==='interactive'&&chasePhase()){state.reviewPaused=false;player.press();}else togglePlay();}}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
@@ -333,6 +361,7 @@
     if(e.button!==0||state.pointer!==null)return;
     state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer&&!state.scenePointer){if(chasePhase()){state.reviewPaused=false;const p=pointerPoint(e),indicator=$('hold-indicator');if(indicator){indicator.style.left=p.x+'px';indicator.style.top=p.y+'px';}}player.press();}
   });
+  function worldPoint(p,time=sceneTime()){const v=view(time),s=scale(v);return{x:v.x+(p.x-state.w/2)/s,y:v.y+(p.y-state.h/2)/s};}
   function pointerPoint(e){const box=stage.getBoundingClientRect();return{x:(e.clientX-box.left)*state.w/box.width,y:(e.clientY-box.top)*state.h/box.height};}
   function release(e,cancelled=false){
     if(state.pointer!==e.pointerId)return;state.pointer=null;
@@ -340,7 +369,7 @@
     if(state.scenePointer){const phase=state.scenePointer;state.scenePointer=false;if(!cancelled&&phase===inputPhase())localTap(pointerPoint(e));return;}
     player.release(cancelled);
   }
-  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()&&encounter.snapshot().familyWaiting);stage.style.cursor=target?'pointer':'default';});
+  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()&&!!encounter.hitTest(worldPoint(p)));stage.style.cursor=target?'pointer':'default';});
   stage.addEventListener('pointerup',e=>release(e));
   stage.addEventListener('pointercancel',e=>release(e,true));
   stage.addEventListener('contextmenu',e=>e.preventDefault());

@@ -63,7 +63,7 @@ assert.equal(actual.__arrival(131.7,{chase:{}}),131.7,'automatic playback retain
 let windows=0;
 for(let t=69;t<98;t+=.007){
   const source=Factory.frame(t),original={...source.hero},w=Factory.resistanceWindow(t),result=Factory.withResistance(source,1000,t);
-  assert(result.appliedOffset>=0&&result.appliedOffset<=110+1e-9);
+  assert(result.appliedOffset>=0&&result.appliedOffset<=240+1e-9);
   assert.deepEqual(source.hero,original,'an input reaction cannot mutate cached animation poses');
   assert.equal(result.actors.find(e=>e.id==='hero').body,result.hero,'the renderer and collision silhouette share one body');
   assert.equal(result.hero.angle,source.hero.angle,'backward transport must never turn the child around');
