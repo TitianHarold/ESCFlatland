@@ -72,7 +72,7 @@ const Versions=require('./docs/story-versions.js'),A=Versions.get('rhythm'),B=Ve
 const Office=require('./docs/office-world.js');
 Factory.setPlaybackClock(A.timing.playbackAt);
 try {
-assert.equal(Versions.get().id,'rhythm');
+assert.equal(Versions.get().id,'routine');
 for(let raw=0;raw<=58;raw+=1)assert.equal(A.timing.playbackAt(raw),B.timing.playbackAt(raw),'Both openings share the same edit');
 assert.equal(A.factory.anchors.pressStations.length,4);
 for(const [index,program] of A.factory.pressProgram.programs.entries()){
@@ -101,7 +101,8 @@ assert.equal(A.timing.playbackAt(119)-A.timing.playbackAt(104),13,'The struggle 
 assert.equal(A.timing.playbackAt(138)-A.timing.playbackAt(119),17,'Chase and POV retain their previous speed');
 assert(A.notes.at(74.1).action.includes('第一、第二、第三、第四组夹具同时回升'),'Notes show concurrent fixture motion, not a single current group');
 assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
-assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(70),16);
+assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(64),19,'The longer open-belt travel fits the existing factory edit');
+for(const [start,end]of[[76.7,78.5],[81.6,83.2]])assert(Math.abs(B.timing.playbackAt(end)-B.timing.playbackAt(start)-3)<1e-8,'Each inter-station transfer leaves three real seconds for resistance');
 assert.equal(B.timing.playbackAt(108)-B.timing.playbackAt(94),16);
 assert.equal(B.timing.playbackAt(119)-B.timing.playbackAt(108),10);
 const workView=B.camera.pose(98),officeView=B.camera.pose(104);
@@ -131,7 +132,7 @@ for(const variant of[A,B]){
   assert.equal(variant.timing.playbackAt(138),variant.duration);
   for(let seconds=0;seconds<=variant.duration;seconds+=.5)assert(Math.abs(variant.timing.playbackAt(variant.timing.sceneAt(seconds))-seconds)<1e-7);
   const p=new StoryPlayer({timing:variant.timing,beats:variant.beats});
-  p.seek(variant.timing.playbackAt(77)-.01);p.tap();const target=p.target;
+  const stationCut=variant.id==='routine'?76.7:77;p.seek(variant.timing.playbackAt(stationCut)-.01);p.tap();const target=p.target;
   const before=variant.camera.shotAt(variant.timing.sceneAt(p.time));p.tick(.02);
   assert.notEqual(variant.camera.shotAt(variant.timing.sceneAt(p.time)).id,before.id,'The camera crosses a real station cut');
   assert(p.playing,'Camera cuts cannot end a version action');assert.equal(p.target,target);

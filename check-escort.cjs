@@ -6,6 +6,10 @@ const walls=new CollisionWorld(CityMap.houseBoundaries),ids=['hero','inspector',
 const actor=(frame,id)=>{const entry=frame.actors.find(a=>a.id===id);assert(entry,'Missing '+id);return entry;};
 const gap=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 
+// The child recoils before the first real tip contact, rather than willingly departing.
+const preparing=D.frame(D.timing.takeAway-.45),prepared=actor(preparing,'hero');
+assert(prepared.body.bend>.25,'the child visibly contracts before the guard pokes');
+assert(gap(preparing.hero,D.frame(D.timing.takeAway-1.1).hero)<.01,'the first refusal happens in place');
 // One real tip contact is followed by forward travel, including the former first-step stop.
 const contact=D.frame(D.timing.firstMove),child=actor(contact,'hero'),poker=actor(contact,'guard-2');
 assert(C.distance(child.actor.outline(child.body),poker.actor.outline(poker.body))<.01,'The single poke must actually contact the child');
@@ -36,5 +40,19 @@ for(const t of[D.timing.firstMove+1,34,42,55]){
     }
   }
 }
+// Refusal and renewed coercion also happen without any user click.
+for(const start of [35.4,43.6,50.8]){
+  let closest=Infinity,reversed=false,previous=D.frame(start).hero;
+  const before=D.frame(start-.1).hero,axis=[previous.x-before.x,previous.y-before.y];
+  for(let t=start+.025;t<start+2.8;t+=.025){
+    const f=D.frame(t),h=actor(f,'hero'),outline=h.actor.outline(h.body),v=[h.body.x-previous.x,h.body.y-previous.y];
+    if(v[0]*axis[0]+v[1]*axis[1]<-.001)reversed=true;
+    for(const other of f.actors)if(other.id!==h.id)assert(!C.penetrates(outline,other.actor.outline(other.body)),h.id+' must not penetrate '+other.id+' during baseline refusal');
+    for(const guard of f.actors.filter(a=>/^guard-/.test(a.id)))closest=Math.min(closest,C.distance(outline,guard.actor.outline(guard.body)));
+    previous=f.hero;
+  }
+  assert(reversed,'baseline escort includes backward resistance near '+start);
+  assert(closest<.01,'the next guard poke really contacts the resisting child near '+start);
+}
 const handoff=D.frame(58).hero;assert(Math.hypot(handoff.x-D.handoff.x,handoff.y-D.handoff.y)<.001,'The delayed departure must still reach the shared factory handoff exactly');
-console.log('PASS escort: one real poke, continuous departure, inspector ahead, three guards behind, doorway cleared by 34, no wall/actor penetration after departure and at 34/42/55.');
+console.log('PASS escort: pre-poke contraction, real repeated pokes, spontaneous refusal, continuous initial departure, inspector ahead, three guards behind, doorway cleared by 34, no wall/actor penetration after departure and at 34/42/55.');

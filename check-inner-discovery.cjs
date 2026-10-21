@@ -32,4 +32,31 @@ const captured=mixed.snapshot(viewport).reveals.map(r=>[r.id,r.x,r.y]);assert.eq
 mixed.update(30);assert.equal(mixed.autoElapsed,2);mixed.update(.9,{automatic:true});assert.equal(mixed.snapshot(viewport).collected,2,'switching from idle or manual hits to auto waits for the next interval');
 mixed.update(.1,{automatic:true});assert.equal(mixed.snapshot(viewport).collected,3);assert.deepEqual(mixed.snapshot(viewport).reveals.slice(0,2).map(r=>[r.id,r.x,r.y]),captured,'automatic assistance preserves manually captured reveal positions');
 assert(/^#[0-9a-f]{6}$/.test(Inner.background));
-console.log(JSON.stringify({pass:true,visibleTargets:2,discoveries:6,ambientIndependent:true,pausedActionFrozen:true,automaticSameCollection:true,deterministicSeek:true}));
+let renderedReveal=false;
+if(process.env.FLATLAND_CANVAS_MODULE){
+  const {createCanvas}=require(process.env.FLATLAND_CANVAS_MODULE),fs=require('node:fs'),path=require('node:path');
+  global.OffscreenCanvas=class{constructor(w,h){return createCanvas(w,h);}};
+  const output=process.env.FLATLAND_REVEAL_OUTPUT;
+  if(output)fs.mkdirSync(output,{recursive:true});
+  const capture=(box,wait)=>{const s=new Inner.Session();s.update(wait);for(let i=0;i<6;i++){const dot=s.snapshot(box).points.find(p=>p.visible&&!p.collected);assert(s.tap(dot.x,dot.y,box));s.update(.11);}return s;};
+  const pixels=(s,box,b,contents=false)=>{
+    s.breakAge=b*2;const c=createCanvas(box.w,box.h),ctx=c.getContext('2d');
+    Inner.draw(ctx,box,s.snapshot(box),{drawContents:contents?undefined:g=>{g.fillStyle='#ffffff';g.fillRect(0,0,box.w,box.h);}});
+    return{canvas:c,data:ctx.getImageData(0,0,box.w,box.h).data};
+  };
+  for(const box of [{w:1280,h:760},{w:760,h:1280}]){
+    const early=capture(box,.6),late=capture(box,4.8);
+    assert.notDeepEqual(early.found.map(p=>[p.u,p.v]),late.found.map(p=>[p.u,p.v]),'real catch times leave different reveal centres');
+    const a=pixels(early,box,.08).data,b=pixels(late,box,.08).data;
+    let difference=0;for(let i=0;i<a.length;i+=4)difference+=Math.abs(a[i]-b[i]);
+    assert(difference>box.w*box.h*2,'the growing mask follows the actual catch positions, rather than the same preset slit');
+    for(const progress of [.71,.72,1]){
+      const lit=pixels(early,box,progress).data;
+      let darkest=255;for(let i=0;i<lit.length;i+=4)darkest=Math.min(darkest,lit[i],lit[i+1],lit[i+2]);
+      assert.equal(darkest,255,'the whole inner world, including all corners, is illuminated before the seed returns');
+    }
+    if(output)for(const progress of [0,.12,.32,.56,.72])fs.writeFileSync(path.join(output,`inner-${box.w}x${box.h}-${progress}.png`),pixels(early,box,progress,true).canvas.toBuffer('image/png'));
+  }
+  renderedReveal=true;
+}
+console.log(JSON.stringify({pass:true,visibleTargets:2,discoveries:6,ambientIndependent:true,pausedActionFrozen:true,automaticSameCollection:true,deterministicSeek:true,renderedReveal}));

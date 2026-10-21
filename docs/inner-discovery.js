@@ -84,6 +84,24 @@
     const {w,h,s}=size(v),colors=[p.teal,p.lavender,p.coral,p.gold];ctx.fillStyle=p.night;ctx.fillRect(0,0,w,h);
     for(let i=0;i<9;i++){ctx.save();ctx.translate(w*(.16+(i%3)*.34),h*(.14+Math.floor(i/3)*.34));ctx.rotate(clock*.045*(i%2?1:-1)+i);ctx.fillStyle=colors[i%4];ctx.beginPath();ctx.moveTo(-230*s,20*s);ctx.bezierCurveTo(-70*s,-180*s,200*s,-90*s,210*s,40*s);ctx.bezierCurveTo(130*s,-20*s,0,130*s,-230*s,20*s);ctx.fill();ctx.restore();}
   }
+  function revealMask(ctx,reveals,viewport,b){
+    const {w,h}=size(viewport),growth=Math.pow(smooth(b/.72),1.5),solid=smooth(b/.42);
+    for(const r of reveals){
+      // Every opening stays rooted at the position the viewer actually caught.
+      // Its own soft contour expands into neighbouring openings, never a preset slit.
+      const reach=Math.max(Math.hypot(r.x,r.y),Math.hypot(w-r.x,r.y),Math.hypot(r.x,h-r.y),Math.hypot(w-r.x,h-r.y));
+      const radius=r.radius*(.12+.88*r.strength)+reach*1.45*growth,alpha=r.strength*(.88+.12*solid);
+      const g=ctx.createRadialGradient(r.x,r.y,0,r.x,r.y,radius);
+      g.addColorStop(0,'rgba(255,255,255,'+alpha+')');
+      g.addColorStop(.75*solid,'rgba(255,255,255,'+alpha+')');
+      g.addColorStop(.48+.35*solid,'rgba(255,255,255,'+alpha*(.66+.34*solid)+')');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g;ctx.fillRect(r.x-radius,r.y-radius,radius*2,radius*2);
+    }
+    // The cores already cover the viewport here; make the fully lit state exact,
+    // including corner pixels, before the final seed returns to the body.
+    if(b>=.72){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
+  }
   function draw(ctx,viewport,state,{drawContents,palette=P}={}){
     const {w,h,s}=size(viewport),clock=state.clock||0,b=state.breakProgress||0,p=palette,dark=mix(p.night,'#000000',.89);
     ctx.save();ctx.fillStyle=dark;ctx.fillRect(0,0,w,h);texture(ctx,w,h,p);
@@ -95,10 +113,8 @@
       c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.clearRect(0,0,w,h);c.save();
       if(drawContents)drawContents(c,viewport);else fallbackContents(c,viewport,clock,p);
       c.restore();m.setTransform(1,0,0,1,0,0);m.globalAlpha=1;m.globalCompositeOperation='source-over';m.clearRect(0,0,w,h);
-      for(const r of state.reveals){const radius=r.radius*(.12+.88*r.strength)*(1+b*.9),g=m.createRadialGradient(r.x,r.y,0,r.x,r.y,radius);g.addColorStop(0,'rgba(255,255,255,'+(.88*r.strength)+')');g.addColorStop(.48,'rgba(255,255,255,'+(.58*r.strength)+')');g.addColorStop(1,'rgba(255,255,255,0)');m.fillStyle=g;m.fillRect(r.x-radius,r.y-radius,radius*2,radius*2);}
-      if(b>0){const reach=Math.hypot(w,h)*1.2,half=reach*.55*Math.pow(smooth(b),2.2),feather=70*s;m.save();m.translate(w*.51,h*.49);m.rotate(-.55);const g=m.createLinearGradient(0,-half-feather,0,half+feather);g.addColorStop(0,'#ffffff00');g.addColorStop(Math.min(.49,feather/(half*2+feather*2)),'#ffffffff');g.addColorStop(Math.max(.51,1-feather/(half*2+feather*2)),'#ffffffff');g.addColorStop(1,'#ffffff00');m.fillStyle=g;m.fillRect(-reach,-half-feather,reach*2,(half+feather)*2);m.restore();}
+      revealMask(m,state.reveals,viewport,b);
       c.globalCompositeOperation='destination-in';c.drawImage(maskCanvas,0,0);c.globalCompositeOperation='source-over';ctx.drawImage(contentCanvas,0,0);
-      if(b>0&&b<.9){const reach=Math.hypot(w,h)*1.2,half=reach*.55*Math.pow(smooth(b),2.2);ctx.save();ctx.translate(w*.51,h*.49);ctx.rotate(-.55);ctx.strokeStyle=p.gold;ctx.globalAlpha=Math.sin(Math.PI*clamp(b/.9))*.42;for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(-reach,side*half);ctx.bezierCurveTo(-reach*.28,side*half+6*s,reach*.28,side*half-10*s,reach,side*half);ctx.lineWidth=2.2*s;ctx.stroke();}ctx.restore();}
     }
     for(const dot of state.points){
       if(!dot.visible||dot.alpha<=0)continue;

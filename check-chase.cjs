@@ -21,6 +21,18 @@ const viewport={w:1280,h:760},camera={...Factory.anchors.discard,tilt:0,yaw:1.06
 assert(point&&point.length===4&&point.every(Number.isFinite));
 assert(point[0]>0&&point[0]<1280&&point[1]>0&&point[1]<760,'invitation light remains visible before the sprint');
 assert.deepEqual(Dimension.journeyLightPoint(119,camera,viewport,data),point,'projection is stable on paused scrubs');
+for(const factory of[Factory,require('./docs/factory-routine.js')]){
+  let previous;
+  for(let t=119;t<=122;t+=.002){
+    const frame=factory.frame(t),entry=frame.actors.find(a=>a.id==='hero'),light=Dimension.seedLight(t,entry,frame.light);
+    assert.equal(light.entityId,'hero-seed');
+    if(t<=119.6){assert(light.inside,'the returning seed stays in the body before flying out');assert(Math.hypot(light.x-entry.body.x,light.y-entry.body.y)<11);}
+    if(previous)assert(Math.hypot(light.x-previous.x,light.y-previous.y)<1,'the seed cannot jump from inside to the invitation path');
+    previous=light;
+  }
+  const frame=factory.frame(121.9),light=Dimension.seedLight(121.9,frame.actors.find(a=>a.id==='hero'),frame.light);
+  assert(!light.inside);assert.equal(light.x,frame.light.x);assert.equal(light.y,frame.light.y);
+}
 // Inspect the real world-space visibility gate, without adding diagnostics to the runtime API.
 const file=path.resolve('docs/dimension.js'),box={module:{exports:{}},require:createRequire(file)};
 vm.runInNewContext(fs.readFileSync(file,'utf8').replace('return Object.freeze({draw,drawJourney,','return Object.freeze({__objects:journeyObjects,__alpha:distanceAlpha,draw,drawJourney,'),box,{filename:file});

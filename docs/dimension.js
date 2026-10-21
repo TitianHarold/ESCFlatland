@@ -357,7 +357,7 @@
     const passTime=chasePassTime(index/journeyObjectCount);
     for(const side of [-1,1]){
       const growAt=clamp(passTime-1.2+(side>0?.12:0),124.8,129.5),enterAt=passTime-mix(.35,1.45,clamp(index/(journeyObjectCount*.94),0,1))+(side>0?.08:0);
-      journeyObjects.push({x:point[0]+normal[0]*side*(250+(index%3)*95),y:point[1]+normal[1]*side*(250+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],enterAt,growAt,growUntil:growAt+1.1+(index%3)*.12});
+      journeyObjects.push({x:point[0]+normal[0]*side*(250+(index%3)*95),y:point[1]+normal[1]*side*(250+(index%3)*95),routeDistance:index/journeyObjectCount*pathLengths[32],laneOffset:side*(250+(index%3)*95),kind:(index+(side>0?2:0))%5,r:68+(index%4)*16,passTime,index,side,heading,color:[Palette.blue,Palette.teal,Palette.coral,Palette.lavender,Palette.gold][(index+(side>0?1:0))%5],enterAt,growAt,growUntil:growAt+1.1+(index%3)*.12});
     }
   }
   for(let i=0;i<=journeyObjectCount;i++){const point=pathPoint(i/journeyObjectCount),p=worldToCity([point.x,point.y,0]);placeJourneyObject(p,point.heading+bridgeAngle,i);}
@@ -405,16 +405,26 @@
     const u=along*deformation.stretch+across*deformation.shear,v=across*deformation.across;
     return[c*u-s*v,s*u+c*v,point[2]];
   }
-  const journeyFlowLength=journeyDX*Math.cos(endHeading)+journeyDY*Math.sin(endHeading);
+  const journeyFlowLength=pathLengths[32];
+  function journeyRoutePoint(distance){
+    const d=clamp(distance,0,journeyFlowLength),point=pathPoint(d/journeyFlowLength),extra=distance-d,heading=point.heading+bridgeAngle,center=worldToCity([point.x,point.y,0]);
+    return{x:center[0]+Math.cos(heading)*extra,y:center[1]+Math.sin(heading)*extra,heading};
+  }
   function referenceFlow(item,hero,time,data){
-    const base=finite(data.chase?.baseTravel,time-119),travel=finite(data.chase?.travel,base);
-    let shift=-Math.max(0,travel-base)*pathLengths[32]*Motion.chaseProgress(132).qSpeed,repeat=0;
-    if(Number.isFinite(data.chase?.travel)&&time>130){
-      const along=(item.x+forward[0]*shift-hero[0])*forward[0]+(item.y+forward[1]*shift-hero[1])*forward[1];
-      if(along<-900){repeat=Math.ceil((-900-along)/journeyFlowLength);shift+=repeat*journeyFlowLength;}
+    const base=finite(data.chase?.baseTravel,time-119),travel=finite(data.chase?.travel,base),extra=Math.max(0,travel-base)*journeyFlowLength*Motion.chaseProgress(132).qSpeed;
+    if(!Number.isFinite(item.routeDistance))return item;
+    let distance=item.routeDistance-extra,repeat=0;
+    const heroDistance=Motion.chaseProgress(Math.min(time,132)).q*journeyFlowLength;
+    if(Number.isFinite(data.chase?.travel)||time>130){
+      // Repeat the route coordinate, then sample its tangent and normal together.
+      // Translating old curved points along a fixed axis moved an entire lane across
+      // the hero at the end of a hold. Every repeated pair now keeps its own side.
+      const behind=heroDistance-900;
+      if(distance<behind){repeat=Math.ceil((behind-distance)/journeyFlowLength);distance+=repeat*journeyFlowLength;}
     }
-    if(!shift&&!repeat)return item;
-    return{...item,x:item.x+forward[0]*shift,y:item.y+forward[1]*shift,index:item.index+repeat*journeyObjectCount};
+    if(!extra&&!repeat)return item;
+    const center=journeyRoutePoint(distance),normal=[-Math.sin(center.heading),Math.cos(center.heading)],offset=item.laneOffset||0;
+    return{...item,x:center.x+normal[0]*offset,y:center.y+normal[1]*offset,heading:center.heading,index:item.index+repeat*journeyObjectCount};
   }
   function apparition(list,item,time,clock,alpha,speed=0){
     const r=item.r*shapeScale(item,time),phase=item.index*.91+item.side*.6;
@@ -487,14 +497,14 @@
   }
   const speedRibbons=Array.from({length:560},(_,i)=>{
     const point=pathPoint((i%280)/279),center=worldToCity([point.x,point.y,0]),heading=point.heading+bridgeAngle,side=i<280?-1:1;
-    return{center,heading,side,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
+    return{center,heading,side,routeDistance:(i%280)/279*journeyFlowLength,laneOffset:0,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
   });
   function addSpeedRibbons(list,hero,time,data){
     const speed=(Motion.speedShape(data.chase?.speed||0).perspectiveStretch-1)/2,kick=clamp(data.chase?.effort||0,0,1);
     const amount=ease(time,122,122.3)*(1-ease(time,132,137));
     if(amount<=0)return;
     for(const original of speedRibbons){
-      const moved=referenceFlow({x:original.center[0],y:original.center[1],index:0},hero,time,data),item={...original,center:[moved.x,moved.y]};
+      const moved=referenceFlow({...original,x:original.center[0],y:original.center[1],index:0},hero,time,data),item={...original,heading:moved.heading,center:[moved.x,moved.y]};
       const alpha=distanceAlpha(item.center,hero)*amount*(.18+.62*speed+.18*kick);if(alpha<.005)continue;
       const c=Math.cos(item.heading),s=Math.sin(item.heading),n=[-s,c],x=item.center[0]+n[0]*item.side*item.offset,y=item.center[1]+n[1]*item.side*item.offset;
       const length=item.length*(.7+7.8*speed),width=item.width*(1+.25*speed);
@@ -590,13 +600,21 @@
     if(endingAssets.open){drawEndingHand(ctx,'left',pose.left,w,h);drawEndingHand(ctx,'right',pose.right,w,h);}
     ctx.restore();return{...pose,assetStatus:endingAssets.status};
   }
-  function paintArrivalLight(ctx,point,time,radius,w,h){
+  function seedLight(time,entry,guide){
+    if(!entry?.body||!guide)return guide;
+    const body=entry.body,local=entry.routine?[-7,7]:[0,0],c=Math.cos(body.angle||0),s=Math.sin(body.angle||0);
+    const x=local[0]*(body.sx??1),y=local[1]*(body.sy??1),origin=[body.x+c*x-s*y,body.y+s*x+c*y];
+    const flight=ease(time,119.6,121.7);
+    return{...guide,x:mix(origin[0],guide.x,flight),y:mix(origin[1],guide.y,flight),z:4,
+      r:mix(6,guide.r||10,flight),inside:flight===0,phase:flight===0?'enclosed':flight<1?'emerge':guide.phase,entityId:'hero-seed'};
+  }
+  function paintArrivalLight(ctx,point,time,radius,w,h,enclosed=false){
     if(!point)return;const arrival=ease(time,131,132),r=Math.max(3.3,radius*point[3]),spread=r*4+Math.hypot(w,h)*Math.pow(arrival,2.2)*1.3;
     ctx.save();
     const warm=ctx.createRadialGradient(point[0],point[1],r*.35,point[0],point[1],r*4);warm.addColorStop(0,'rgba(244,215,148,'+(.62*(1-arrival))+')');warm.addColorStop(1,'rgba(244,215,148,0)');ctx.fillStyle=warm;ctx.fillRect(point[0]-r*4,point[1]-r*4,r*8,r*8);
     const halo=ctx.createRadialGradient(point[0],point[1],0,point[0],point[1],Math.max(1,spread));
-    halo.addColorStop(0,'rgba(255,255,255,1)');halo.addColorStop(arrival?Math.min(.72,.12+arrival*.6):.12,'rgba(255,255,255,'+(.28+.72*arrival)+')');halo.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(point[0],point[1],r*(.65+2.8*arrival),0,Math.PI*2);ctx.fill();
+    halo.addColorStop(0,enclosed?Palette.gold:'rgba(255,255,255,1)');halo.addColorStop(arrival?Math.min(.72,.12+arrival*.6):.12,enclosed?Palette.gold+'65':'rgba(255,255,255,'+(.28+.72*arrival)+')');halo.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);ctx.fillStyle=enclosed?Palette.gold:'#ffffff';ctx.beginPath();ctx.arc(point[0],point[1],r*(.65+2.8*arrival),0,Math.PI*2);ctx.fill();
     const complete=ease(time,131.72,132);if(complete>0){ctx.globalAlpha=complete;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
     ctx.restore();
   }
@@ -613,7 +631,7 @@
     const {state,pathHeading,w,h}=layout;
     const near=data.light?[data.light.x,data.light.y]:[state.raw.x+Math.cos(pathHeading-bridgeAngle)*100,state.raw.y+Math.sin(pathHeading-bridgeAngle)*100];
     const target=ease(time,122.5,125),end=[journeyEnd.x+Math.cos(endHeading)*20,journeyEnd.y+Math.sin(endHeading)*20];
-    const light=worldToCity([mix(near[0],end[0],target),mix(near[1],end[1],target),0]);
+    const light=worldToCity([mix(near[0],end[0],target),mix(near[1],end[1],target),data.light?.z||0]);
     const lightPoint=project(light);
     // Keep the one destination point inside the upper-right field while the early, nearly flat view still has its vanishing point beyond the frame.
     if(time>=122&&lightPoint){lightPoint[0]=clamp(lightPoint[0],w*.55,w*.80);lightPoint[1]=clamp(lightPoint[1],h*.18,h*.45);}
@@ -634,10 +652,10 @@
     addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock,data);addJourneyDarkness(list,state.center,time,clock,data);
     addJourneyHero(list,state,data);if(data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,132))},state.center);
     const project=render(ctx,list,layout.view,{w,h},sharedMaterial(clock),Palette.outside.background),lightPoint=projectJourneyLight(time,layout,data,project);
-    if(!data.hideLight)paintArrivalLight(ctx,lightPoint,chaseArrivalTime(time,data),data.light?.r||10,w,h);
+    if(!data.hideLight)paintArrivalLight(ctx,lightPoint,chaseArrivalTime(time,data),data.light?.r||10,w,h,data.light?.inside);
   }
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,seedLight});
 });

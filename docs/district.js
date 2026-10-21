@@ -168,10 +168,18 @@
   const heroCurves=[[[hx,hy],[hx+(door[0]-hx)/3,hy+(door[1]-hy)/3],[hx+(door[0]-hx)*2/3,hy+(door[1]-hy)*2/3],door],...road];
   const takeAway=entryFinish[3],firstMove=takeAway+.38,cruiseStart=firstMove;
   const heroRoute=path(heroCurves),heroCruise=heroRoute.length/(58-cruiseStart-.25),heroDoorDistance=heroRoute.segments[0].length;
-  function heroDistance(time){
-    return Math.min(heroRoute.length,walking(time-firstMove,heroCruise));
+  function escortResistance(time){
+    for(const start of [35.4,43.6,50.8]){
+      const age=time-start;if(age<0||age>2.8)continue;
+      const lag=1.1*ease(age/.9)*(1-ease((age-1.35)/1.3));
+      return{lag,poke:ease((age-.75)/.6)*(1-ease((age-1.45)/.45)),strain:.32*Math.sin(Math.PI*clamp(age/2.8)),tremble:Math.sin(age*32)*Math.sin(Math.PI*clamp(age/1.35))*(age<1.35?1:0)};
+    }
+    return{lag:0,poke:0,strain:0,tremble:0};
   }
-  function heroSpeed(time){return time>=58?0:walkSpeed(time-firstMove,heroCruise);}
+  function heroDistance(time){
+    return Math.min(heroRoute.length,walking(time-firstMove-escortResistance(time).lag,heroCruise));
+  }
+  function heroSpeed(time){return time>=58?0:(heroDistance(time+.002)-heroDistance(time-.002))/.004;}
   function heroBody(time,opening){
     if(time<contactEnd)return {...(opening||Motion.pose(Math.min(time/duration,1))).child};
     if(time<familyEnd){
@@ -180,11 +188,14 @@
       body.bend=.18-.08*u;body.fear=.28*(1-u);body.strain*=.45;body.bounce=0;
       return body;
     }
-    if(time<firstMove)return {...main.child};
+    if(time<firstMove){
+      const age=time-(takeAway-1.05),u=clamp(age/1.05),struggle=age>=0&&time<takeAway?Math.sin(Math.PI*u):0;
+      return{...main.child,angle:main.child.angle+.075*Math.sin(age*31)*struggle,strain:0,bend:.1+.27*struggle,edgeBends:heroActor.vertices.map((_,i)=>.26*struggle*(1+.2*Math.sin(age*25+i)))};
+    }
     const wanted=heroDistance(time),speed=heroSpeed(time),d=gatedDistance(heroActor,heroRoute,wanted,time,speed);
     const body=poseOn(heroActor,heroRoute,d,d<wanted?0:speed),turn=ease((time-firstMove)/.2);
     const delta=Math.atan2(Math.sin(body.angle-main.child.angle),Math.cos(body.angle-main.child.angle));
-    body.angle=main.child.angle+delta*turn;return body;
+    const reluctant=escortResistance(time);body.angle=main.child.angle+delta*turn+.07*reluctant.tremble;body.bend+=reluctant.strain;body.strain=Math.max(body.strain,reluctant.strain);return body;
   }
   // Each pointed advance ends at the child's actual outline, before the child takes a step.
   function threateningRoute(body,target){
@@ -232,7 +243,7 @@
   const escortGaps=[360,-140,-260,-140],doorwayGaps=[360,-420,-140,-280];
   function policeDistance(person,time,index){
     const fan=ease((heroDistance(time)-heroDoorDistance-480)/260),gap=doorwayGaps[index]+(escortGaps[index]-doorwayGaps[index])*fan;
-    const wanted=person.roadOffset+heroDistance(time)-heroDoorDistance+gap;
+    const wanted=person.roadOffset+(index===0?Math.min(heroRoute.length,walking(time-firstMove,heroCruise)):heroDistance(time))-heroDoorDistance+gap;
     return Math.min(person.exit.length,Math.max(0,wanted)*ease((time-policeStarts[index])/1.2));
   }
   function policeBody(person,time,index){
@@ -243,7 +254,16 @@
     // Everyone shares the child's route distance, rather than catching up on independent clocks.
     const wanted=policeDistance(person,time,index),speed=Math.max(0,(policeDistance(person,time+.005,index)-policeDistance(person,time-.005,index))/.01);
     const d=gatedDistance(person.actor,person.exit,wanted,time,speed);
-    return poseOn(person.actor,person.exit,d,d<wanted?0:speed);
+    const body=poseOn(person.actor,person.exit,d,d<wanted?0:speed),reluctant=escortResistance(time);
+    if(index===0&&reluctant.lag>.03){const child=heroBody(time),axis=person.actor.headAxis(body),look=Math.atan2(child.y-body.y,child.x-body.x)-axis.angle;body.angle+=Math.atan2(Math.sin(look-body.angle),Math.cos(look-body.angle))*clamp(reluctant.lag/.3);}
+    if(index===2&&reluctant.poke>0){
+      const child=heroBody(time),direction=Math.atan2(child.y-body.y,child.x-body.x),axis=person.actor.headAxis(body),look=direction-axis.angle;
+      body.angle+=Math.atan2(Math.sin(look-body.angle),Math.cos(look-body.angle))*reluctant.poke;
+      const outline=heroActor.outline(child),distance=Math.hypot(child.x-body.x,child.y-body.y);let low=0,high=distance;
+      for(let i=0;i<20;i++){const step=(low+high)/2,candidate={...body,x:body.x+Math.cos(direction)*step,y:body.y+Math.sin(direction)*step};if(C.penetrates(person.actor.outline(candidate),outline))high=step;else low=step;}
+      body.x+=Math.cos(direction)*low*reluctant.poke;body.y+=Math.sin(direction)*low*reluctant.poke;
+    }
+    return body;
   }
   const westKid=households.find(h=>h.id==='west').kids[0],nwKids=households.find(h=>h.id==='northwest').kids;
   const detainees=[{kid:westKid,lag:640},{kid:nwKids[0],lag:1140},{kid:nwKids[1],lag:1460}];
@@ -413,7 +433,10 @@
       const last=before.get(entry.id);
       return{...entry,motionTime:last&&entry.routeControlled?last.motionTime+(entry.motionTime-last.motionTime)*(entry.collision.fraction??1):time};
     }),entry=actors.find(actor=>actor.id==='hero');
-    return{...plan,time,actors,hero:entry?{...entry.body,id:'hero',actor:heroActor,body:entry.body,active:time<58}:plan.hero};
+    let lastPoke=previous?.lastPoke??-Infinity;
+    if(entry&&escortResistance(time).poke>.5&&actors.some(other=>/^guard-/.test(other.id)&&C.distance(entry.actor.outline(entry.body),other.actor.outline(other.body))<.25))lastPoke=time;
+    if(entry&&time-lastPoke<.7)emotion(entry,'exclamation',time-lastPoke,.7,1.15);
+    return{...plan,time,actors,lastPoke,hero:entry?{...entry.body,id:'hero',actor:heroActor,body:entry.body,active:time<58}:plan.hero};
   }
   function frame(value){
     const time=Number.isFinite(value)?Math.max(0,Math.min(64,value)):0,index=Math.floor(time/collisionStep+1e-8);
@@ -422,5 +445,5 @@
     return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
   }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,escortResistance,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

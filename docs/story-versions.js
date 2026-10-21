@@ -16,7 +16,7 @@
   }
   const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,18],[58,25],[64,28]];
   const rhythmTiming=edit([...opening,[70,30.5],[72,31.5],[77,36.5],[87,41],[90,42],[98,46],[104,49],[110,54],[119,62],[122,65],[132,75],[138,79]]);
-  const routineTiming=edit([...opening,[70,31],[77,36],[82,40],[94,47],[108,63],[119,73],[122,76],[132,86],[138,90]]);
+  const routineTiming=edit([...opening,[67.4,29.2],[71.7,31.9],[76.7,34.6],[78.5,37.6],[81.6,39.6],[83.2,42.6],[94,47],[108,63],[119,73],[122,76],[132,86],[138,90]]);
   const point=(value,fallback)=>Array.isArray(value)?{x:value[0],y:value[1]}:value||fallback;
   function fixed(points,zoom=.6){
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
@@ -32,8 +32,8 @@
     shot('discard','011 · 出口 · 扔出',98,104),shot('exhausted','012 · 墙外挣扎',104,112),shot('inner','013 · 光从内心出现',112,119),
     ...endingShots.map((s,i)=>({...s,label:(i?'015':'014')+' · '+s.label}))];
   const routineShots=[...firstShots,
-    shot('factory','006 · 工厂概览',64,70),shot('mold','007 · 套模',70,77),shot('compact','008 · 压实',77,82),
-    shot('paint','009 · 逐边喷涂',82,94),shot('work','010 · 重复办公室',94,110),shot('inner','011 · 光从内心出现',110,119),
+    shot('factory','006 · 工厂概览',64,67.4),shot('mold','007 · 套模',67.4,76.7),shot('compact','008 · 压实',76.7,81.6),
+    shot('paint','009 · 逐边喷涂',81.6,94),shot('work','010 · 重复办公室',94,110),shot('inner','011 · 光从内心出现',110,119),
     ...endingShots.map((s,i)=>({...s,label:(i?'013':'012')+' · '+s.label}))];
   function cameraFor(id,shots){
     const shotAt=time=>shots.find(s=>time<s.end)||shots.at(-1);
@@ -57,10 +57,10 @@
         else v={...Camera.pose(time),x:discard.x,y:discard.y};
       }else{
         const b=RoutineFactory.anchors||{},work=Office.anchors.work,officeOverview=Office.anchors.overview;
-        if(time<70){const p=point(b.overview,overview);v=fixed([p],p.zoom||.22);}
-        else if(time<77)v=move(time,70,71.7,point(b.approach,stage.m1),point(b.mold,stage.m1),b.mold?.zoom||1.5);
-        else if(time<82)v=move(time,77,78.5,point(b.mold,stage.m1),point(b.compact,stage.m2),b.compact?.zoom||1.5);
-        else if(time<94)v=move(time,82,83.2,point(b.compact,stage.m2),point(b.paint,stage.m3),b.paint?.zoom||1.5);
+        if(time<67.4){const p=point(b.overview,overview);v=fixed([p],p.zoom||.17);}
+        else if(time<76.7)v=move(time,67.4,71.7,point(b.approach,stage.m1),point(b.mold,stage.m1),b.mold?.zoom||.95);
+        else if(time<81.6)v=move(time,76.7,78.5,point(b.mold,stage.m1),point(b.compact,stage.m2),b.compact?.zoom||.95);
+        else if(time<94)v=move(time,81.6,83.2,point(b.compact,stage.m2),point(b.paint,stage.m3),b.paint?.zoom||.95);
         else if(time<96)v=move(time,94,96,point(b.paint,stage.m3),point(b.exit),b.paint?.zoom||1.5,1.2);
         else if(time<98)v=move(time,96,98,point(b.officeEntry,work),work,b.officeEntry?.zoom||1.2,work.zoom||.75);
         else if(time<104)v=move(time,98,104,work,officeOverview,work.zoom||.75,officeOverview.zoom||.035);
@@ -68,9 +68,13 @@
         else v=fixed([discard],1.5);
       }
       // The overview move crosses the shot boundary without changing the factory clock.
-      if(time>=68.3&&time<70.8){
+      if(id==='rhythm'&&time>=68.3&&time<70.8){
         const b=RoutineFactory.anchors,start=point(id==='routine'?b.overview:a.overview,a.factoryCenter);
         const from=fixed([start],start.zoom||.22),to=id==='routine'?(time>=70?{...v}:fixed([point(b.approach,stage.m1)],b.mold?.zoom||1.5)):fixed((a.pressStations||[stage.m1]).map(p=>point(p)),.65),u=ease((time-68.3)/2.5);
+        for(const key of ['x','y','zoom'])v[key]=from[key]+(to[key]-from[key])*u;
+      }
+      if(id==='routine'&&time>=66.2&&time<68.3){
+        const start=RoutineFactory.anchors.overview,from=fixed([start],start.zoom),to=time<67.4?fixed([RoutineFactory.anchors.approach],.95):{...v},u=ease((time-66.2)/2.1);
         for(const key of ['x','y','zoom'])v[key]=from[key]+(to[key]-from[key])*u;
       }
       return{...v,shotId:current.id};
@@ -102,17 +106,17 @@
   }
   function routineNotes(time){
     if(time<64)return StoryNotes.at(time);
-    if(time<70)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
-    if(time<77)return{summary:'主角进入五边套模工位。五段标准边框逐段靠近，接缝扣合，顶角依次锁住。',action:time<71.7?'主角沿传送带接近张开的五边套模工位。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
-    if(time<82)return{summary:'主角进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿传送带移入五边排列的成型压块之间。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
-    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角沿传送带进入喷涂工位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
+    if(time<67.4)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
+    if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿传送带接近张开的五边套模工位。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
+    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长的传送带移入成型压块；点击会转身向后跑，失力后继续被输送。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
+    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长的输送段上向喷涂工位移动；点击可逆向挣扎，接近机器前重新归位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
     if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'从喷涂工位平移到工厂出口。':time<98?'经过门口遮挡切入办公室，平滑移向主角工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
-    if(time<119)return{summary:'办公外景完全隐入黑暗，进入主角内心。亮点拖着短光迹游动，点击捕捉后照亮局部，发现逐渐积累，最后破开迷雾。',action:'暗层持续缓慢运动；每次捕捉留下流动色带，积累完成后光种子移向前方。',camera:'保持内心全景，破雾后连续进入追逐。'};
-    if(time<132)return{summary:'光先在近处绕行，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<122?'光在近处绕行，主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；沿途小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方。'};
+    if(time<119)return StoryNotes.at(time);
+    if(time<132)return{summary:'身体内的同一颗光种子飞出，在近处引导，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<119.6?'光种子暂留主角身体内。':time<122?'同一颗光种子从体内飞出，再近身绕行；主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；两侧图形沿速度函数拉伸，从小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方；冲刺两侧持续保留参照物。'};
     return StoryNotes.at(time);
   }
   function notesFor(select){return{at:value=>select(clamp(Number(value)||0,0,138))};}
   const rhythm={id:'rhythm',label:'A · 四组夹具',duration:rhythmTiming.duration,factory:Factory,timing:rhythmTiming,camera:cameraFor('rhythm',rhythmShots),notes:notesFor(rhythmNotes),beats:[6.8,98,104,110,119,132,138].map(rhythmTiming.playbackAt),chaseStart:119,chaseEnd:132};
   const routine={id:'routine',label:'B · 例行塑形',duration:routineTiming.duration,factory:RoutineFactory,timing:routineTiming,camera:cameraFor('routine',routineShots),notes:notesFor(routineNotes),beats:[6.8,119,132,138].map(routineTiming.playbackAt),chaseStart:119,chaseEnd:132};
-  return{get:id=>id==='routine'?routine:rhythm};
+  return{get:id=>id==='rhythm'?rhythm:routine};
 });

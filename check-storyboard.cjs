@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.join(__dirname,'docs/storyboard-r2'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),data=JSON.parse(html.match(/<script id="board-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+for(const v of data.versions){assert.equal(v.shots.length,37);assert(Math.abs(v.shots.reduce((n,s)=>n+s.duration,0)-v.duration)<1e-6);for(let i=0;i<v.shots.length;i++){const s=v.shots[i];if(i)assert.equal(v.shots[i-1].sceneEnd,s.sceneStart);for(const p of Object.values(s.prompts))assert.deepEqual([...p.matchAll(/【([^】]+)】/g)].map(m=>m[1]),data.headings);for(const img of [s.firstImage,s.lastImage])assert(fs.existsSync(path.join(root,img)));}}
+assert.equal(data.characterAssets.length,6);for(const asset of data.characterAssets){assert(fs.existsSync(path.join(root,asset.image)));if(asset.originalImage)assert(fs.existsSync(path.join(root,asset.originalImage)));}
+class Element{constructor(id){this.id=id;this.children=[];this.listeners={};this.style={};this.scrollHeight=100;this.value='';this.textContent='';}append(...n){this.children.push(...n);}replaceChildren(...n){this.children=n;}setAttribute(k,v){this[k]=v;}addEventListener(k,f){this.listeners[k]=f;}focus(){}select(){}scrollIntoView(){}remove(){}click(){this.listeners.click?.();}get href(){return this._href||'https://titianharold.github.io/ESCFlatland/workbench.html';}set href(v){this._href=v;}}
+const nodes=new Map(),el=id=>{if(!nodes.has(id))nodes.set(id,new Element(id));return nodes.get(id);};el('board-data').textContent=JSON.stringify(data);
+const location={search:'',href:'https://titianharold.github.io/ESCFlatland/storyboard-r2/',protocol:'https:'};
+const document={getElementById:el,createElement:tag=>new Element(tag),body:new Element('body')},sandbox={document,location,URL,URLSearchParams,Blob,setTimeout,clearTimeout,innerWidth:1200,navigator:{},console,history:{replaceState(_a,_b,url){location.href=String(url);}},addEventListener(){},FlatlandPalette:{getConfig:()=>({preset:'F2',colors:{}}),setConfig:()=>true}};sandbox.window=sandbox;
+const script=html.match(/<script>\s*([\s\S]*?)<\/script>\s*<\/body>/)[1];vm.runInNewContext(script,sandbox,{filename:'storyboard-r2.js'});
+assert.equal(el('version-select').value,'routine');assert.equal(el('palette-select').value,'F2');assert.equal(el('overview-body').children.length,37);assert.equal(el('character-gallery').children.length,6);
+// Selecting retained hand-drawn frames never restores the old video script.
+el('overview-body').children[1].click();el('palette-select').listeners.change({target:{value:'F3'}});el('source-select').listeners.change({target:{value:'F3-001B'}});
+assert(el('first-image').src.includes('F3'));assert(el('full-prompt').value.startsWith('B-001B'));assert(el('full-prompt').value.includes('0.8秒连续后退'));
+el('version-select').listeners.change({target:{value:'rhythm'}});assert.equal(el('overview-body').children.length,37);assert(el('full-prompt').value.startsWith('001A'));assert(new URL(el('animation-link').href).searchParams.get('version')==='rhythm');
+console.log('PASS storyboard: A/B timing and complete independent prompts, all frames/assets exist, default B/F2, version switching and retained art cannot override current script.');

@@ -14,7 +14,7 @@
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
       this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
       this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
-      this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
+      this.reactions={};this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
     activate(target){
@@ -23,7 +23,8 @@
         const phaseStart=this.stage==='father'?1.2:6.8,end=this.stage==='father'?6.8:contactEnd,start=Math.min(end,Math.max(phaseStart,this.sceneTime));
         // A workbench scrub resumes the remaining action; only the short body join returns from idle to its route.
         const duration=(target==='father'?1.75:2.45)*(end-start)/(end-phaseStart);
-        this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),from:this.previous?.hero?.body};this.mark='curiosity';this.markAtAmbient=this.ambient;this.wait=0;this.epoch++;return true;
+        const contact=Motion.contactTimes[target]*Motion.duration,touched=start>=contact,reactionDuration=.9*(1-clamp((start-contact)/1.45));if(touched)this.reactions[target]=Math.max(0,(start-contact)/1.45*.8);
+        this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),reactionDuration,touched,from:this.previous?.hero?.body};this.mark=touched?'exclamation':'curiosity';this.markAtAmbient=this.ambient;this.wait=0;this.epoch++;return true;
       }
       if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
       if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
@@ -36,19 +37,22 @@
       this.automatic=!!options.automatic;
       this.shiver=Math.max(0,this.shiver-dt);this.poke=Math.max(0,this.poke-dt);
       if(this.automatic&&Number.isFinite(options.sceneTime)){
-        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;return this.snapshot();
+        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;this.reactions={};return this.snapshot();
       }
       if(this.stage!=='done'){
         if(options.advance===false)return this.snapshot();
+        for(const kind of Object.keys(this.reactions))this.reactions[kind]+=(dt);
         if(this.stage==='return'){
           this.sceneTime=Math.min(familyEnd,this.sceneTime+dt*(familyEnd-contactEnd)/2.15);
           if(this.sceneTime>=familyEnd-1e-8){this.sceneTime=familyEnd;this.stage='done';}
         }else if(this.action){
           const action=this.action;action.elapsed+=dt;
           const before=this.sceneTime,contact=Motion.contactTimes[action.target]*Motion.duration;
-          this.sceneTime=action.start+(action.end-action.start)*clamp((action.elapsed-.24)/action.duration);
-          if(!action.touched&&this.sceneTime>=contact){if(before<contact)this.sceneTime=contact;action.touched=true;this.mark='exclamation';this.markAtAmbient=this.ambient;}
-          if(action.elapsed>=action.duration+.24-1e-8){this.sceneTime=action.end;this.stage=action.target==='father'?'mother':'return';this.action=null;this.wait=0;}
+          const touchAt=action.duration*clamp((contact-action.start)/(action.end-action.start)),age=Math.max(0,action.elapsed-.24);
+          const travelAge=age<=touchAt?age:age<touchAt+action.reactionDuration?touchAt:age-action.reactionDuration;
+          this.sceneTime=action.start+(action.end-action.start)*clamp(travelAge/action.duration);
+          if(!action.touched&&this.sceneTime>=contact-1e-8){if(before<contact)this.sceneTime=contact;action.touched=true;this.reactions[action.target]=0;this.mark='exclamation';this.markAtAmbient=this.ambient;}
+          if(action.elapsed>=action.duration+action.reactionDuration+.24-1e-8){this.sceneTime=action.end;this.stage=action.target==='father'?'mother':'return';this.action=null;this.wait=0;}
         }
       }else{
         if(Number.isFinite(options.sceneTime))this.sceneTime=Math.max(familyEnd,options.sceneTime);
@@ -75,6 +79,7 @@
       const frame={...input,actors:input.actors.map(entry=>({...entry,body:{...entry.body}}))},hero=frame.actors.find(entry=>entry.id==='hero');
       if(!hero)return frame;
       if(this.stage!=='done'&&!this.automatic){
+        for(const kind of Object.keys(this.reactions)){const parent=frame.actors.find(entry=>entry.id===kind);if(parent)parent.body=Motion.parentReaction(kind,this.reactions[kind],.8);}
         if(this.action&&this.action.elapsed<.24&&this.action.from){
           const destination=District.frame(this.action.start).hero.body;
           hero.body=blend(this.action.from,destination,ease(this.action.elapsed/.24));

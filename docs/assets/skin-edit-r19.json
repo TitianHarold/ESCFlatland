@@ -1,0 +1,56 @@
+{
+  "version": "r19",
+  "request": "小女孩肤色再白一点，减少黄调，包括双手。只调整肤色，其他角色素材内容保留。",
+  "edits": [
+    {
+      "source": "docs/storyboard-r2/frames/alternative/ALT-C-metamorphosis.png",
+      "edited": "docs/storyboard-r2/frames/alternative/ALT-C-metamorphosis-fair-r19.png",
+      "prompt": "Use case: identity-preserve. This is a precise local COLOR EDIT of the supplied illustration, not a redraw. Primary request: change ONLY the exposed skin from its current yellow/orange-tan cast to noticeably fairer light skin with a neutral, very slightly rosy undertone. Lift skin lightness moderately and reduce yellow/orange saturation while preserving the existing shading, blush, fine pencil grain and translucent hand-painted appearance. Keep it natural and healthy, not chalk white, glowing, gray or overexposed. Absolutely preserve every contour, anatomy, finger length and slenderness, pose, facial identity, age, hair, garment, brush, paint stains and their exact irregular placement, line work, paper texture, composition and crop. Do not recolor the blue/cyan/coral/lavender paint marks on the skin. Do not add anything, do not simplify or redesign. Preserve the source image's exact width, height, aspect ratio and framing. Subject: the metamorphosing girl reaching toward a golden seed, with paint ribbons trailing behind. Preserve the exact existing off-white illustrated background and all environmental brush marks.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparentBackground": false,
+      "generatedOutputPath": "/Users/harold/.codex/generated_images/01a15ddb-7f5e-7e21-b21e-0e605125ed48/exec-f056c729-31a1-4a24-88cb-c2b2ed0fc1f0.png",
+      "workspaceOutputPath": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland/docs/storyboard-r2/frames/alternative/ALT-C-metamorphosis-fair-r19.png",
+      "verification": "Visually inspected against source: same composition, pose, silhouette, fingers, blue clothes, irregular paint distribution and background; only skin lighter and less yellow."
+    },
+    {
+      "source": "docs/storyboard-r2/frames/alternative/ALT-D-girl-running.png",
+      "edited": "docs/storyboard-r2/frames/alternative/ALT-D-girl-running-fair-r19.png",
+      "prompt": "Use case: identity-preserve. This is a precise local COLOR EDIT of the supplied illustration, not a redraw. Primary request: change ONLY the exposed skin from its current yellow/orange-tan cast to noticeably fairer light skin with a neutral, very slightly rosy undertone. Lift skin lightness moderately and reduce yellow/orange saturation while preserving the existing shading, blush, fine pencil grain and translucent hand-painted appearance. Keep it natural and healthy, not chalk white, glowing, gray or overexposed. Absolutely preserve every contour, anatomy, finger length and slenderness, pose, facial identity, age, hair, garment, brush, paint stains and their exact irregular placement, line work, paper texture, composition and crop. Do not recolor the blue/cyan/coral/lavender paint marks on the skin. Do not add anything, do not simplify or redesign. Preserve the source image's exact width, height, aspect ratio and framing. Subject: the running girl reaching toward a golden seed. Preserve the exact existing off-white illustrated background and all environmental brush marks.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparentBackground": false,
+      "generatedOutputPath": "/Users/harold/.codex/generated_images/01a15ddb-7f5e-7e21-b21e-0e605125ed48/exec-0909e206-3149-40a6-8bcf-bb34ddd3bd55.png",
+      "workspaceOutputPath": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland/docs/storyboard-r2/frames/alternative/ALT-D-girl-running-fair-r19.png",
+      "verification": "Visually inspected against source: same composition, pose, silhouette, fingers, blue clothes, irregular paint distribution and background; only skin lighter and less yellow."
+    },
+    {
+      "source": "docs/storyboard-r2/frames/alternative/ALT-E-girl-breathing.png",
+      "edited": "docs/storyboard-r2/frames/alternative/ALT-E-girl-breathing-fair-r19.png",
+      "prompt": "Use case: identity-preserve. This is a precise local COLOR EDIT of the supplied illustration, not a redraw. Primary request: change ONLY the exposed skin from its current yellow/orange-tan cast to noticeably fairer light skin with a neutral, very slightly rosy undertone. Lift skin lightness moderately and reduce yellow/orange saturation while preserving the existing shading, blush, fine pencil grain and translucent hand-painted appearance. Keep it natural and healthy, not chalk white, glowing, gray or overexposed. Absolutely preserve every contour, anatomy, finger length and slenderness, pose, facial identity, age, hair, garment, brush, paint stains and their exact irregular placement, line work, paper texture, composition and crop. Do not recolor the blue/cyan/coral/lavender paint marks on the skin. Do not add anything, do not simplify or redesign. Preserve the source image's exact width, height, aspect ratio and framing. Subject: the girl bending forward and breathing after running. Preserve the exact existing off-white illustrated background and all environmental brush marks.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparentBackground": false,
+      "generatedOutputPath": "/Users/harold/.codex/generated_images/01a15ddb-7f5e-7e21-b21e-0e605125ed48/exec-fa933413-3b16-4fdf-ae8d-04ebf4085e0f.png",
+      "workspaceOutputPath": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland/docs/storyboard-r2/frames/alternative/ALT-E-girl-breathing-fair-r19.png",
+      "verification": "Visually inspected against source: same composition, pose, silhouette, fingers, blue clothes, irregular paint distribution and background; only skin lighter and less yellow."
+    },
+    {
+      "source": "docs/assets/pov-hands-open.png",
+      "edited": "docs/assets/pov-hands-open-fair-r19.png",
+      "prompt": "Use case: identity-preserve. This is a precise local COLOR EDIT of the supplied illustration, not a redraw. Primary request: change ONLY the exposed skin from its current yellow/orange-tan cast to noticeably fairer light skin with a neutral, very slightly rosy undertone. Lift skin lightness moderately and reduce yellow/orange saturation while preserving the existing shading, blush, fine pencil grain and translucent hand-painted appearance. Keep it natural and healthy, not chalk white, glowing, gray or overexposed. Absolutely preserve every contour, anatomy, finger length and slenderness, pose, facial identity, age, hair, garment, brush, paint stains and their exact irregular placement, line work, paper texture, composition and crop. Do not recolor the blue/cyan/coral/lavender paint marks on the skin. Do not add anything, do not simplify or redesign. Preserve the source image's exact width, height, aspect ratio and framing. Subject: the slender teenage girl's two open palms and forearms seen in first person. Output must preserve the original genuinely transparent alpha background and cutout silhouette, including all finger gaps; no background of any color.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparentBackground": true,
+      "generatedOutputPath": "/Users/harold/.codex/generated_images/01a15ddb-7f5e-7e21-b21e-0e605125ed48/exec-8c24341d-94cf-4e90-8e49-42d4f76a7288.png",
+      "workspaceOutputPath": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland/docs/assets/pov-hands-open-fair-r19.png",
+      "verification": "Visually inspected against source: same composition, pose, silhouette, fingers, blue clothes, irregular paint distribution and background; only skin lighter and less yellow."
+    },
+    {
+      "source": "docs/assets/pov-hands-flexed.png",
+      "edited": "docs/assets/pov-hands-flexed-fair-r19.png",
+      "prompt": "Use case: identity-preserve. This is a precise local COLOR EDIT of the supplied illustration, not a redraw. Primary request: change ONLY the exposed skin from its current yellow/orange-tan cast to noticeably fairer light skin with a neutral, very slightly rosy undertone. Lift skin lightness moderately and reduce yellow/orange saturation while preserving the existing shading, blush, fine pencil grain and translucent hand-painted appearance. Keep it natural and healthy, not chalk white, glowing, gray or overexposed. Absolutely preserve every contour, anatomy, finger length and slenderness, pose, facial identity, age, hair, garment, brush, paint stains and their exact irregular placement, line work, paper texture, composition and crop. Do not recolor the blue/cyan/coral/lavender paint marks on the skin. Do not add anything, do not simplify or redesign. Preserve the source image's exact width, height, aspect ratio and framing. Subject: the slender teenage girl's two flexing hands and forearms seen in first person. Output must preserve the original genuinely transparent alpha background and cutout silhouette, including all finger gaps; no background of any color.",
+      "tool": "image_gen.imagegen (built-in)",
+      "transparentBackground": true,
+      "generatedOutputPath": "/Users/harold/.codex/generated_images/01a15ddb-7f5e-7e21-b21e-0e605125ed48/exec-cad7512a-4e12-4856-91dc-8ab4c56b1be5.png",
+      "workspaceOutputPath": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland/docs/assets/pov-hands-flexed-fair-r19.png",
+      "verification": "Visually inspected against source: same composition, pose, silhouette, fingers, blue clothes, irregular paint distribution and background; only skin lighter and less yellow."
+    }
+  ]
+}

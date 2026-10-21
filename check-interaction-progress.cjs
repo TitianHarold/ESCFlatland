@@ -11,14 +11,24 @@ assert.equal(run(work,30).raw,98,'idle work must not advance the story');
 work.click();
 assert.equal(work.snapshot().raw,98,'click sets a destination without teleporting');
 let ws=run(work,2);
-assert.equal(ws.raw,99.5);
-assert.equal(run(work,30).raw,99.5,'completed click stays put indefinitely');
+assert.equal(ws.raw,98.75);
+assert.equal(run(work,30).raw,98.75,'completed click stays put indefinitely');
 for(let i=0;i<6;i++)work.click();
 assert.equal(run(work,2).complete,false,'seven clicks cannot complete eight steps');
 work.click();
-assert.equal(run(work,2).raw,110);
+assert.equal(run(work,2).raw,104);
+assert.equal(work.snapshot().phase,'wide');
+assert.equal(run(work,30).darkness,0,'the furthest view waits for the next click');
+work.click();
+assert.equal(work.snapshot().darkness,0,'starting the fade cannot jump its opacity');
+assert(run(work,1).darkness>0,'one final click starts a continuous fade');
+assert(run(work,7.1).complete,'the fade finishes without more clicks');
+const fast=new WorkProgress({raw:104});fast.click();
+for(let i=0;i<12;i++){const before=fast.snapshot().darkness;fast.click();assert.equal(fast.snapshot().darkness,before);run(fast,.12);}
+assert(fast.snapshot().darkness>.5,'frequent clicks smoothly accelerate the continuous fade');
 work.seek(104);
-assert.equal(work.snapshot().target,.5);
+assert.equal(work.snapshot().target,1);
+assert.equal(work.snapshot().phase,'wide');
 const frozen=work.snapshot();
 work.update(.1,{advance:false});assert.deepEqual(work.snapshot(),frozen);
 

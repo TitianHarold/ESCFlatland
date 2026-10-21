@@ -12,7 +12,7 @@
   factory.setPlaybackClock?.(timing.playbackAt);
   const palette=window.FlatlandPalette;
   // Paths are supplied with the final transparent hand assets; white remains until they load.
-  dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open.png',flexedHands:'assets/pov-hands-flexed.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
+  dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open-fair-r19.png',flexedHands:'assets/pov-hands-flexed-fair-r19.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const mode=params.get('mode')==='auto'?'auto':'interactive';
   const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
@@ -105,12 +105,13 @@
     const speed=(original?.body.speed||base.chase?.speed||0)*rate,shape=motion.speedShape(speed);
     const body=original&&sprinting?{...original.body,speed,axialStretch:shape.axialStretch,strain:shape.strain,effort:boost}:original?.body;
     const entry=original?{...original,body}:undefined;
-    const sample=sprinting?{...base,hero:body,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost,...(interactive?{travel:drive.travel+state.chaseOrigin-119,baseTravel:time-119,holdGate:true,charge:drive.charge}:{})},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
+    const light=sprinting?dimension.seedLight(time,entry,base.light):base.light;
+    const sample=sprinting?{...base,hero:body,light,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost,...(interactive?{travel:drive.travel+state.chaseOrigin-119,baseTravel:time-119,holdGate:true,charge:drive.charge}:{})},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
     const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){
       const textureBody=time>=132?dimension.journeyPose(time,sample).raw:entry.body;
-      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,textureWindow:true,blacken:version.id==='routine'?entry.blacken:0,body:{...textureBody,x:0,y:0,angle:0}},ctx);
+      const a=256/textureExtent;ctx.setTransform(a,0,0,a,128,128);drawActor({...entry,core:0,routine:entry.routine?{...entry.routine,seed:false}:undefined,textureWindow:true,blacken:version.id==='routine'?entry.blacken:0,body:{...textureBody,x:0,y:0,angle:0}},ctx);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.clearRect(0,0,256,256);
       heroMaterialContext.setTransform(a,0,0,a,128-800*a,128-550*a);window.FlatlandPossibility.draw(heroMaterialContext,state.ambient);
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.globalAlpha=darkness;heroMaterialContext.fillStyle=palette.night;heroMaterialContext.fillRect(0,0,256,256);heroMaterialContext.globalAlpha=1;
@@ -146,7 +147,7 @@
     if(b>.35){
       const q=clamp((b-.35)/.65),flight=q*q*(3-2*q),scale=Math.max(state.w/1280,state.h/760);
       const x=state.w/2+(point[0]-state.w/2)*flight,y=state.h/2+(point[1]-state.h/2)*flight,k=scale+(point[3]-scale)*flight;
-      screenOverlay();top.save();top.globalAlpha=clamp((b-.35)/.15);dimension.paintArrivalLight(top,[x,y,0,k],119,10,state.w,state.h);top.restore();
+      screenOverlay();top.save();top.globalAlpha=clamp((b-.35)/.15);dimension.paintArrivalLight(top,[x,y,0,k],119,6,state.w,state.h,true);top.restore();
     }
   }
   function draw(time,v){
@@ -171,7 +172,7 @@
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(version.id==='routine'){
       factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
-      const dark=workPhase(time)&&player.mode==='interactive'?clamp((workProgress.snapshot().progress-.18)/.82):plant.outsideDarkness;
+      const dark=workPhase(time)&&player.mode==='interactive'?workProgress.snapshot().darkness:plant.outsideDarkness;
       if(dark){screenOverlay();top.save();top.globalAlpha=dark;top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
@@ -197,7 +198,7 @@
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'孩子向输送的反方向用力，尝试向后退；输送带与机器继续运行。'};
-    if(workPhase(time))return{...base,action:a.work.rate>1.1?'点击让所有工位的循环加快，镜头进一步拉远，画面加深；等待时继续当前的机械循环。':'工位持续重复操作；点击让工作加快、镜头拉远，逐步隐入黑暗。'};
+    if(workPhase(time)){const progress=workProgress.snapshot();return{...base,action:progress.phase==='fade'?'画面持续、平滑地变黑；更密集的点击会加快变黑，工位继续循环。':progress.phase==='wide'?'镜头已到最远，密集工位保持循环；下一次点击开始连续变黑。':'点击让所有工位的循环加快，镜头进一步拉远；等待时继续当前的机械循环。'};}
     if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸，圆环逐渐蓄满。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
     return base;
   }
@@ -206,9 +207,9 @@
     if(indicator){indicator.dataset.visible=String(player.mode==='interactive'&&chasePhase(time)&&(player.pressed||charge.charge>0));indicator.style.setProperty('--hold-progress',String(charge.charge));indicator.style.setProperty('--hold-color',palette.gold);}
     const shot=inInner(time)?cameraTrack.shots.find(s=>s.id==='inner'):cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot),displayTime=innerDisplayTime();
     stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
-    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
+    if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&palette='+palette.getConfig().preset+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
     const snapshot=inInner(time)?innerState():null;
-    const notes=snapshot?{summary:'黑暗中，亮点拖着细短光迹游动。点击捕捉后，局部留下流动色带，逐渐积累，最后破开迷雾。',action:snapshot.phase==='break'||snapshot.done?'已发现的色域连成光缝，暗层向两侧分开；同一颗光种子飞向前方。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；破雾后窗口向光点收拢，连续接入右上方追逐。'}:actionNotes(time,version.notes.at(time));
+    const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；照亮后缩回身体，光种子再从体内飞出，引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(displayTime*100);$('progress').style.setProperty('--p',`${displayTime/duration*100}%`);

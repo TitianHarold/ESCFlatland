@@ -14,16 +14,20 @@ assert(!actor(frame,'hero').emotion,'idle observation must not invent a curiosit
 assert(Math.hypot(frame.hero.x-first.x,frame.hero.y-first.y)>10,'the child keeps exploring while the event waits');
 assert.equal(controller.activate('mother'),false,'clicking the second target must not skip the first encounter');
 for(const target of ['father','mother']){
-  assert(controller.activate(target));assert.equal(controller.mark,'curiosity');let minimum=Infinity,touched=false;
+  assert(controller.activate(target));assert.equal(controller.mark,'curiosity');let minimum=Infinity,touched=false,touchAt=null,reactionFrames=0,peakDent=0,firstRetreat=null,settledRetreat=null;const baseline=actor(District.frame(0),target).body;
   for(let i=0;i<360;i++){
     const state=controller.tick(1/60);frame=controller.applyFrame(District.frame(state.sceneTime));noOverlap(frame);
     assert.equal(controller.applyFrame(District.frame(state.sceneTime)),frame,'hit testing must not advance the solver a second time');
     const child=actor(frame,'hero'),adult=actor(frame,target);minimum=Math.min(minimum,C.distance(child.actor.outline(child.body),adult.actor.outline(adult.body)));
-    if(minimum<1e-4)touched=true;
+    if(minimum<1e-4&&!touched){touched=true;touchAt=controller.ambient;}
+    if(touched){const age=controller.ambient-touchAt,retreat=Math.hypot(adult.body.x-baseline.x,adult.body.y-baseline.y);peakDent=Math.max(peakDent,...(adult.body.edgeBends||[0]));if(age>.02&&age<.15)firstRetreat=retreat;if(age>.6&&age<.8)settledRetreat=retreat;if(age<.8)reactionFrames++;}
     if(touched)assert.equal(child.emotion,'exclamation','contact mark must persist until the next click');
     if(state.familyWaiting||state.familyDone)break;
   }
   assert(minimum<1e-4,target+' must be physically touched before recoiling');
+  assert(reactionFrames>=46,target+' reaction gets an actual readable .8 seconds');
+  assert(peakDent>.9,target+' contact edge visibly bends inward before retreat');
+  assert(firstRetreat<1&&settledRetreat>35,target+' must indent first and retreat continuously instead of jumping away');
 }
 assert(controller.snapshot().familyDone);assert.equal(controller.sceneTime,familyEnd);
 assert(Math.hypot(frame.hero.x-District.timing.homeCenter.x,frame.hero.y-District.timing.homeCenter.y)<.01,'the child must return to the actual room center before the inspector enters');

@@ -3,7 +3,7 @@
   else root.FlatlandPalette=factory(root);
 })(typeof globalThis!=='undefined'?globalThis:this,function(root){
   'use strict';
-  // Original pigments remain the default; all presets expose the same semantic getters.
+  // All presets expose the same semantic getters; the viewing page opens in F2.
   const original={
     paper:'#f5f1e6',white:'#ffffff',black:'#000000',blue:'#0754ee',ink:'#121d2f',navy:'#102b5a',deep:'#112743',
     night:'#241936',teal:'#519fb3',lavender:'#ae96cf',coral:'#ee9884',gold:'#edbf70',
@@ -50,7 +50,12 @@
     for(const {key} of editableKeys)if(/^#[0-9a-f]{6}$/i.test(value?.colors?.[key]||''))colors[key]=value.colors[key].toLowerCase();
     return{version:1,preset,colors};
   }
-  function load(){try{return normalize(JSON.parse(root.localStorage.getItem(storageKey)));}catch{return normalize(null);}}
+  function load(){
+    const requested=typeof URLSearchParams!=='undefined'?new URLSearchParams(root.location?.search||'').get('palette'):null;
+    if(presets.some(item=>item.id===requested))return normalize({preset:requested});
+    if(root.document?.body?.classList?.contains('viewer'))return normalize({preset:'F2'});
+    try{return normalize(JSON.parse(root.localStorage.getItem(storageKey)));}catch{return normalize(null);}
+  }
   function mix(a,b,q){return'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-q)+parseInt(b.slice(i,i+2),16)*q).toString(16).padStart(2,'0')).join('');}
   function resolve(value){
     if(value.preset==='original'&&!Object.keys(value.colors).length)return copy(original);
