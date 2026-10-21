@@ -1,53 +1,53 @@
 {
   "id": "flatland-r2-detailed-code-frames",
-  "generatedAt": "2026-10-21T14:04:34.220Z",
+  "generatedAt": "2026-10-21T15:01:42.291Z",
   "sourceRepository": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland",
-  "sourceCommit": "fa2b9bdbfe0654402d601da90f08cd2c2e43cba1",
+  "sourceCommit": "9f2e5fea28eb366baddce6d43d05d542b448c726",
   "sourceCommitRole": "Base revision before the current working-tree edits",
-  "sourceState": "R23 working-tree render before commit",
-  "sourceWorkingTree": "M README.md\n M check-app-interaction.cjs\n M check-escort.cjs\n M check-hero-camera.cjs\n M check-inner-discovery.cjs\n M check-player.cjs\n M check-storyboard.cjs\n M docs/action-input.js\n M docs/app.js\n M docs/camera.js\n M docs/city-map.js\n M docs/dimension.js\n M docs/district.js\n M docs/factory-routine.js\n M docs/factory.js\n M docs/index.html\n M docs/inner-discovery.js\n M docs/interaction-progress.js\n M docs/resistance-indicator.css\n M docs/story-notes.js\n M docs/story-versions.js\n M docs/workbench.html\n?? check-city-map.cjs\n?? check-ending-progress.cjs\n?? check-ending-render.cjs\n?? check-peel-input.cjs\n?? check-r23-transport-integration.cjs\n?? check-transport-clock.cjs\n?? docs/assets/pov-hands-brush-r23.png\n?? docs/ending-progress.js",
+  "sourceState": "R24 working-tree render before commit",
+  "sourceWorkingTree": "M README.md\n M check-app-interaction.cjs\n M check-encounter.cjs\n M check-ending-progress.cjs\n M check-ending-render.cjs\n M check-escort.cjs\n M check-inner-discovery.cjs\n M check-interaction-progress.cjs\n M check-player.cjs\n M check-r23-transport-integration.cjs\n M check-speed-response.cjs\n M check-storyboard.cjs\n M docs/app.js\n M docs/camera.js\n M docs/city-map.js\n M docs/dimension.js\n M docs/district.js\n M docs/encounter-interaction.js\n M docs/ending-progress.js\n M docs/factory-routine.js\n M docs/factory.js\n M docs/family-navigation.js\n M docs/index.html\n M docs/inner-discovery.js\n M docs/interaction-progress.js\n M docs/motion.js\n M docs/story-notes.js\n M docs/story-versions.js\n M docs/workbench.html\n?? check-correction-resistance.cjs\n?? check-gate-escort.cjs\n?? docs/assets/pov-hands-tools-r24.png\n?? docs/assets/tools-r24.json",
   "sourceModuleSHA256": {
     "palette.js": "ac22e69bf491b799f8a8ad2cbcaca50a409b5b7138882cccad073dd4bafb920a",
     "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
-    "motion.js": "56361a36845d13febfc2d889d2f35fff1b2ccab733c349678b0e72b6e99b0f5d",
+    "motion.js": "5bd8ae525d5fd042e01083de22702bda47bf5d3a0d5dea5aaf76dc71d2c29c89",
     "possibility.js": "3093fd0bcdae939a54c14e5ad1c5b4526be93eda871faea775d0a49cc233f454",
     "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
-    "camera.js": "c9fcabb4552bf3f42511bb3805e69db48647442a298237afbd36d4717ac28248",
+    "camera.js": "425464a4fbcf9186a10d61c3dc367da957f9ce4a3cecdb0ffc2df24c2222d960",
     "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
-    "city-map.js": "565f6472918591deba0298e3241b1f3a7ce92f4d1ef130fefa2f70a76bfeceff",
+    "city-map.js": "5418f8e6cb4c50682610cffbca3ee24abeae39f51820ff63950e1365001f8980",
     "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
-    "district.js": "73df2c67d50a8653bfdaac2201c0bc3bacf2e3cab82c873cac0d300fc2912cd2",
+    "district.js": "3e4c0e286a48613db6d95dab43379986e23bb23256be0fc8ace582c33e9f6c41",
     "correction-rules.js": "7fcc0a90513d5d66f5c651f879e92730db206ac190dca0e0210a918c77f36968",
-    "factory.js": "a2c145189128117293ee2144d2d4a72a2a3f2743440c7934ca51817a4cd5342c",
+    "factory.js": "ce0df9ebd7d77cef4d510bb76e2197ddc2b3eb47011058745bd7fdd034c6ce9b",
     "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
-    "ending-progress.js": "fc49c9b3c67b213cf4254f51282a6044de60e0f986e8644a6e164c9823ffb456",
-    "dimension.js": "e4fcb08d93d59cf8091605d65b89ac7b90849a5c7adfdf08f95cc79a2ebf73a6",
-    "inner-discovery.js": "dcd02652bcb386913600062eac60c6bd93d8b83c08bb9b324e2b847f761221b0",
+    "ending-progress.js": "3eb85f5610f563a8808b34f8b807b5dd711e1747ca46b193d8718fe49e2e3f53",
+    "dimension.js": "68c84c1b7cf06748d30eceb7f876bf74f14f0eb0df68850f61d7e46fdcb43c29",
+    "inner-discovery.js": "17d62c3f6df903a6e803af4c0593679b9b2a9c647850d015ecd2c46902d214e4",
     "inner-world.js": "411f54a7f3c0a7d5460254311c7bf575d157f00e60743a3d8e869de8ebd4661b",
     "story-timing.js": "59338129f445351bf5bb1ca9e2e94dcbfeb35a02549237f8c5fec72198ca4110",
-    "story-notes.js": "b92ab529fc10d56b2b5781d7f1ba017dbb55ce1772ba10c8b5c4c58589634ea5",
+    "story-notes.js": "3aeb48c4fdb9e24dff8c53dd1c5037131e4026648816e4deef72882a065aaf12",
     "office-world.js": "269945825bac9c13227e110c45600ecaedee80a646c01dd8715ef969afe4409e",
-    "factory-routine.js": "71393a0cfad7689b63b63fcdcabdfbf1c0384528e84da4cad66345dae4ab4d57",
-    "story-versions.js": "6776257d655b6da3c3c823021a88a60adfaeed79000f4426fa6d186a5b878ad3",
-    "family-navigation.js": "365b43398af10a9faedea42e41643e42c1e7f9ac712c208248bd74471c20a36b",
-    "encounter-interaction.js": "c4b06532ef38405b988c5eea9c26546f503d34c80799c2ae68fbe64855f6d916",
+    "factory-routine.js": "9110ad36ffd847b37c24c5875299695c1e4c37fe2bd51950961df6d091697931",
+    "story-versions.js": "1725b15578282b49e6d090123445df77cc3159cf9a61eba795ce37b994aa2559",
+    "family-navigation.js": "016bc9f1a0362d74aec05bc29fa9f018367d06a5c667e5ad6ef79913e40e62c8",
+    "encounter-interaction.js": "1fa2637ec3d2ae36729b3fe26cc99d49934ae094ff3dca9e48402b8231fc1bd1",
     "action-input.js": "1c71bbf971eddeb29c5e85468d6a109940339a7590f1772a2bd363843672eff1",
     "story-player.js": "69026a8bf0abf9e0559d26a7c3a4aa4ab23ca0e8823ce405adee464dea6b2adf",
-    "interaction-progress.js": "046fabd9ba54825654d3059cf09d0b45b49dcd0d3ff37e8b5ed5c44a3b5124dd",
-    "app.js": "c3e38417ef0ce57095d229b88226d60ac7a41348895cada303f51ff86083fef1"
+    "interaction-progress.js": "31edba995c583a9c4889fb04a501bad5f54841039e13b96c4e30f0c3c96bd158",
+    "app.js": "e9b069bc7ab03a519e58594398a09b052eba9ee3e35bcae05539528d9fad11be"
   },
   "shotsFile": "../../shots-detailed.json",
-  "shotsSHA256": "49319bda13122906a59983eb22429c8f14a83a264ecbafaf7e92622bb8529ff1",
+  "shotsSHA256": "b56be1b2606161fdcb788609d3746a411edd005b1df66501ef973fdc03435e90",
   "renderer": "@napi-rs/canvas; actual index.html script order and app.js draw functions in fresh VMs; no browser automation",
   "evidenceBoundary": "Offline Node Canvas render of current repository geometry and actual app.js draw functions. This is not a browser screenshot and is not newly generated hand-drawn artwork. Minimal DOM and Canvas rasterization may differ from browser output.",
   "isNewHandDrawnArtwork": false,
   "isBrowserScreenshot": false,
   "productionCompositionDifference": "Code frames preserve the implemented upper house opening, planar geometry and continuous scene clock. Hand-drawn source images remain selectable visual references.",
   "storyDuration": 138,
-  "playbackDuration": 116.7,
+  "playbackDuration": 118.7,
   "playbackDurations": {
-    "rhythm": 105.65,
-    "routine": 116.7
+    "rhythm": 107.65,
+    "routine": 118.7
   },
   "status": "complete",
   "frames": [
@@ -78,7 +78,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -99,8 +100,8 @@
       "ambientSeconds": 1.760294117647059,
       "width": 1280,
       "height": 760,
-      "bytes": 83504,
-      "sha256": "25b94f83ef9d5be8b3ae90821be867662f29784a2ea20bd516e389345022e362",
+      "bytes": 82280,
+      "sha256": "d3f0df0d2a810b6276295a8781dc586bcfa4d23c5a3b1c173c5e8dd8ac274430",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -108,7 +109,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -129,8 +131,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 1280,
       "height": 760,
-      "bytes": 83450,
-      "sha256": "75bfe45900be84dd4aca752b700185b818368a5723463320b682e6e513f46b7e",
+      "bytes": 82158,
+      "sha256": "8936a7ae5935081ef83b430500235ecd0913199c3ee673556713793c7e861ef3",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -138,7 +140,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -168,7 +171,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -198,7 +202,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -219,8 +224,8 @@
       "ambientSeconds": 5.873170731707317,
       "width": 1280,
       "height": 760,
-      "bytes": 86073,
-      "sha256": "10d5aed03fcc4536efa587611a23a6e024d54b09a6bd8d026016663c010d4502",
+      "bytes": 84682,
+      "sha256": "af4b0c8e7f1e33b48fdca3d58588f5ddefa2294b4555d47ba11fb33cad2833a5",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -228,7 +233,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -249,8 +255,8 @@
       "ambientSeconds": 5.878048780487805,
       "width": 1280,
       "height": 760,
-      "bytes": 86028,
-      "sha256": "1a0007aa82c13855efd65380a2ebd97a3136ba662ef17051a1dfd404a0558398",
+      "bytes": 84731,
+      "sha256": "3100cfb2a538c91d661c61880b92ef01fa4893002b53f51fdb8c1c59cf0f6b1d",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -258,7 +264,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -279,8 +286,8 @@
       "ambientSeconds": 6.360975609756098,
       "width": 1280,
       "height": 760,
-      "bytes": 87845,
-      "sha256": "31be8b48e3bf8e6b1c6dc6cb6f4cc4cad847a14b8ec5f3cfb4ee557fa2c47af5",
+      "bytes": 87705,
+      "sha256": "4bd6cb5e9c711676f73436d5f0dfc89cce3053a2bc5be5d50eae80632f5f6d23",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -288,7 +295,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -309,8 +317,8 @@
       "ambientSeconds": 6.365853658536585,
       "width": 1280,
       "height": 760,
-      "bytes": 88130,
-      "sha256": "2fa25f1229780647c81daeadf70c2165baf9c43c67d7cfd68e9754d0781da230",
+      "bytes": 87933,
+      "sha256": "f742bb8a681854f438bcc116fb1052865c103da50f819f77fd098d9448de22fa",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -318,7 +326,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -348,7 +357,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -381,7 +391,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -414,7 +425,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -447,7 +459,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -480,7 +493,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -513,7 +527,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -546,7 +561,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -567,8 +583,8 @@
       "ambientSeconds": 15.706666666666667,
       "width": 1280,
       "height": 760,
-      "bytes": 90860,
-      "sha256": "dd90f6e4288f79e3e77b90eedfa48cf9a20e67b9bc605b3a13867ce1ecdff17c",
+      "bytes": 90737,
+      "sha256": "4d36a8543711d207edb5f51660ab558545e72df08b090440202e55f4cb3e3ff3",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -579,7 +595,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -600,8 +617,8 @@
       "ambientSeconds": 17.345000000000002,
       "width": 1280,
       "height": 760,
-      "bytes": 116975,
-      "sha256": "6d4c06be2fcbe4bef357624adf09de0185d5c1744241cdbe1782fa722f04494d",
+      "bytes": 117196,
+      "sha256": "aa6a6f04c84e2cfd311aedd05106b1c916a4185207837500ed8a162f079b9852",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -612,7 +629,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -633,8 +651,8 @@
       "ambientSeconds": 17.35,
       "width": 1280,
       "height": 760,
-      "bytes": 119399,
-      "sha256": "2718365ed919a947cdca59a34709ecf5d2c2580fe1fb44c87f2cf7f62e65f047",
+      "bytes": 119587,
+      "sha256": "218559e4805ec014f58e7a507dd6989bb921c29fb0b61d3045c28ea802b93f4a",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -645,7 +663,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -666,8 +685,8 @@
       "ambientSeconds": 19.995,
       "width": 1280,
       "height": 760,
-      "bytes": 228070,
-      "sha256": "1d57bc19572aa00a42c9e67c05e4308a2e6955310e40bafe6ca2212f24ac63db",
+      "bytes": 227612,
+      "sha256": "5322fffc215f7996859cdd0e774182dd91be7d6ae8eaccf8622d2a4642bce5b0",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -678,7 +697,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -699,8 +719,8 @@
       "ambientSeconds": 20,
       "width": 1280,
       "height": 760,
-      "bytes": 228748,
-      "sha256": "ceaadfc89e92abf045df617ea9d349823a0a0d6978addacb79c03b5a4abcc84e",
+      "bytes": 228075,
+      "sha256": "c2ed39301e79633b884a80dd12ed90e3549e0f2ad3a8b9c017a5be171b84783e",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -711,7 +731,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -732,8 +753,8 @@
       "ambientSeconds": 29.19425,
       "width": 1280,
       "height": 760,
-      "bytes": 201905,
-      "sha256": "c47138ea2a600f879ba34ec9d76dfa33b98020fea5aaf215e8fc402bda855b63",
+      "bytes": 201297,
+      "sha256": "51768113c4e2428d7a795fa689cca719db8f0941612e42a47869512e089684d4",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -744,7 +765,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -765,8 +787,8 @@
       "ambientSeconds": 29.2,
       "width": 1280,
       "height": 760,
-      "bytes": 202503,
-      "sha256": "01ca6245af0f821767f6d1000651ec5a6504a6c45ecfeb1110c044929868797a",
+      "bytes": 201704,
+      "sha256": "a7b2c14c825ba83fc8f78457892a241224e0f7971c985794ca009262d487db28",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -777,7 +799,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -798,8 +821,8 @@
       "ambientSeconds": 30.695,
       "width": 1280,
       "height": 760,
-      "bytes": 54219,
-      "sha256": "1a530365401a0f7a7f304a43eab3a97e354d04b7c3f332bfb494cc635bff9b47",
+      "bytes": 54647,
+      "sha256": "1a4dc663e4b3090374a64a9341a144b137875c784e97827a0e8da8db821738c3",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -810,7 +833,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -843,7 +867,8 @@
         "yaw": 0,
         "followBody": false,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -864,8 +889,8 @@
       "ambientSeconds": 32.19500000000001,
       "width": 1280,
       "height": 760,
-      "bytes": 566192,
-      "sha256": "d1f514127fb544f00c5568a7b0a92444f777899838f9f3fdc71781e7e89aaf64",
+      "bytes": 568509,
+      "sha256": "dade8b254162594d2d81f4e51d92ceb71245354151f0b47d475ff850bfcf2cc7",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -876,7 +901,8 @@
         "yaw": 0,
         "followBody": false,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -897,8 +923,8 @@
       "ambientSeconds": 32.2,
       "width": 1280,
       "height": 760,
-      "bytes": 559944,
-      "sha256": "ef5ab7295f6d50d66bf2fe010a5bd4e65c8d4a11da9e0dd8ea76ab978bb3b53e",
+      "bytes": 562432,
+      "sha256": "19cd5af11f9ad6035e2945171e521d48e6a78d14cd01073b3881fd35c318369b",
       "camera": {
         "space": "flat",
         "x": -4759.705469202209,
@@ -906,7 +932,8 @@
         "zoom": 0.28,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "factory"
+        "shotId": "factory",
+        "resisting": false
       }
     },
     {
@@ -927,8 +954,8 @@
       "ambientSeconds": 36.49283333333333,
       "width": 1280,
       "height": 760,
-      "bytes": 352591,
-      "sha256": "1bd9a8b07659fb6cbe124a6b121c5b3b97c8abac70c3da97db3972c49d6b636f",
+      "bytes": 352612,
+      "sha256": "ced32a229d80a2b5a3e4454e7bb38967ab2db47f09970e16c406d3994a342835",
       "camera": {
         "space": "flat",
         "x": -3613.995765718571,
@@ -936,7 +963,8 @@
         "zoom": 0.5586456857599995,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "factory"
+        "shotId": "factory",
+        "resisting": false
       }
     },
     {
@@ -957,8 +985,8 @@
       "ambientSeconds": 36.5,
       "width": 1280,
       "height": 760,
-      "bytes": 351273,
-      "sha256": "30d5308e1b0d448e82bd706ff0eb917e26ce2a21fafcaeb2c9be42cf0eb59957",
+      "bytes": 351350,
+      "sha256": "f9b032b9d1c1966a7f6dfab9c942b6f1fdca62e5d150e667dd13db7a66c84851",
       "camera": {
         "space": "flat",
         "x": -3605.970696229979,
@@ -966,7 +994,8 @@
         "zoom": 0.5605843200000006,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "press"
+        "shotId": "press",
+        "resisting": false
       }
     },
     {
@@ -987,8 +1016,8 @@
       "ambientSeconds": 42.489999999999995,
       "width": 1280,
       "height": 760,
-      "bytes": 413501,
-      "sha256": "cf1fa5ab3bb392f39d8d72eb4a2e2c89c2130c81f76846d9c789110aee626ae1",
+      "bytes": 413382,
+      "sha256": "b026e8cc276d1ba0031b0a0e9321f86cce015021c15e54bc65af63cca8db4020",
       "camera": {
         "space": "flat",
         "x": -4534.181406351639,
@@ -997,7 +1026,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1018,8 +1048,8 @@
       "ambientSeconds": 42.5,
       "width": 1280,
       "height": 760,
-      "bytes": 414711,
-      "sha256": "3143350256b0839aab4785f0cdf68d2c7be1cc76f9a2afda778d042c6b965d8d",
+      "bytes": 414500,
+      "sha256": "5576763a25daa63c49662c8d114cbcaf29aa2f4186891b5eb9c90f6b80d2912e",
       "camera": {
         "space": "flat",
         "x": -4534.181406351639,
@@ -1028,7 +1058,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1049,8 +1080,8 @@
       "ambientSeconds": 45.489999999999995,
       "width": 1280,
       "height": 760,
-      "bytes": 375555,
-      "sha256": "8070f06fc0c78b44f5ac81e01c5a294bb5e71c712685220977c6e86413905ee8",
+      "bytes": 375397,
+      "sha256": "2a050a5865d9c2c786b35aeb5cc89834287f01ba5752f608c7b2b91a6476401b",
       "camera": {
         "space": "flat",
         "x": -4722.9988354406705,
@@ -1059,7 +1090,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1080,8 +1112,8 @@
       "ambientSeconds": 45.5,
       "width": 1280,
       "height": 760,
-      "bytes": 376354,
-      "sha256": "46cc355e8f9649b264eb5dc29d3f6dfe18cd23d5728c9924211ee9fe43011728",
+      "bytes": 376173,
+      "sha256": "aa5aacdea592447d524094cddf8414bc5a0b9f318726749791bcc8a31b55536d",
       "camera": {
         "space": "flat",
         "x": -4722.998910122231,
@@ -1090,7 +1122,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "turn",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1111,8 +1144,8 @@
       "ambientSeconds": 49.48666666666666,
       "width": 1280,
       "height": 760,
-      "bytes": 310441,
-      "sha256": "70ba720097d603f42f3ac803e67b43afa6f3d836d1e436e21f6fc7385a12b777",
+      "bytes": 310494,
+      "sha256": "286191706e8a65a24d28bf2246e6a16609e3e8edda18bd0565e90499cb1e7791",
       "camera": {
         "space": "flat",
         "x": -5137.4762046798905,
@@ -1121,7 +1154,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "turn",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1142,8 +1176,8 @@
       "ambientSeconds": 49.5,
       "width": 1280,
       "height": 760,
-      "bytes": 309685,
-      "sha256": "87b7502c41cc0fe3a79fdfbb8249563115869b034c3f596dd8219953bc25b060",
+      "bytes": 309731,
+      "sha256": "557108ff8ffadd540aad8a110ebebdb1c3e859c6f5b82a2787ae3337d7b218f3",
       "camera": {
         "space": "flat",
         "x": -5137.476357423529,
@@ -1152,7 +1186,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "turn",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1173,8 +1208,8 @@
       "ambientSeconds": 52.6455,
       "width": 1280,
       "height": 760,
-      "bytes": 300045,
-      "sha256": "9e1ddff6aa6d1bf1acc47262247653aaf08a11c9d0d18a02eb6fd2e72566d686",
+      "bytes": 299924,
+      "sha256": "cc0d8555c368a2a30d557f398656aca64c5b57a4d19fc5810cb4bd70e2ba2760",
       "camera": {
         "space": "flat",
         "x": -5137.476357423529,
@@ -1183,7 +1218,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "turn",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1204,8 +1240,8 @@
       "ambientSeconds": 52.65,
       "width": 1280,
       "height": 760,
-      "bytes": 300203,
-      "sha256": "af9dbe5ad281cd6a5f53d898b367566215c9b0f2739f6601827d69899aaa9a15",
+      "bytes": 300124,
+      "sha256": "167df49867812b01588ed80899527be476f1eac8d3d7134904e47ae2cb654d32",
       "camera": {
         "space": "flat",
         "x": -5137.476357423529,
@@ -1214,7 +1250,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mix",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1235,8 +1272,8 @@
       "ambientSeconds": 56.636666666666656,
       "width": 1280,
       "height": 760,
-      "bytes": 210952,
-      "sha256": "d018c4504d9ee5c13407a4c6594336fbf19459504de8fa56ce42f1934aed90a1",
+      "bytes": 210902,
+      "sha256": "ddd0422214f5e0f2dc39c4a140a759e8de6f0a22c9457bb5388210d8d2814120",
       "camera": {
         "space": "flat",
         "x": -5551.953651981189,
@@ -1245,7 +1282,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mix",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1266,8 +1304,8 @@
       "ambientSeconds": 56.65,
       "width": 1280,
       "height": 760,
-      "bytes": 209445,
-      "sha256": "d80c85b6acece514727a243b9ea8a6322097a9d9109954c2c7218055834d1605",
+      "bytes": 209481,
+      "sha256": "ec36f817582f1afee8e9edf1883c2568a74788f7922e9f9c0cd7a459f8b99343",
       "camera": {
         "space": "flat",
         "x": -5551.953804724827,
@@ -1276,7 +1314,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "failure",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1297,8 +1336,8 @@
       "ambientSeconds": 58.894999999999996,
       "width": 1280,
       "height": 760,
-      "bytes": 209275,
-      "sha256": "1ac373b7df20304a850ef80e053b9f2fb56c3a6ab98b4358ef919ecbdc5beba7",
+      "bytes": 209284,
+      "sha256": "6ee09b5cf590fbbe14438532d58ea8f912d17b58bc3d8c866d5df1553446bc05",
       "camera": {
         "space": "flat",
         "x": -5551.953804724827,
@@ -1307,7 +1346,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "failure",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1328,8 +1368,8 @@
       "ambientSeconds": 58.9,
       "width": 1280,
       "height": 760,
-      "bytes": 209793,
-      "sha256": "b69c1fba57b3ed439a989fadb2b8511d9af5edd1e9003c6fa173ffde0087991d",
+      "bytes": 209760,
+      "sha256": "1754fbcdd049d764a9d48b9bcd7e54ac136db327adba87f57345ea512ee1d2cd",
       "camera": {
         "space": "flat",
         "x": -5551.953804724827,
@@ -1338,7 +1378,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "failure",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1359,8 +1400,8 @@
       "ambientSeconds": 60.644999999999996,
       "width": 1280,
       "height": 760,
-      "bytes": 215217,
-      "sha256": "0a6e9bec75e4f230b6c9389f50c082d77e086e40846d7024ae9c3c75da6a0c39",
+      "bytes": 215124,
+      "sha256": "2c3cfcbc330de5cfc444a78235afc90450988751e3c562137c4628c0f629a3ab",
       "camera": {
         "space": "flat",
         "x": -5551.953804724827,
@@ -1369,7 +1410,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "failure",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1390,8 +1432,8 @@
       "ambientSeconds": 60.65,
       "width": 1280,
       "height": 760,
-      "bytes": 273210,
-      "sha256": "47c52961bffa7b3dda74e8ea0f8a7642949d39a484c529aa1b31e3222937f312",
+      "bytes": 273204,
+      "sha256": "c46428dae6a174d4b4bef49472267b868d92865f52817c7e5c769ecaae7d5147",
       "camera": {
         "space": "flat",
         "x": -5551.953804724827,
@@ -1400,7 +1442,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "discard",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1421,8 +1464,8 @@
       "ambientSeconds": 63.044999999999995,
       "width": 1280,
       "height": 760,
-      "bytes": 264559,
-      "sha256": "7893f03a0f94f211fee72e5e66861b751d6f9f86c918093aa5f049b87fd7084c",
+      "bytes": 264554,
+      "sha256": "e86efed9253b48ec35ee3760851f2b5a08441a08592e468efae0398077de8c87",
       "camera": {
         "space": "flat",
         "x": -6086.099493333025,
@@ -1431,7 +1474,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "discard",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1452,8 +1496,8 @@
       "ambientSeconds": 63.05,
       "width": 1280,
       "height": 760,
-      "bytes": 193690,
-      "sha256": "61aa7230d635edbc1a5886d3e7dde67289243464b29a30f4d61492003d9e97f6",
+      "bytes": 193722,
+      "sha256": "924213800f8c66219ff4a6be2407e77a8ebd18b7d43c08b98f7a8d1f77a81776",
       "camera": {
         "space": "flat",
         "x": -6086.101240906432,
@@ -1462,7 +1506,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "discard",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1483,8 +1528,8 @@
       "ambientSeconds": 63.644999999999996,
       "width": 1280,
       "height": 760,
-      "bytes": 69141,
-      "sha256": "3da5fc10c78b1f993a1ea85b2e78d8a1f83bb69b30038245318cdabd48a5f98c",
+      "bytes": 69011,
+      "sha256": "4a7e5c5b97a2286b592cdce82d6968f5f1421652ef4ac6051ef28f2e24464350",
       "camera": {
         "space": "flat",
         "x": -6408.475302189296,
@@ -1493,7 +1538,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "discard",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1523,7 +1569,8 @@
         "y": -3394.861150995069,
         "zoom": 1,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1553,7 +1600,8 @@
         "y": -3394.861150995069,
         "zoom": 1.3155034877105143,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1583,7 +1631,8 @@
         "y": -3394.861150995069,
         "zoom": 1.3163632225762407,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1613,7 +1662,8 @@
         "y": -3394.861150995069,
         "zoom": 1.3999933602639962,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1634,8 +1684,8 @@
       "ambientSeconds": 67.23333333333333,
       "width": 1280,
       "height": 760,
-      "bytes": 27994,
-      "sha256": "c375276404684441a41499e2e62134fd88091a6b9de1e3f155d7fc2433912847",
+      "bytes": 27544,
+      "sha256": "2bcb922164c7be8694dc6b487d757f1094680d9b9cfb4478d5fbb642da7c725d",
       "camera": {
         "space": "flat",
         "shotId": "exhausted",
@@ -1643,7 +1693,8 @@
         "y": -3394.861150995069,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1664,8 +1715,8 @@
       "ambientSeconds": 68.64166666666667,
       "width": 1280,
       "height": 760,
-      "bytes": 9373,
-      "sha256": "e90d9623ea3e66a62754c9a73de1537af55415be3b7a07862bb6c77e079400c5",
+      "bytes": 9456,
+      "sha256": "2b7561b6dc0965b4a779d5e98a0a92cb1ec2f8f9dadc6f833f2772b89ccb5aa9",
       "camera": {
         "space": "flat",
         "shotId": "exhausted",
@@ -1673,7 +1724,8 @@
         "y": -3394.861150995069,
         "zoom": 1.4999896600854874,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1703,7 +1755,8 @@
         "y": -3394.861150995069,
         "zoom": 1.5,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1724,8 +1777,8 @@
       "ambientSeconds": 70.86111111111111,
       "width": 1280,
       "height": 760,
-      "bytes": 118072,
-      "sha256": "a864a0993735df6fd5e754660cb25ae470325771263b9967c111cdbd77076a83",
+      "bytes": 117450,
+      "sha256": "0f2c2ae26c645739706f9831dd54547b741d988b7977629fdf2b5ac1296ee5d4",
       "camera": {
         "space": "flat",
         "shotId": "exhausted",
@@ -1733,7 +1786,8 @@
         "y": -3394.861150995069,
         "zoom": 2.7999028249999998,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1754,8 +1808,8 @@
       "ambientSeconds": 70.87222222222223,
       "width": 1280,
       "height": 760,
-      "bytes": 118064,
-      "sha256": "1f34acb9567aadc04580e01b5cb8f25f263931737f65072d0f1b33010df56f55",
+      "bytes": 117399,
+      "sha256": "27362a5d1cf736f1aa89442930799027a11b80cccb1f836de0db0bec658b5e5d",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1763,7 +1817,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1784,8 +1839,8 @@
       "ambientSeconds": 72.19444444444444,
       "width": 1280,
       "height": 760,
-      "bytes": 205431,
-      "sha256": "c953d412bd4c875c2e4dea9280b3fbf45981c080c0415adb50a5cd7bb1e08693",
+      "bytes": 201156,
+      "sha256": "e3c7402192db632237d7066361e2cd3dd2a4f2efce49df2619ca88968716b99e",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1793,7 +1848,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1814,8 +1870,8 @@
       "ambientSeconds": 72.20555555555556,
       "width": 1280,
       "height": 760,
-      "bytes": 205391,
-      "sha256": "3733486de0b12e0b9dc014057d6fca1645bf6298f2de6f7ec3585398327f2b38",
+      "bytes": 201106,
+      "sha256": "683a29e4265aa5bb0b3e611f4b2b64e30ad06bc9b63d84e9733045ed78071eb6",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1823,7 +1879,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1844,8 +1901,8 @@
       "ambientSeconds": 75.30555555555556,
       "width": 1280,
       "height": 760,
-      "bytes": 408613,
-      "sha256": "c5be4fd6fc638b793170169d55954fd2c59fd55a3d8020ffc794bfaa6970a451",
+      "bytes": 407200,
+      "sha256": "da3acb970a754d6e2ce4941d249f2441324d54a6fdf6275b299096ca55af7bc9",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1853,7 +1910,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1862,7 +1920,7 @@
       "shotId": "013C",
       "parentId": "013",
       "version": "rhythm",
-      "shotTitle": "点亮、停留，再缓慢收回体内光种子",
+      "shotTitle": "全亮后点击中央柔光，再缓慢收回体内",
       "position": "start",
       "palette": "F2",
       "declaredStart": 75.31666666666668,
@@ -1874,8 +1932,8 @@
       "ambientSeconds": 75.31666666666668,
       "width": 1280,
       "height": 760,
-      "bytes": 408851,
-      "sha256": "b4bb38b4e31bd681bd8cf12dd06bb2569b743a2c9d70b51c286532a54ecc753c",
+      "bytes": 407182,
+      "sha256": "b4db922a5e1e6b31e3714c850fd6c4e20d069e127d74dd7686d8f9edd44e91c8",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1883,7 +1941,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1892,7 +1951,7 @@
       "shotId": "013C",
       "parentId": "013",
       "version": "rhythm",
-      "shotTitle": "点亮、停留，再缓慢收回体内光种子",
+      "shotTitle": "全亮后点击中央柔光，再缓慢收回体内",
       "position": "end",
       "palette": "F2",
       "declaredStart": 75.31666666666668,
@@ -1904,8 +1963,8 @@
       "ambientSeconds": 78.63888888888889,
       "width": 1280,
       "height": 760,
-      "bytes": 24677,
-      "sha256": "373bef2e1f7886af446945a37b775d441cc3de1556e27b9181723c00acfa57c2",
+      "bytes": 24873,
+      "sha256": "0260d1a765dd459f5ef40abb0569c9805aa3842497976dcb458e35fdaca7aa8c",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -1913,7 +1972,8 @@
         "y": -3394.861150995069,
         "zoom": 1.2004768000000006,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1934,8 +1994,8 @@
       "ambientSeconds": 78.65,
       "width": 1280,
       "height": 760,
-      "bytes": 24671,
-      "sha256": "e495bd9c431aac659e105a0adeee86fdc25e62a07a221f859f7483e7fdde55ca",
+      "bytes": 24883,
+      "sha256": "6e6c8fc0f90caee91daccd5a0e173aeeeb8d4bcf0dea548191b2830b14690096",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -1967,8 +2027,8 @@
       "ambientSeconds": 79.24,
       "width": 1280,
       "height": 760,
-      "bytes": 25044,
-      "sha256": "6372f2d6261228bfe32f7e5dc978495a1bff5efc68c1d5ccac66b28fcf153cc7",
+      "bytes": 25304,
+      "sha256": "6db407fe00e513a1f4d6d2fc8ac0b4784887ef00ce07dd91edeb2dc5183ece4a",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2000,8 +2060,8 @@
       "ambientSeconds": 79.25,
       "width": 1280,
       "height": 760,
-      "bytes": 25035,
-      "sha256": "2ede0b473276c382bdf4c9b49fe26ec54669d8a9a1ec11d3e95d86d5c05cb91b",
+      "bytes": 25245,
+      "sha256": "eade15d83af1d88b6e9c55182f99ed4a9854cddea4cbbd2aed7d3facc4c4d1e5",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2033,8 +2093,8 @@
       "ambientSeconds": 81.64,
       "width": 1280,
       "height": 760,
-      "bytes": 31389,
-      "sha256": "3c62155ec785c27586b22d08b44381220dcd9cec2f0eec76b51da36ef1574ae0",
+      "bytes": 30382,
+      "sha256": "b86d2babe16a33c2d01b21973cecf70e2c140d48fd151cef65b88cf75e369520",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2066,8 +2126,8 @@
       "ambientSeconds": 81.65,
       "width": 1280,
       "height": 760,
-      "bytes": 31494,
-      "sha256": "cc9b8bd77a7cb76ccc5f836bf8078d697c4718ee7d5964ef3d558ae70bfbdaea",
+      "bytes": 30154,
+      "sha256": "474a6482ae94b26182a874ea29c6e7c82f380e042a2eb9cab044379f0310c9d3",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2100,8 +2160,8 @@
       "ambientSeconds": 86.89,
       "width": 1280,
       "height": 760,
-      "bytes": 911664,
-      "sha256": "01b9d1bc2cae9be29666cc2b6b21d9cc82c173b16e1ff96797f1e37b50a5d9b6",
+      "bytes": 910655,
+      "sha256": "01315ca91c1a406e751d0f08a0f4d721ae8a4827cf899bce7aba95e5e17450eb",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2134,8 +2194,8 @@
       "ambientSeconds": 86.9,
       "width": 1280,
       "height": 760,
-      "bytes": 939905,
-      "sha256": "308eedce4b4c11ed90a373fc1b965ebd606955f5119ff759b18e4e31526a42b6",
+      "bytes": 938879,
+      "sha256": "2ab1b1393d049cdb814a2ee4249d11fe5b2fcd90e302fc75d1d3d2bfa7200265",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -2194,7 +2254,7 @@
       "position": "start",
       "palette": "F2",
       "declaredStart": 91.65,
-      "declaredEnd": 94.54999999999966,
+      "declaredEnd": 94.55000000000003,
       "file": "shot-015A-start.png",
       "src": "frames/detailed/shot-015A-start.png",
       "sceneTime": 132,
@@ -2202,8 +2262,8 @@
       "ambientSeconds": 91.65,
       "width": 1280,
       "height": 760,
-      "bytes": 8632,
-      "sha256": "535fe0a6f7b2f3e679e37610b27346f829387e1aa08bba296a385d254454b1e4",
+      "bytes": 5626,
+      "sha256": "54708fc8764fa449ad9e23c8d834f06424496edd9e582a9a54abea415e4b53ef",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2225,16 +2285,16 @@
       "position": "end",
       "palette": "F2",
       "declaredStart": 91.65,
-      "declaredEnd": 94.54999999999966,
+      "declaredEnd": 94.55000000000003,
       "file": "shot-015A-end.png",
       "src": "frames/detailed/shot-015A-end.png",
-      "sceneTime": 133.232857142857,
-      "playbackSeconds": 94.52666666666634,
-      "ambientSeconds": 94.52666666666634,
+      "sceneTime": 133.07750000000001,
+      "playbackSeconds": 94.52333333333338,
+      "ambientSeconds": 94.52333333333338,
       "width": 1280,
       "height": 760,
-      "bytes": 279751,
-      "sha256": "5a4df99493c87ef8a579d63e629d85f1beea89ef8a9bf1e6a17cee8ccd2326be",
+      "bytes": 279372,
+      "sha256": "1102e68984ccff608710de3cd827cd9ff51a7472c8f741c28ca9ad93acd2c19e",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2255,17 +2315,17 @@
       "shotTitle": "第二次点击：尝试半握",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 94.54999999999966,
-      "declaredEnd": 96.35000000000065,
+      "declaredStart": 94.55000000000003,
+      "declaredEnd": 96.34999999999998,
       "file": "shot-015B-start.png",
       "src": "frames/detailed/shot-015B-start.png",
-      "sceneTime": 133.242857142857,
-      "playbackSeconds": 94.54999999999966,
-      "ambientSeconds": 94.54999999999966,
+      "sceneTime": 133.0875,
+      "playbackSeconds": 94.55000000000003,
+      "ambientSeconds": 94.55000000000003,
       "width": 1280,
       "height": 760,
-      "bytes": 279748,
-      "sha256": "b3694bbc07e6e1455f1da17e47ab7f580ad980c1329ee8f50cf3b88b02b6b8fe",
+      "bytes": 279286,
+      "sha256": "b15ed04b5971c22003218750fa513ea2e05a45e06c8141b6545b02bdf3ea7aae",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2286,17 +2346,17 @@
       "shotTitle": "第二次点击：尝试半握",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 94.54999999999966,
-      "declaredEnd": 96.35000000000065,
+      "declaredStart": 94.55000000000003,
+      "declaredEnd": 96.34999999999998,
       "file": "shot-015B-end.png",
       "src": "frames/detailed/shot-015B-end.png",
-      "sceneTime": 134.004285714286,
-      "playbackSeconds": 96.32666666666734,
-      "ambientSeconds": 96.32666666666734,
+      "sceneTime": 133.7525,
+      "playbackSeconds": 96.32333333333334,
+      "ambientSeconds": 96.32333333333334,
       "width": 1280,
       "height": 760,
-      "bytes": 257333,
-      "sha256": "5a6c4d4604c3078b4f6fff1217961dd2a682471341e7f9f38a0b81bad072374c",
+      "bytes": 257162,
+      "sha256": "85d8f9e668651bd7b068ad8528b3626bfb6c7f4dcff1a9c96c8ac405cb87473d",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2314,20 +2374,20 @@
       "shotId": "015C",
       "parentId": "015",
       "version": "rhythm",
-      "shotTitle": "第三次点击：光落入手心，握紧画笔",
+      "shotTitle": "第三次点击：光晕开，显现画笔与调色盘",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 96.35000000000065,
-      "declaredEnd": 98.65,
+      "declaredStart": 96.34999999999998,
+      "declaredEnd": 101.15,
       "file": "shot-015C-start.png",
       "src": "frames/detailed/shot-015C-start.png",
-      "sceneTime": 134.014285714286,
-      "playbackSeconds": 96.35000000000065,
-      "ambientSeconds": 96.35000000000065,
+      "sceneTime": 133.7625,
+      "playbackSeconds": 96.34999999999998,
+      "ambientSeconds": 96.34999999999998,
       "width": 1280,
       "height": 760,
-      "bytes": 257264,
-      "sha256": "eb70fa3873ba249009a2612560a7f0efcbbd5d144dd86bbd7abac48126c5ffd3",
+      "bytes": 257147,
+      "sha256": "5a362bb4f144b00a8cf49fd18a6ba9dd5dce3e336def00f81ad47689b90707b4",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2345,20 +2405,20 @@
       "shotId": "015C",
       "parentId": "015",
       "version": "rhythm",
-      "shotTitle": "第三次点击：光落入手心，握紧画笔",
+      "shotTitle": "第三次点击：光晕开，显现画笔与调色盘",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 96.35000000000065,
-      "declaredEnd": 98.65,
+      "declaredStart": 96.34999999999998,
+      "declaredEnd": 101.15,
       "file": "shot-015C-end.png",
       "src": "frames/detailed/shot-015C-end.png",
-      "sceneTime": 134.99,
-      "playbackSeconds": 98.6266666666667,
-      "ambientSeconds": 98.6266666666667,
+      "sceneTime": 135.5525,
+      "playbackSeconds": 101.12333333333336,
+      "ambientSeconds": 101.12333333333336,
       "width": 1280,
       "height": 760,
-      "bytes": 216812,
-      "sha256": "aa14cd312d7b7e6b00021cc3bed2430bfacb98a24128d921a889a0b4c35d2dc6",
+      "bytes": 271748,
+      "sha256": "67799fdb61071b6913320562fee54d544cb0ed5f8c2e46454f2a6cdfca397e3b",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2376,20 +2436,20 @@
       "shotId": "015D",
       "parentId": "015",
       "version": "rhythm",
-      "shotTitle": "双手淡出，光扩散为内心与邀请",
+      "shotTitle": "第四次点击：白场进入内心与作品名",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 98.65,
-      "declaredEnd": 105.65,
+      "declaredStart": 101.15,
+      "declaredEnd": 107.65,
       "file": "shot-015D-start.png",
       "src": "frames/detailed/shot-015D-start.png",
-      "sceneTime": 135,
-      "playbackSeconds": 98.65,
-      "ambientSeconds": 98.65,
+      "sceneTime": 135.5625,
+      "playbackSeconds": 101.15,
+      "ambientSeconds": 101.15,
       "width": 1280,
       "height": 760,
-      "bytes": 216812,
-      "sha256": "aa14cd312d7b7e6b00021cc3bed2430bfacb98a24128d921a889a0b4c35d2dc6",
+      "bytes": 271748,
+      "sha256": "67799fdb61071b6913320562fee54d544cb0ed5f8c2e46454f2a6cdfca397e3b",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2407,20 +2467,20 @@
       "shotId": "015D",
       "parentId": "015",
       "version": "rhythm",
-      "shotTitle": "双手淡出，光扩散为内心与邀请",
+      "shotTitle": "第四次点击：白场进入内心与作品名",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 98.65,
-      "declaredEnd": 105.65,
+      "declaredStart": 101.15,
+      "declaredEnd": 107.65,
       "file": "shot-015D-end.png",
       "src": "frames/detailed/shot-015D-end.png",
       "sceneTime": 137.99,
-      "playbackSeconds": 105.6266666666667,
-      "ambientSeconds": 105.6266666666667,
+      "playbackSeconds": 107.62333333333336,
+      "ambientSeconds": 107.62333333333336,
       "width": 1280,
       "height": 760,
-      "bytes": 960366,
-      "sha256": "9ce67cb7406c9c18ea34bb0f4decfac77624dc59a84040a9560d6247e72a4cad",
+      "bytes": 939976,
+      "sha256": "ae80d76de8ebe295d4a12cbeafafa6fffa042af7faa25c96e1d514db4ac452a6",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -2459,7 +2519,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2480,8 +2541,8 @@
       "ambientSeconds": 1.760294117647059,
       "width": 1280,
       "height": 760,
-      "bytes": 83504,
-      "sha256": "25b94f83ef9d5be8b3ae90821be867662f29784a2ea20bd516e389345022e362",
+      "bytes": 82280,
+      "sha256": "d3f0df0d2a810b6276295a8781dc586bcfa4d23c5a3b1c173c5e8dd8ac274430",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2489,7 +2550,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2510,8 +2572,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 1280,
       "height": 760,
-      "bytes": 83450,
-      "sha256": "75bfe45900be84dd4aca752b700185b818368a5723463320b682e6e513f46b7e",
+      "bytes": 82158,
+      "sha256": "8936a7ae5935081ef83b430500235ecd0913199c3ee673556713793c7e861ef3",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2519,7 +2581,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2549,7 +2612,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2579,7 +2643,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2600,8 +2665,8 @@
       "ambientSeconds": 5.873170731707317,
       "width": 1280,
       "height": 760,
-      "bytes": 86073,
-      "sha256": "10d5aed03fcc4536efa587611a23a6e024d54b09a6bd8d026016663c010d4502",
+      "bytes": 84682,
+      "sha256": "af4b0c8e7f1e33b48fdca3d58588f5ddefa2294b4555d47ba11fb33cad2833a5",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2609,7 +2674,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2630,8 +2696,8 @@
       "ambientSeconds": 5.878048780487805,
       "width": 1280,
       "height": 760,
-      "bytes": 86028,
-      "sha256": "1a0007aa82c13855efd65380a2ebd97a3136ba662ef17051a1dfd404a0558398",
+      "bytes": 84731,
+      "sha256": "3100cfb2a538c91d661c61880b92ef01fa4893002b53f51fdb8c1c59cf0f6b1d",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2639,7 +2705,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2660,8 +2727,8 @@
       "ambientSeconds": 6.360975609756098,
       "width": 1280,
       "height": 760,
-      "bytes": 87845,
-      "sha256": "31be8b48e3bf8e6b1c6dc6cb6f4cc4cad847a14b8ec5f3cfb4ee557fa2c47af5",
+      "bytes": 87705,
+      "sha256": "4bd6cb5e9c711676f73436d5f0dfc89cce3053a2bc5be5d50eae80632f5f6d23",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2669,7 +2736,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2690,8 +2758,8 @@
       "ambientSeconds": 6.365853658536585,
       "width": 1280,
       "height": 760,
-      "bytes": 88130,
-      "sha256": "2fa25f1229780647c81daeadf70c2165baf9c43c67d7cfd68e9754d0781da230",
+      "bytes": 87933,
+      "sha256": "f742bb8a681854f438bcc116fb1052865c103da50f819f77fd098d9448de22fa",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -2699,7 +2767,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2729,7 +2798,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -2762,7 +2832,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2795,7 +2866,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2828,7 +2900,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2861,7 +2934,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2894,7 +2968,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2927,7 +3002,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -2948,8 +3024,8 @@
       "ambientSeconds": 15.706666666666667,
       "width": 1280,
       "height": 760,
-      "bytes": 90860,
-      "sha256": "dd90f6e4288f79e3e77b90eedfa48cf9a20e67b9bc605b3a13867ce1ecdff17c",
+      "bytes": 90737,
+      "sha256": "4d36a8543711d207edb5f51660ab558545e72df08b090440202e55f4cb3e3ff3",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -2960,7 +3036,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -2981,8 +3058,8 @@
       "ambientSeconds": 17.345000000000002,
       "width": 1280,
       "height": 760,
-      "bytes": 116975,
-      "sha256": "6d4c06be2fcbe4bef357624adf09de0185d5c1744241cdbe1782fa722f04494d",
+      "bytes": 117196,
+      "sha256": "aa6a6f04c84e2cfd311aedd05106b1c916a4185207837500ed8a162f079b9852",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -2993,7 +3070,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -3014,8 +3092,8 @@
       "ambientSeconds": 17.35,
       "width": 1280,
       "height": 760,
-      "bytes": 119399,
-      "sha256": "2718365ed919a947cdca59a34709ecf5d2c2580fe1fb44c87f2cf7f62e65f047",
+      "bytes": 119587,
+      "sha256": "218559e4805ec014f58e7a507dd6989bb921c29fb0b61d3045c28ea802b93f4a",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -3026,7 +3104,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -3047,8 +3126,8 @@
       "ambientSeconds": 19.995,
       "width": 1280,
       "height": 760,
-      "bytes": 228070,
-      "sha256": "1d57bc19572aa00a42c9e67c05e4308a2e6955310e40bafe6ca2212f24ac63db",
+      "bytes": 227612,
+      "sha256": "5322fffc215f7996859cdd0e774182dd91be7d6ae8eaccf8622d2a4642bce5b0",
       "camera": {
         "space": "flat",
         "shotId": "inspection",
@@ -3059,7 +3138,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -3080,8 +3160,8 @@
       "ambientSeconds": 20,
       "width": 1280,
       "height": 760,
-      "bytes": 228748,
-      "sha256": "ceaadfc89e92abf045df617ea9d349823a0a0d6978addacb79c03b5a4abcc84e",
+      "bytes": 228075,
+      "sha256": "c2ed39301e79633b884a80dd12ed90e3549e0f2ad3a8b9c017a5be171b84783e",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -3092,7 +3172,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -3113,8 +3194,8 @@
       "ambientSeconds": 29.19425,
       "width": 1280,
       "height": 760,
-      "bytes": 201905,
-      "sha256": "c47138ea2a600f879ba34ec9d76dfa33b98020fea5aaf215e8fc402bda855b63",
+      "bytes": 201297,
+      "sha256": "51768113c4e2428d7a795fa689cca719db8f0941612e42a47869512e089684d4",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -3125,7 +3206,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -3146,8 +3228,8 @@
       "ambientSeconds": 29.2,
       "width": 1280,
       "height": 760,
-      "bytes": 202054,
-      "sha256": "c15b86b3582d49cd881dd88ddc79980b59eec1ca83b1684cb4bc3e5a8aa67a7e",
+      "bytes": 201140,
+      "sha256": "b34e3c47289d8a6a5446cdd121725e1abd5a702c196f7a36554464261e5444b3",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -3158,7 +3240,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -3179,8 +3262,8 @@
       "ambientSeconds": 30.695,
       "width": 1280,
       "height": 760,
-      "bytes": 53113,
-      "sha256": "63531c84f72c900d9f5b1397e6fa8f7543e893f7e13a79cd4b412938552d7dcb",
+      "bytes": 53733,
+      "sha256": "63a44382c32e761637a3727e8b4efbb7738e711d6d775f527e372b969cb42a54",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -3191,7 +3274,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -3224,7 +3308,8 @@
         "yaw": 0,
         "followBody": false,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -3245,8 +3330,8 @@
       "ambientSeconds": 32.19500000000001,
       "width": 1280,
       "height": 760,
-      "bytes": 363209,
-      "sha256": "be97ac5d67a77b0d7e12c9dee87f05d69961aad19c99c8393533898592169418",
+      "bytes": 365037,
+      "sha256": "a1eef5756eb9466f4573f4c50112a197f5e2db86fd1a245ae7b58b5c99018075",
       "camera": {
         "space": "flat",
         "shotId": "gate",
@@ -3257,7 +3342,8 @@
         "yaw": 0,
         "followBody": false,
         "focalOffsetY": 160,
-        "followReference": false
+        "followReference": false,
+        "resisting": false
       }
     },
     {
@@ -3278,8 +3364,8 @@
       "ambientSeconds": 32.2,
       "width": 1280,
       "height": 760,
-      "bytes": 419321,
-      "sha256": "c1ec7eab1466d22adbc03665e27d2700cbd4cd19b8ed8b414f5d3237204a7426",
+      "bytes": 421396,
+      "sha256": "b727f26475c5305358e592fc6439d1fac34d0b2f36d123814229ee8f44ef22b3",
       "camera": {
         "space": "flat",
         "x": -5625.502803564921,
@@ -3287,7 +3373,8 @@
         "zoom": 0.22,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "factory"
+        "shotId": "factory",
+        "resisting": false
       }
     },
     {
@@ -3308,8 +3395,8 @@
       "ambientSeconds": 35.19117647058823,
       "width": 1280,
       "height": 760,
-      "bytes": 423538,
-      "sha256": "6620f4bb8b82314236628d7a2dbdd214fb1bd994cdeea82048818cae311ef73b",
+      "bytes": 423555,
+      "sha256": "a2d6e1abdab68ef956d2680cdf4840a30fe0e354a8d21a1b7672e05ea9565ade",
       "camera": {
         "space": "flat",
         "x": -5625.502803564921,
@@ -3317,7 +3404,8 @@
         "zoom": 0.22,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "factory"
+        "shotId": "factory",
+        "resisting": false
       }
     },
     {
@@ -3338,8 +3426,8 @@
       "ambientSeconds": 35.2,
       "width": 1280,
       "height": 760,
-      "bytes": 423119,
-      "sha256": "4b808608a53c240b71e9e18b36af3caffc56086c1c33a9ea9c840d5313327f2f",
+      "bytes": 423113,
+      "sha256": "5edfb7fb2f5498083778d69b14a9dd8674588cac55cd3fd19ccc52a4b5415c01",
       "camera": {
         "space": "flat",
         "x": -5625.502803564921,
@@ -3347,7 +3435,8 @@
         "zoom": 0.22,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "mold"
+        "shotId": "mold",
+        "resisting": false
       }
     },
     {
@@ -3368,8 +3457,8 @@
       "ambientSeconds": 40.58744186046511,
       "width": 1280,
       "height": 760,
-      "bytes": 158025,
-      "sha256": "b838ddf11c98589b4c21f0732696e5842b27e068074e3063d585607c21fe5089",
+      "bytes": 158046,
+      "sha256": "d411c3eadd82f4b7c0472332ae7cd4d6bf7998e181b98583176b2e58cf25975c",
       "camera": {
         "space": "flat",
         "x": -4048.6965824196523,
@@ -3378,7 +3467,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3387,7 +3477,7 @@
       "shotId": "B-007B",
       "parentId": "007",
       "version": "routine",
-      "shotTitle": "五段边框逐段扣上",
+      "shotTitle": "尝试逃向边缘，边条突然扣上挡回",
       "position": "start",
       "palette": "F2",
       "declaredStart": 40.6,
@@ -3399,8 +3489,8 @@
       "ambientSeconds": 40.6,
       "width": 1280,
       "height": 760,
-      "bytes": 158121,
-      "sha256": "d067e9748f7ebeb287eae031cbd6f74d13653edaa936d21ccdf44ade6691a649",
+      "bytes": 158149,
+      "sha256": "06eeb82fcec88789d4b8748c70250f8e2ad4db6b73a5d2e94f5c2e84531a0346",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -3409,7 +3499,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3418,7 +3509,7 @@
       "shotId": "B-007B",
       "parentId": "007",
       "version": "routine",
-      "shotTitle": "五段边框逐段扣上",
+      "shotTitle": "尝试逃向边缘，边条突然扣上挡回",
       "position": "end",
       "palette": "F2",
       "declaredStart": 40.6,
@@ -3430,8 +3521,8 @@
       "ambientSeconds": 42.10659999999999,
       "width": 1280,
       "height": 760,
-      "bytes": 163578,
-      "sha256": "ec1bb10d4601eebbab6a8ea111cf5e0e9c9c4f0973690d70f6f5df50e3c31fcc",
+      "bytes": 163636,
+      "sha256": "5ad097d5f04c7d9f703e9f56dff29f9747420723ffe3df5c873282061ac87a67",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -3440,7 +3531,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3461,8 +3553,8 @@
       "ambientSeconds": 42.111999999999995,
       "width": 1280,
       "height": 760,
-      "bytes": 164613,
-      "sha256": "8a47589e7024b5c44715cfcf57a9f99f915a3ad299bd670288cf8ebd173ba379",
+      "bytes": 164687,
+      "sha256": "9ae5b03695b0242e3bb61604acc3d6c6dba89c48ffc2ee9b91fc61faa8622bf6",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -3471,7 +3563,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3492,8 +3585,8 @@
       "ambientSeconds": 43.294599999999996,
       "width": 1280,
       "height": 760,
-      "bytes": 154519,
-      "sha256": "8b107d476244028b259aa986c9e6423df4bb4665e1a46348a3d3de86c0870791",
+      "bytes": 154584,
+      "sha256": "a160b80e53f533621e8960693a4104b9ec6f4ee776e4df63defecc9a40aa9412",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -3502,7 +3595,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3523,8 +3617,8 @@
       "ambientSeconds": 43.3,
       "width": 1280,
       "height": 760,
-      "bytes": 152573,
-      "sha256": "476500d308876f3260e01becdcd9688d82ff50e094d67a3b578ff91ffb37f7b7",
+      "bytes": 152669,
+      "sha256": "200ddd83d2af941e48b27f90f9f45345cf1dcbf05598305983eeb530d83035a3",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -3533,7 +3627,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3554,8 +3649,8 @@
       "ambientSeconds": 49.266666666666644,
       "width": 1280,
       "height": 760,
-      "bytes": 192121,
-      "sha256": "e599c6a4fecbb816c55e173436721e2817a028c019cf311171867ec4b5fd971e",
+      "bytes": 192135,
+      "sha256": "bb93fdf5a3927803394c2924ba81a94e543e8af4569b9a91461a256236c9a42d",
       "camera": {
         "space": "flat",
         "x": -5424.5403672210905,
@@ -3564,7 +3659,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3585,8 +3681,8 @@
       "ambientSeconds": 49.3,
       "width": 1280,
       "height": 760,
-      "bytes": 190229,
-      "sha256": "55dd6021e57c54a02f6dc5e0fcde744b6bbdb7e631c417c19d8d8fb86ddfe5e9",
+      "bytes": 190281,
+      "sha256": "d305ddca934381af93b88c844b8a242b3ff2898ec1d35cb92aed82667d19a6c2",
       "camera": {
         "space": "flat",
         "x": -5432.215875504452,
@@ -3595,7 +3691,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3616,8 +3713,8 @@
       "ambientSeconds": 49.777419354838706,
       "width": 1280,
       "height": 760,
-      "bytes": 195120,
-      "sha256": "19591b28286bdcd08c1c250363a7bd855560bbb1c9381501b42015630488becd",
+      "bytes": 195093,
+      "sha256": "e402cd088009f69c59796b6b65d1d2ab37a1c5c6d63bbed340dd44757a081e96",
       "camera": {
         "space": "flat",
         "x": -5432.215875504452,
@@ -3626,7 +3723,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3647,8 +3745,8 @@
       "ambientSeconds": 49.78387096774193,
       "width": 1280,
       "height": 760,
-      "bytes": 197189,
-      "sha256": "827de9bcbae1aa692225f0f804995c9ad86356ce177d7323ef8848ffa7b08311",
+      "bytes": 197166,
+      "sha256": "94dedabdcb692bb9389c6fb7f29bc471311d4b432d3275c921fd5a1a18770fda",
       "camera": {
         "space": "flat",
         "x": -5432.215875504452,
@@ -3657,7 +3755,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3678,8 +3777,8 @@
       "ambientSeconds": 51.29354838709677,
       "width": 1280,
       "height": 760,
-      "bytes": 176945,
-      "sha256": "241a9c162332b710a51e6adb57af913745165ebd614ef4bd6b009a7d0cbcee25",
+      "bytes": 176903,
+      "sha256": "a0324465a173c27ac858b2ae1397005256301c5aa59141194818f681a74d457a",
       "camera": {
         "space": "flat",
         "x": -5432.215875504452,
@@ -3688,7 +3787,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "compact",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3709,8 +3809,8 @@
       "ambientSeconds": 51.3,
       "width": 1280,
       "height": 760,
-      "bytes": 177014,
-      "sha256": "4218654da886ba8dbd46894f255823dfa361fe7612134342159eb41817067cda",
+      "bytes": 177008,
+      "sha256": "3071ac7526eb0453301ce22d021c60ed35d3a09dfdba7e2f613163255ca04b3f",
       "camera": {
         "space": "flat",
         "x": -5432.215875504452,
@@ -3719,7 +3819,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3740,8 +3841,8 @@
       "ambientSeconds": 57.262499999999974,
       "width": 1280,
       "height": 760,
-      "bytes": 179940,
-      "sha256": "ca3c86ae258dd3f8fe51fe19370100fee2abd3c35caefeb346f6545264a01d3f",
+      "bytes": 179921,
+      "sha256": "e37af162bef1d7edcd7fcf8c57f8075da43e1beb94424a73dd11b35fdf81c5f5",
       "camera": {
         "space": "flat",
         "x": -6896.702855969035,
@@ -3750,7 +3851,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3759,7 +3861,7 @@
       "shotId": "B-009B",
       "parentId": "009",
       "version": "routine",
-      "shotTitle": "逐边转动与喷黑",
+      "shotTitle": "逆向扭动抵抗，仍被逐边转动喷黑",
       "position": "start",
       "palette": "F2",
       "declaredStart": 57.3,
@@ -3771,8 +3873,8 @@
       "ambientSeconds": 57.3,
       "width": 1280,
       "height": 760,
-      "bytes": 179367,
-      "sha256": "cef784ebbd5aefdf50082ab59cb5da8f5f3aa5b1f79e3cfb58b6bcadad3af422",
+      "bytes": 179358,
+      "sha256": "9c90e3f5cbb116bf2a050c0a4085b6c6b38b5b0a37aad04cb69bdfb0fb2aebb4",
       "camera": {
         "space": "flat",
         "x": -6905.913465909069,
@@ -3781,7 +3883,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3790,7 +3893,7 @@
       "shotId": "B-009B",
       "parentId": "009",
       "version": "routine",
-      "shotTitle": "逐边转动与喷黑",
+      "shotTitle": "逆向扭动抵抗，仍被逐边转动喷黑",
       "position": "end",
       "palette": "F2",
       "declaredStart": 57.3,
@@ -3802,8 +3905,8 @@
       "ambientSeconds": 59.495925925925924,
       "width": 1280,
       "height": 760,
-      "bytes": 176906,
-      "sha256": "b2f153f4894a5ad37cf7d0a174556d258e5b5317b61400fce62f9f5d89d9a311",
+      "bytes": 176939,
+      "sha256": "63e0049415ffd313e0aaad55dae9676fe963f638e8447439950fbab76800443f",
       "camera": {
         "space": "flat",
         "x": -6905.913465909069,
@@ -3812,7 +3915,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3833,8 +3937,8 @@
       "ambientSeconds": 59.5,
       "width": 1280,
       "height": 760,
-      "bytes": 174748,
-      "sha256": "f46f2c212a8b6a23bfc539e25cf34f796431dc7c71b4b0b98e69169c30fc4e38",
+      "bytes": 174782,
+      "sha256": "eeff40f68ec0377f0764e81960728cd2a20bc07574ee63549a8cc1dc15583f71",
       "camera": {
         "space": "flat",
         "x": -6905.913465909069,
@@ -3843,7 +3947,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3864,8 +3969,8 @@
       "ambientSeconds": 61.69592592592593,
       "width": 1280,
       "height": 760,
-      "bytes": 165324,
-      "sha256": "83f52b288424c7fc110ddb72d32f30faca699251a040f77940939e3a91815aff",
+      "bytes": 165226,
+      "sha256": "11fc81b6613edda3af5d82f62d7a50cd09e45d9b0375350d240dc27699616816",
       "camera": {
         "space": "flat",
         "x": -6905.913465909069,
@@ -3874,7 +3979,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "paint",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3895,8 +4001,8 @@
       "ambientSeconds": 61.7,
       "width": 1280,
       "height": 760,
-      "bytes": 165404,
-      "sha256": "ff00b6c299163db3b8e457df1976a170fa421729ae879e33cc1ef6796f8be3d0",
+      "bytes": 165319,
+      "sha256": "36051581bfcde133739110995bb539301409e3b757b6eb896d752eabdac39af0",
       "camera": {
         "space": "flat",
         "x": -6905.913465909069,
@@ -3905,7 +4011,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "work",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3926,8 +4033,8 @@
       "ambientSeconds": 63.97428571428571,
       "width": 1280,
       "height": 760,
-      "bytes": 8753,
-      "sha256": "d214effd178d90e129ae31260ce7c5ea698b901dec412dc2967904ca500ecdeb",
+      "bytes": 8712,
+      "sha256": "edd8723f0bafc64ff4729030d9eea35e3563c3365c5d2cbd8123905e0f421ee8",
       "camera": {
         "space": "flat",
         "x": -7596.657574429256,
@@ -3936,7 +4043,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "work",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -3966,7 +4074,8 @@
         "zoom": 1.2,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -3987,8 +4096,8 @@
       "ambientSeconds": 66.25999999999999,
       "width": 1280,
       "height": 760,
-      "bytes": 94562,
-      "sha256": "c722dae778b26e712388a5580ae2c5e01b93200e45a7d4c5dcc94658ba73d241",
+      "bytes": 94485,
+      "sha256": "4ca2c43024b5b6a966fb3392f5a111694e3b3689f8c77013f6cb2a4f810dc2c1",
       "camera": {
         "space": "flat",
         "x": -7217.439406301578,
@@ -3996,7 +4105,8 @@
         "zoom": 0.7500336375000001,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -4017,8 +4127,8 @@
       "ambientSeconds": 66.27142857142857,
       "width": 1280,
       "height": 760,
-      "bytes": 93639,
-      "sha256": "1a0463e88127c7f772ced3321b7795897fa54a2ad520f3f165e9cbf507f4bf26",
+      "bytes": 93551,
+      "sha256": "69c50d1471b6e5bfee77a378444fd0028c70e6488a6990a4a9521382079c1ec2",
       "camera": {
         "space": "flat",
         "x": -7217.448139755989,
@@ -4026,7 +4136,8 @@
         "zoom": 0.75,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -4047,8 +4158,8 @@
       "ambientSeconds": 75.00360389610388,
       "width": 1280,
       "height": 760,
-      "bytes": 1065678,
-      "sha256": "3f7bd1e658e09fc75d67eb4da74de0a2600d009f39185322eee0eef09519c41a",
+      "bytes": 1065679,
+      "sha256": "4c903a48ec35d0adcc109da1d1cea192e99d7e187e386772a414eaf4d8acbe25",
       "camera": {
         "space": "flat",
         "x": -7217.448139755989,
@@ -4056,7 +4167,8 @@
         "zoom": 0.035005951712962946,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -4078,7 +4190,7 @@
       "width": 1280,
       "height": 760,
       "bytes": 1143266,
-      "sha256": "7595fa2cfffdb23088132dd42c197eccf2de4d81586587d66fcfec4f9b02547c",
+      "sha256": "92e759b0cdcf24209eb58d51f496e1dee5e9c6e15d06acea16f3dd1d0e5a1f2f",
       "camera": {
         "space": "flat",
         "x": -7217.448139755989,
@@ -4086,7 +4198,8 @@
         "zoom": 0.035,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -4116,7 +4229,8 @@
         "zoom": 0.035,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "work"
+        "shotId": "work",
+        "resisting": false
       }
     },
     {
@@ -4146,7 +4260,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4167,8 +4282,8 @@
       "ambientSeconds": 83.1270707070707,
       "width": 1280,
       "height": 760,
-      "bytes": 199069,
-      "sha256": "416bdd30cd3f9fbfaab4501a7dcd365e811900c4ef807d6dabb791b72ef3f209",
+      "bytes": 194828,
+      "sha256": "ffa7338cf6788943f49b62157b9bcf49898fe217ac68427de30a3e75045febd5",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -4176,7 +4291,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4197,8 +4313,8 @@
       "ambientSeconds": 83.13838383838385,
       "width": 1280,
       "height": 760,
-      "bytes": 199150,
-      "sha256": "0a857097ffdc570dbbd4c27632c20fa103091b8f58fab998509de11d2b27de6d",
+      "bytes": 194908,
+      "sha256": "e2f34fe4c4973c3e9db454f724563148e32952e6f89677a94565d90b872ab4ed",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -4206,7 +4322,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4227,8 +4344,8 @@
       "ambientSeconds": 86.29474747474747,
       "width": 1280,
       "height": 760,
-      "bytes": 401284,
-      "sha256": "abf60f6aaa08683afdfd6239107d2e19e854a3b157a59bcb520643c81da863d2",
+      "bytes": 400412,
+      "sha256": "04c4022d026df19670c1d4cd085b8973847a6e3fe643fc33dbd095f49d5b0180",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -4236,7 +4353,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4245,7 +4363,7 @@
       "shotId": "B-011C",
       "parentId": "011",
       "version": "routine",
-      "shotTitle": "点亮、停留，再缓慢收回体内光种子",
+      "shotTitle": "全亮后点击中央柔光，再缓慢收回体内",
       "position": "start",
       "palette": "F2",
       "declaredStart": 86.30606060606061,
@@ -4257,8 +4375,8 @@
       "ambientSeconds": 86.30606060606061,
       "width": 1280,
       "height": 760,
-      "bytes": 401554,
-      "sha256": "4bcb97cbd5313a030521ff597b2c589fc3f8bec4adc5659804b81a37ac9908f0",
+      "bytes": 400268,
+      "sha256": "7872c32f2c3ed0145f5660909119e80ea577575601ac781a8cdf5a12a4e449cf",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -4266,7 +4384,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4275,7 +4394,7 @@
       "shotId": "B-011C",
       "parentId": "011",
       "version": "routine",
-      "shotTitle": "点亮、停留，再缓慢收回体内光种子",
+      "shotTitle": "全亮后点击中央柔光，再缓慢收回体内",
       "position": "end",
       "palette": "F2",
       "declaredStart": 86.30606060606061,
@@ -4287,8 +4406,8 @@
       "ambientSeconds": 89.68868686868686,
       "width": 1280,
       "height": 760,
-      "bytes": 23610,
-      "sha256": "d7781a04db52075dca39f87c0d17693643046eb7d91b64515ed12c9978f1971e",
+      "bytes": 23407,
+      "sha256": "c3f655e2a82a987a4b0b4ff6f016f850794898c3353b0fd643ce7a7e8ed696e3",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -4296,7 +4415,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -4317,8 +4437,8 @@
       "ambientSeconds": 89.7,
       "width": 1280,
       "height": 760,
-      "bytes": 23603,
-      "sha256": "9034003cac9f1c090fc0c790883941941fc3ed71c4934c99a339f8082cade241",
+      "bytes": 23383,
+      "sha256": "9cc5e16ad013ddbe2c2053fc37e0daa80eb1d84f41c7502e67c7118f872809f6",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4350,8 +4470,8 @@
       "ambientSeconds": 90.28999999999999,
       "width": 1280,
       "height": 760,
-      "bytes": 23847,
-      "sha256": "237396463aabd68fd46d68321a9ebc046c8ed5d8baeb4ac197e60a4511ae6325",
+      "bytes": 23490,
+      "sha256": "0e136c5692ff157bc0445d76f93a70277bf6ca9e46718de1b2bfaa15e9564dbb",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4383,8 +4503,8 @@
       "ambientSeconds": 90.3,
       "width": 1280,
       "height": 760,
-      "bytes": 23693,
-      "sha256": "510109131255a026bbec65ef5a386d4ca6ca7a261e7576d1199760fd622b251b",
+      "bytes": 23363,
+      "sha256": "8474d6f012d06bfafd218b312704ee69bece0dd08b678390090031dbfed6cd3f",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4416,8 +4536,8 @@
       "ambientSeconds": 92.69,
       "width": 1280,
       "height": 760,
-      "bytes": 28817,
-      "sha256": "93e48ff32c2b882f569096354aa17fd60ee5cd670c05b79da3a2ddeae8ea29d2",
+      "bytes": 27518,
+      "sha256": "c28f0c034c69ec79d7ea875dd93c5623eaa5b053c1198030a91377ec238390cd",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4449,8 +4569,8 @@
       "ambientSeconds": 92.7,
       "width": 1280,
       "height": 760,
-      "bytes": 29135,
-      "sha256": "a846808abee52565064463deb83a9bbc7e09a0411e05d19a8bb54be1b4cb443b",
+      "bytes": 27463,
+      "sha256": "f09182355c7f07d4a249561c101a0cf7823d3b08e8f05cb33dbce4e5790fc5db",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4483,8 +4603,8 @@
       "ambientSeconds": 97.94,
       "width": 1280,
       "height": 760,
-      "bytes": 869221,
-      "sha256": "06510ccad0f5a35510bff58fa4f98d36b0d6435d7f3f4e8cf4c59a362494ea17",
+      "bytes": 868033,
+      "sha256": "dcae00079089e40228ab4ce80c7d6ef9d4cf6c7abb524c8ef467086a8cc2bf62",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4517,8 +4637,8 @@
       "ambientSeconds": 97.95,
       "width": 1280,
       "height": 760,
-      "bytes": 883922,
-      "sha256": "10a3fd5dcdcb0ebc69c20fadd5db7d69cf9538b899c4fc2bbe6790b8991c2f3b",
+      "bytes": 882784,
+      "sha256": "4760f5051c14b163b0a7268fcd75b81855516f3fc3c8ffa8691db537967c50a4",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -4577,7 +4697,7 @@
       "position": "start",
       "palette": "F2",
       "declaredStart": 102.7,
-      "declaredEnd": 105.59999999999965,
+      "declaredEnd": 105.60000000000002,
       "file": "shot-B-013A-start.png",
       "src": "frames/detailed/shot-B-013A-start.png",
       "sceneTime": 132,
@@ -4585,8 +4705,8 @@
       "ambientSeconds": 102.7,
       "width": 1280,
       "height": 760,
-      "bytes": 8632,
-      "sha256": "535fe0a6f7b2f3e679e37610b27346f829387e1aa08bba296a385d254454b1e4",
+      "bytes": 5626,
+      "sha256": "54708fc8764fa449ad9e23c8d834f06424496edd9e582a9a54abea415e4b53ef",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4608,16 +4728,16 @@
       "position": "end",
       "palette": "F2",
       "declaredStart": 102.7,
-      "declaredEnd": 105.59999999999965,
+      "declaredEnd": 105.60000000000002,
       "file": "shot-B-013A-end.png",
       "src": "frames/detailed/shot-B-013A-end.png",
-      "sceneTime": 133.232857142857,
-      "playbackSeconds": 105.57666666666634,
-      "ambientSeconds": 105.57666666666634,
+      "sceneTime": 133.07750000000001,
+      "playbackSeconds": 105.57333333333338,
+      "ambientSeconds": 105.57333333333338,
       "width": 1280,
       "height": 760,
-      "bytes": 279751,
-      "sha256": "5a4df99493c87ef8a579d63e629d85f1beea89ef8a9bf1e6a17cee8ccd2326be",
+      "bytes": 279372,
+      "sha256": "1102e68984ccff608710de3cd827cd9ff51a7472c8f741c28ca9ad93acd2c19e",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4638,17 +4758,17 @@
       "shotTitle": "第二次点击：尝试半握",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 105.59999999999965,
-      "declaredEnd": 107.40000000000065,
+      "declaredStart": 105.60000000000002,
+      "declaredEnd": 107.39999999999998,
       "file": "shot-B-013B-start.png",
       "src": "frames/detailed/shot-B-013B-start.png",
-      "sceneTime": 133.242857142857,
-      "playbackSeconds": 105.59999999999965,
-      "ambientSeconds": 105.59999999999965,
+      "sceneTime": 133.0875,
+      "playbackSeconds": 105.60000000000002,
+      "ambientSeconds": 105.60000000000002,
       "width": 1280,
       "height": 760,
-      "bytes": 279748,
-      "sha256": "b3694bbc07e6e1455f1da17e47ab7f580ad980c1329ee8f50cf3b88b02b6b8fe",
+      "bytes": 279286,
+      "sha256": "b15ed04b5971c22003218750fa513ea2e05a45e06c8141b6545b02bdf3ea7aae",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4669,17 +4789,17 @@
       "shotTitle": "第二次点击：尝试半握",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 105.59999999999965,
-      "declaredEnd": 107.40000000000065,
+      "declaredStart": 105.60000000000002,
+      "declaredEnd": 107.39999999999998,
       "file": "shot-B-013B-end.png",
       "src": "frames/detailed/shot-B-013B-end.png",
-      "sceneTime": 134.004285714286,
-      "playbackSeconds": 107.37666666666733,
-      "ambientSeconds": 107.37666666666733,
+      "sceneTime": 133.7525,
+      "playbackSeconds": 107.37333333333333,
+      "ambientSeconds": 107.37333333333333,
       "width": 1280,
       "height": 760,
-      "bytes": 257333,
-      "sha256": "5a6c4d4604c3078b4f6fff1217961dd2a682471341e7f9f38a0b81bad072374c",
+      "bytes": 257162,
+      "sha256": "85d8f9e668651bd7b068ad8528b3626bfb6c7f4dcff1a9c96c8ac405cb87473d",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4697,20 +4817,20 @@
       "shotId": "B-013C",
       "parentId": "013",
       "version": "routine",
-      "shotTitle": "第三次点击：光落入手心，握紧画笔",
+      "shotTitle": "第三次点击：光晕开，显现画笔与调色盘",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 107.40000000000065,
-      "declaredEnd": 109.7,
+      "declaredStart": 107.39999999999998,
+      "declaredEnd": 112.2,
       "file": "shot-B-013C-start.png",
       "src": "frames/detailed/shot-B-013C-start.png",
-      "sceneTime": 134.014285714286,
-      "playbackSeconds": 107.40000000000065,
-      "ambientSeconds": 107.40000000000065,
+      "sceneTime": 133.7625,
+      "playbackSeconds": 107.39999999999998,
+      "ambientSeconds": 107.39999999999998,
       "width": 1280,
       "height": 760,
-      "bytes": 257264,
-      "sha256": "eb70fa3873ba249009a2612560a7f0efcbbd5d144dd86bbd7abac48126c5ffd3",
+      "bytes": 257147,
+      "sha256": "5a362bb4f144b00a8cf49fd18a6ba9dd5dce3e336def00f81ad47689b90707b4",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4728,20 +4848,20 @@
       "shotId": "B-013C",
       "parentId": "013",
       "version": "routine",
-      "shotTitle": "第三次点击：光落入手心，握紧画笔",
+      "shotTitle": "第三次点击：光晕开，显现画笔与调色盘",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 107.40000000000065,
-      "declaredEnd": 109.7,
+      "declaredStart": 107.39999999999998,
+      "declaredEnd": 112.2,
       "file": "shot-B-013C-end.png",
       "src": "frames/detailed/shot-B-013C-end.png",
-      "sceneTime": 134.99,
-      "playbackSeconds": 109.67666666666669,
-      "ambientSeconds": 109.67666666666669,
+      "sceneTime": 135.5525,
+      "playbackSeconds": 112.17333333333336,
+      "ambientSeconds": 112.17333333333336,
       "width": 1280,
       "height": 760,
-      "bytes": 216812,
-      "sha256": "aa14cd312d7b7e6b00021cc3bed2430bfacb98a24128d921a889a0b4c35d2dc6",
+      "bytes": 271748,
+      "sha256": "67799fdb61071b6913320562fee54d544cb0ed5f8c2e46454f2a6cdfca397e3b",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4759,20 +4879,20 @@
       "shotId": "B-013D",
       "parentId": "013",
       "version": "routine",
-      "shotTitle": "双手淡出，光扩散为内心与邀请",
+      "shotTitle": "第四次点击：白场进入内心与作品名",
       "position": "start",
       "palette": "F2",
-      "declaredStart": 109.7,
-      "declaredEnd": 116.7,
+      "declaredStart": 112.2,
+      "declaredEnd": 118.7,
       "file": "shot-B-013D-start.png",
       "src": "frames/detailed/shot-B-013D-start.png",
-      "sceneTime": 135,
-      "playbackSeconds": 109.7,
-      "ambientSeconds": 109.7,
+      "sceneTime": 135.5625,
+      "playbackSeconds": 112.2,
+      "ambientSeconds": 112.2,
       "width": 1280,
       "height": 760,
-      "bytes": 216812,
-      "sha256": "aa14cd312d7b7e6b00021cc3bed2430bfacb98a24128d921a889a0b4c35d2dc6",
+      "bytes": 271748,
+      "sha256": "67799fdb61071b6913320562fee54d544cb0ed5f8c2e46454f2a6cdfca397e3b",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -4790,20 +4910,20 @@
       "shotId": "B-013D",
       "parentId": "013",
       "version": "routine",
-      "shotTitle": "双手淡出，光扩散为内心与邀请",
+      "shotTitle": "第四次点击：白场进入内心与作品名",
       "position": "end",
       "palette": "F2",
-      "declaredStart": 109.7,
-      "declaredEnd": 116.7,
+      "declaredStart": 112.2,
+      "declaredEnd": 118.7,
       "file": "shot-B-013D-end.png",
       "src": "frames/detailed/shot-B-013D-end.png",
       "sceneTime": 137.99,
-      "playbackSeconds": 116.67666666666669,
-      "ambientSeconds": 116.67666666666669,
+      "playbackSeconds": 118.67333333333336,
+      "ambientSeconds": 118.67333333333336,
       "width": 1280,
       "height": 760,
-      "bytes": 942620,
-      "sha256": "93a84a0c28d20f9bf656a3526b17e8469f99b5c061b4b6a4fc072eb9ffcd9ec4",
+      "bytes": 976161,
+      "sha256": "9818731bc912b82acb41cd879b2f8b0480c63b8a3cd370f5e678c0d8bb8ab5e2",
       "camera": {
         "space": "pov",
         "shotId": "dimension",

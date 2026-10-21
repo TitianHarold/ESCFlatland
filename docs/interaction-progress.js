@@ -52,12 +52,13 @@
     seek(raw){
       this.raw=clamp(Number(raw)||this.start,this.start,this.end);
       this.complete=this.raw>=this.end;this.charge=this.complete?1:0;
-      this.rate=this.baseRate;this.travel=0;this.held=false;return this;
+      this.rate=this.baseRate;this.travel=0;this.held=false;this.finishing=false;this.finishAge=0;return this;
     }
     update(delta,{held=false,advance=true}={}){
       if(!advance||this.complete)return this.snapshot();
       const dt=stepTime(delta),oldRate=this.rate;
-      this.held=!!held;
+      this.held=!!held||this.finishing;
+      held=this.held;
       this.charge=held?clamp(this.charge+dt/this.holdSeconds):clamp(this.charge-dt/this.releaseSeconds);
       const targetRate=held?1.8+2.4*smooth(this.charge):this.baseRate;
       const tau=targetRate>oldRate?.14:.32,decay=Math.exp(-dt/tau);
@@ -67,20 +68,22 @@
       const distance=targetRate*dt+(oldRate-targetRate)*tau*(1-decay);
       this.travel+=distance;
       this.raw=Math.max(this.raw,Math.min(this.end-.3,this.raw+distance));
-      if(held&&this.charge>=1-1e-9){this.charge=1;this.raw=this.end;this.complete=true;}
+      if(this.finishing){this.finishAge+=dt;this.raw=this.end-.3+.3*smooth(clamp(this.finishAge/1.6));if(this.finishAge>=1.6){this.raw=this.end;this.complete=true;}}
+      else if(held&&this.charge>=1-1e-9){this.charge=1;this.finishing=true;this.raw=this.end-.3;}
       return this.snapshot();
     }
     snapshot(){
       return{raw:this.raw,charge:this.charge,rate:this.rate,travel:this.travel,
-        held:this.held,complete:this.complete};
+        held:this.held,finishing:this.finishing,finishAge:this.finishAge,complete:this.complete};
     }
   }
 
   class PaintPeel{
     constructor(){this.reset();}
-    reset(){this.ages=Array(5).fill(-1);return this;}
+    reset(){this.ages=Array(5).fill(-1);this.finishing=false;this.next=0;return this;}
     click(){const index=this.ages.indexOf(-1);if(index<0)return false;this.ages[index]=0;return true;}
-    update(dt){for(let i=0;i<this.ages.length;i++)if(this.ages[i]>=0)this.ages[i]=Math.min(.6,this.ages[i]+Math.max(0,dt));return this.snapshot();}
+    finish(){this.finishing=true;return this;}
+    update(dt){dt=Math.max(0,dt);if(this.finishing){this.next-=dt;if(this.next<=0&&this.click())this.next=.12;}for(let i=0;i<this.ages.length;i++)if(this.ages[i]>=0)this.ages[i]=Math.min(.6,this.ages[i]+dt);return this.snapshot();}
     snapshot(){return this.ages.map(age=>age<0?0:smooth(clamp(age/.6)));}
   }
   return{WorkProgress,ChaseProgress,PaintPeel};

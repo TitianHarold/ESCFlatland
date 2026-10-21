@@ -7,12 +7,14 @@ function noOverlap(frame){
   const entries=frame.actors.filter(entry=>/^(hero|father|mother|inspector|guard-[123])$/.test(entry.id));
   for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++)assert(!C.penetrates(entries[i].actor.outline(entries[i].body),entries[j].actor.outline(entries[j].body)),entries[i].id+' must not cross '+entries[j].id);
 }
-const Motion=require('./docs/motion.js');for(const kind of ['father','mother']){const at=t=>Motion.parentReaction(kind,t,.5),rest=at(0),quick=at(.06),late=at(.48);assert(Math.max(...quick.edgeBends)>.95,'contact side contracts within the first .1 seconds');assert(Math.hypot(quick.x-rest.x,quick.y-rest.y)<.01,'dent precedes body retreat');assert(Math.hypot(late.x-rest.x,late.y-rest.y)>45,'the continuous retreat completes by .5 seconds');assert.equal(quick.sx,1);assert.equal(quick.sy,1);}
+const Motion=require('./docs/motion.js');for(const kind of ['father','mother']){const at=t=>Motion.parentReaction(kind,t,.5),rest=at(0),quick=at(.06),late=at(.48);assert(Math.max(...quick.edgeBends)>.95,'contact side contracts within the first .1 seconds');assert(Math.hypot(quick.x-rest.x,quick.y-rest.y)<.01,'dent precedes body retreat');assert(Math.hypot(late.x-rest.x,late.y-rest.y)>45,'the continuous retreat completes by .5 seconds');if(kind==='mother'){assert(quick.sy<.9,'mother visibly squeezes inward before moving away');assert(quick.sx<1);}else{assert.equal(quick.sx,1);assert.equal(quick.sy,1);}const mid=at(.23),early=at(.13),end=at(.33);assert(Math.hypot(mid.x-early.x,mid.y-early.y)>Math.hypot(end.x-mid.x,end.y-mid.y),'parent retreat has a fast start and slower end');}
 const controller=new EncounterController();let frame=controller.applyFrame(District.frame(0)),first={...frame.hero};
 for(let i=0;i<180;i++){controller.tick(1/60);frame=controller.applyFrame(District.frame(controller.sceneTime));noOverlap(frame);}
 assert.equal(controller.sceneTime,0,'idle observation must not advance the family event clock');
 assert(!actor(frame,'hero').emotion,'idle observation must not invent a curiosity mark');
 assert(Math.hypot(frame.hero.x-first.x,frame.hero.y-first.y)>10,'the child keeps exploring while the event waits');
+assert(Math.abs(Math.atan2(Math.sin(frame.hero.angle-first.angle),Math.cos(frame.hero.angle-first.angle)))>.04,'idle child gently looks from side to side');
+for(const kind of ['father','mother']){const initial=actor(District.frame(0),kind).body,current=actor(frame,kind).body,gap=Math.hypot(current.x-initial.x,current.y-initial.y);assert(gap>.1&&gap<5,'idle parent moves more calmly than the exploring child');}
 assert(controller.hitTest({x:1090,y:470})==='mother','either visible parent can be targeted first');
 for(const target of ['mother','father']){
   assert(controller.activate(target));assert.equal(controller.mark,'curiosity');let minimum=Infinity,touched=false,touchAt=null,reactionFrames=0,peakDent=0,firstRetreat=null,settledRetreat=null;const baseline=actor(District.frame(0),target).body;
@@ -28,7 +30,7 @@ for(const target of ['mother','father']){
   assert(minimum<1e-4,target+' must be physically touched before recoiling');
   assert(reactionFrames>=28,target+' reaction gets an actual readable .5 seconds');
   assert(peakDent>.9,target+' contact edge visibly bends inward before retreat');
-  assert(firstRetreat<1&&settledRetreat>35,target+' must indent first and retreat continuously instead of jumping away');
+  assert(firstRetreat<4&&settledRetreat>35,target+' must indent first and retreat continuously instead of jumping away');
 }
 assert(controller.snapshot().familyDone);assert.equal(controller.sceneTime,familyEnd);
 assert(Math.hypot(frame.hero.x-District.timing.homeCenter.x,frame.hero.y-District.timing.homeCenter.y)<.01,'the child must return to the actual room center before the inspector enters');
@@ -49,17 +51,24 @@ for(const version of ['rhythm','routine']){
 }
 controller.seek(arrivalTime);frame=controller.applyFrame(arrival);const originalX=frame.hero.x;assert(controller.activate('authority'));
 controller.tick(1/60,{sceneTime:arrivalTime+.02});frame=controller.applyFrame(District.frame(arrivalTime+.02));assert.notEqual(frame.hero.x,originalX,'authority clicks make the child shiver');noOverlap(frame);
-const escortStart=timing.firstMove+.05;controller.seek(escortStart);frame=controller.applyFrame(District.frame(escortStart));let maxLag=0,closestGuard=Infinity;
-for(let i=1;i<600;i++){
-  const raw=escortStart+i/30*2.2;if(raw>=58)break;
-  if(i===30||i===35||i===40)assert(controller.activate('escort'));
-  controller.tick(1/30,{sceneTime:raw});frame=controller.applyFrame(District.frame(raw));noOverlap(frame);
-  if(raw>escortStart+8.5)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))assert(!guard.collision.blocked,'click resistance must not strand a guard in a doorway');
-  const child=actor(frame,'hero'),canonical=District.frame(raw).hero;if(controller.snapshot().effects.resistance>.05&&controller.snapshot().effects.lag>.35)assert(Math.abs(Math.atan2(Math.sin(child.body.angle-controller.resistanceFacing),Math.cos(child.body.angle-controller.resistanceFacing)))<.1,'click resistance keeps its original facing');maxLag=Math.max(maxLag,Math.hypot(child.body.x-canonical.x,child.body.y-canonical.y));
-  if(raw>escortStart+2.5&&raw<escortStart+10)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))closestGuard=Math.min(closestGuard,C.distance(child.actor.outline(child.body),guard.actor.outline(guard.body)));
+const escortStart=timing.firstMove+4;controller.seek(escortStart);frame=controller.applyFrame(District.frame(escortStart));
+let maxReverse=0,closestGuard=Infinity,raw=escortStart,last=frame.hero,maxStep=0,minAlong=Infinity,loaded=false,reversed=false;
+assert(controller.activate('escort'));const immediate=controller.applyFrame(District.frame(raw));assert(immediate.hero.bend>.2,'the press contracts the child immediately before positional motion');
+for(let i=0;i<390;i++){
+  if(i===24||i===42)assert(controller.activate('escort'));
+  const nominal=raw+1/60;controller.tick(1/60,{sceneTime:nominal,transportResolved:true});const effects=controller.snapshot().effects;raw=controller.sceneTime;
+  assert(Math.abs(raw-(nominal-effects.rewindStep))<1e-9,'the route clock consumes exactly one bounded rewind step');
+  assert(effects.pace<=1&&effects.pace>=-.200001,'resistance never creates a catch-up speed');
+  frame=controller.applyFrame(District.frame(raw));noOverlap(frame);
+  const child=actor(frame,'hero'),heading=child.body.angle+child.actor.headAxis(child.body).angle,along=(child.body.x-last.x)*Math.cos(heading)+(child.body.y-last.y)*Math.sin(heading);
+  maxStep=Math.max(maxStep,Math.hypot(child.body.x-last.x,child.body.y-last.y));if(effects.pace<-.04){reversed||=along<-.001;minAlong=Math.min(minAlong,along);}
+  if(effects.load>.5){loaded=true;assert(Math.abs(Math.atan2(Math.sin(child.body.angle-controller.resistanceFacing),Math.cos(child.body.angle-controller.resistanceFacing)))<.18,'the resisting child does not turn around');}
+  maxReverse=Math.max(maxReverse,nominal-raw);
+  for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))closestGuard=Math.min(closestGuard,C.distance(child.actor.outline(child.body),guard.actor.outline(guard.body)));
+  last=child.body;
 }
-assert(maxLag>60,'clicking must visibly resist instead of merely delaying the story clock');assert(closestGuard<.1,'a guard must make real contact while urging the child onward');
-assert.equal(controller.snapshot().effects.lag,0,'resistance must end before the factory handoff');
+assert(loaded&&reversed,'clicking creates a visible slow backwards movement after the flinch');assert(maxReverse>.018,'input holds the route back');assert(maxStep<8,'a press cannot fling the child backwards');assert(minAlong>-2,'backwards travel stays slower than ordinary walking');assert(closestGuard<.25,'nearby soldiers really contact the refusing child');assert(controller.snapshot().effects.pace>.999,'forward pace returns to one without a speed boost');
+controller.seek(58);
 const ending=District.frame(58);controller.tick(1/60,{sceneTime:58});assert.equal(controller.applyFrame(ending),ending);
 const auto=new EncounterController();for(const raw of [0,4.3,6.8,13.7,20])assert.equal(auto.tick(1/60,{automatic:true,sceneTime:raw}).sceneTime,raw,'automatic preview keeps the canonical scene clock');
 for(const [raw,target] of [[3,'father'],[12,'mother']]){const review=new EncounterController({sceneTime:raw});const pose=review.applyFrame(District.frame(raw)).hero;assert(review.activate(target));assert(Math.hypot(review.navigation.body.x-pose.x,review.navigation.body.y-pose.y)<.001,'resuming a review route starts at the actual displayed position');}

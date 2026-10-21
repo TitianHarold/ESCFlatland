@@ -1,0 +1,10 @@
+{
+  "tool": "built-in image_gen",
+  "mode": "precise-object-edit",
+  "reference": "pov-hands-brush-r23.png",
+  "output": "pov-hands-tools-r24.png",
+  "generatedFile": "exec-6c52dede-018d-467c-aefc-1d3d1f8c4e94.png",
+  "transparent": true,
+  "prompt": "Edit the transparent first-person hand illustration. Preserve the hand-drawn anime style, slender teenage girl fair pink-white skin, thin delicate fingers, blue paint-stained cuffs and arms, sparse natural random turquoise/lilac/coral paint smudges. Preserve right hand holding the existing long paintbrush with turquoise bristles. Change left empty fist to naturally holding a compact oval kidney-shaped wooden painter palette, thumb through hole, slim fingers supporting beneath. Thin warm light wood with irregular turquoise/coral/yellow/lilac paint daubs, matte hand-drawn flat color. Both forearms from lower corners, open central gap for floating light. Correct POV anatomy, no head/body/text/icons/jewelry/extra fingers or glossy color. Actual transparent alpha, matching 4:3 landscape, brush entirely contained.",
+  "integration": "Separate crops left 0..0.57, right 0.57..1 preserve the full palette; wrists retain the original global image pivots."
+}

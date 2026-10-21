@@ -14,7 +14,7 @@
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
       this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
       this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
-      this.reactions={};this.resistanceFacing=null;this.clickPoker=0;this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
+      this.reactions={};this.resistanceFacing=null;this.clickPoker=0;this.shiver=0;this.resistance=0;this.resistancePace=1;this.resistanceLoad=0;this.rewindStep=0;this.flinch=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
     ensureFamily(){
@@ -33,18 +33,18 @@
         const parent=this.ensureFamily().parents.find(p=>p.id===target);return this.activatePoint({x:parent.body.x,y:parent.body.y});
       }
       if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
-      if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
-        if(this.lag<.03||this.resistanceFacing===null){this.resistanceFacing=this.previous?.hero?.body?.angle??District.frame(this.sceneTime).hero.body.angle;this.clickPoker=this.clickPoker%3+1;}
-        this.resistance=Math.min(.9,this.resistance+.26);this.fatigue+=.27;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;
+      if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<58&&this.fatigue<4.2){
+        if(this.resistanceLoad<.08||this.resistanceFacing===null){this.resistanceFacing=this.previous?.hero?.body?.angle??District.frame(this.sceneTime).hero.body.angle;this.clickPoker=this.clickPoker%3+1;}
+        this.resistance=Math.min(1.4,this.resistance+.72);this.flinch=.18;this.fatigue=Math.min(4.2,this.fatigue+.10);this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;
       }
       return false;
     }
     tick(delta,options={}){
       const dt=clamp(Number(delta)||0,0,.1);this.ambient+=dt;this.wait+=dt;this.epoch++;
       this.automatic=!!options.automatic;
-      this.shiver=Math.max(0,this.shiver-dt);this.poke=Math.max(0,this.poke-dt);
+      this.shiver=Math.max(0,this.shiver-dt);this.poke=Math.max(0,this.poke-dt);this.flinch=Math.max(0,this.flinch-dt);this.rewindStep=0;
       if(this.automatic&&Number.isFinite(options.sceneTime)){
-        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;this.reactions={};this.navigation=null;this.familyBridge=null;return this.snapshot();
+        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.resistance=0;this.resistancePace=1;this.resistanceLoad=0;this.lag=0;this.action=null;this.reactions={};this.navigation=null;this.familyBridge=null;return this.snapshot();
       }
       if(this.stage!=='done'){
         if(options.advance===false)return this.snapshot();
@@ -56,22 +56,30 @@
         if(state.done){this.stage='done';this.sceneTime=familyEnd;this.familyBridge=state.parents.map(p=>({id:p.id,body:p.body}));}
 
       }else{
-        if(Number.isFinite(options.sceneTime))this.sceneTime=Math.max(familyEnd,options.sceneTime);
-        const resisting=this.resistance>0&&this.sceneTime<54&&this.fatigue<4.2;
-        this.resistance=Math.max(0,this.resistance-dt);
-        this.lag=resisting?Math.min(1.15,this.lag+dt*3.8):Math.max(0,this.lag-dt*.95);
-        if(resisting)this.fatigue+=dt*.4;
-        if(resisting&&this.resistance===0&&this.lag>.12)this.poke=.22;
-        if(this.sceneTime>=54){this.lag=Math.min(this.lag,Math.max(0,58-this.sceneTime)*.18);this.resistance=0;}
+        const previousTime=this.sceneTime,requested=Number.isFinite(options.sceneTime)?Math.max(familyEnd,options.sceneTime):previousTime;
+        const active=previousTime>=District.timing.firstMove&&previousTime<58;
+        const resisting=active&&this.resistance>0&&this.fatigue<4.2;
+        const wasResisting=this.resistance>0;this.resistance=Math.max(0,this.resistance-dt);
+        this.resistancePace+=( (resisting?-.20:1)-this.resistancePace)*(1-Math.exp(-dt/(resisting?.25:.30)));
+        this.resistancePace=Math.max(-.20,Math.min(1,this.resistancePace));
+        this.resistanceLoad+=((resisting?1:0)-this.resistanceLoad)*(1-Math.exp(-dt/(resisting?.10:.38)));
+        this.lag=.35*this.resistanceLoad;
+        if(resisting)this.fatigue=Math.min(4.2,this.fatigue+dt*.32);
+        if(active&&requested>=previousTime){
+          this.rewindStep=(requested-previousTime)*(1-this.resistancePace);
+          this.rewindStep=Math.min(this.rewindStep,requested-District.timing.firstMove);
+        }
+        this.sceneTime=requested-this.rewindStep;
+        if(wasResisting&&this.resistance===0&&this.resistanceLoad>.1)this.poke=.30;
+        if(this.sceneTime>=58){this.resistance=0;this.resistanceLoad=0;this.resistancePace=1;this.lag=0;this.rewindStep=0;}
       }
       return this.snapshot();
     }
     markAt(time){
-      if(time<1.2)return null;
       const father=Motion.contactTimes.father*Motion.duration,mother=Motion.contactTimes.mother*Motion.duration;
-      return time<father||time>6.8&&time<mother?'curiosity':'exclamation';
+      return time<father||time>6.8&&time<mother?null:'exclamation';
     }
-    snapshot(){const family=this.navigation?.snapshot();return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&(family?family.waiting:this.stage!=='return'&&!this.action),familyDone:this.stage==='done',familyTarget:family?.target||(this.stage==='return'?'return':null),familyVisited:family?.visited||[],familyMoving:family?.moving||false,familyBody:family?.body||null,familyStage:family?.state||null,familyLastContact:family?.lastContact||null,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke}};}
+    snapshot(){const family=this.navigation?.snapshot();return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&(family?family.waiting:this.stage!=='return'&&!this.action),familyDone:this.stage==='done',familyTarget:family?.target||(this.stage==='return'?'return':null),familyVisited:family?.visited||[],familyMoving:family?.moving||false,familyBody:family?.body||null,familyStage:family?.state||null,familyLastContact:family?.lastContact||null,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke,rewindStep:this.rewindStep,pace:this.resistancePace,load:this.resistanceLoad,flinch:this.flinch}};}
 
     applyFrame(input){
       if(!input?.actors)return input;
@@ -84,20 +92,20 @@
         for(const source of family.parents){const parent=frame.actors.find(entry=>entry.id===source.id);if(!parent)continue;parent.body=source.body;delete parent.emotion;if(source.reactionAge!==undefined&&source.reactionAge<1.25)Object.assign(parent,{emotion:'exclamation',emotionElapsed:source.reactionAge,emotionDuration:1.25,emotionStrength:.9});}
       }else if(this.sceneTime<58){
         if(this.shiver>0){const age=.58-this.shiver;hero.body.x+=5*Math.sin(age*78)*Math.sin(Math.PI*age/.58);hero.body.edgeBends=C.actors.child.vertices.map((_,i)=>.25+.12*Math.sin(age*54+i));hero.body.fear=.35;}
-        if(this.sceneTime>=District.timing.firstMove&&this.lag>0){
-          const delayedTime=Math.max(District.timing.firstMove,this.sceneTime-this.lag),delayedFrame=District.frame(delayedTime),delayed=delayedFrame.hero.body;
-          const facing=hero.body.angle,locked=this.resistanceFacing??facing;
-          hero.body={...delayed,angle:facing+shortest(facing,locked)*clamp(this.lag/.35),bend:Math.max(delayed.bend||0,this.resistance>0?.28:0),fear:this.resistance>0?.4:delayed.fear};
-          if(this.resistance>0){hero.body.strain=.28;hero.body.axialStretch=-.07*clamp(this.resistance/.9);}
+        if(this.sceneTime>=District.timing.firstMove&&this.sceneTime<58&&(this.resistanceLoad>.001||this.flinch>0)){
+          const load=Math.max(this.resistanceLoad,this.flinch>0?.65:0),facing=hero.body.angle,locked=this.resistanceFacing??facing;
+          hero.body={...hero.body,angle:facing+shortest(facing,locked)*this.resistanceLoad,bend:Math.max(hero.body.bend||0,.34*load),fear:.4*load,strain:.30*load,axialStretch:-.10*load};
+          const heading=hero.body.angle+C.actors.child.headAxis(hero.body).angle,sway=5.5*Math.sin(this.ambient*7)*this.resistanceLoad;
+          hero.body.x-=Math.sin(heading)*sway;hero.body.y+=Math.cos(heading)*sway;
           const inspector=frame.actors.find(entry=>entry.id==='inspector');
-          if(inspector){const head=inspector.actor.headAxis(inspector.body);inspector.body.angle+=shortest(inspector.body.angle,Math.atan2(hero.body.y-inspector.body.y,hero.body.x-inspector.body.x)-head.angle)*clamp(this.lag/.2);}
-          const age=.22-this.poke,poker=District.escortProximity(delayedTime,this.clickPoker)>.98?this.clickPoker:2;
-          const poke=this.resistance<=0&&this.lag>.12&&this.poke>0?ease(age/.06)*(1-ease((age-.12)/.1)):0;
+          if(inspector){const head=inspector.actor.headAxis(inspector.body);inspector.body.angle+=shortest(inspector.body.angle,Math.atan2(hero.body.y-inspector.body.y,hero.body.x-inspector.body.x)-head.angle)*this.resistanceLoad;}
           for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id))){
-            const source=delayedFrame.actors.find(entry=>entry.id===guard.id)?.body||guard.body;
-            const index=Number(guard.id.slice(-1));guard.body=District.guardCoercion(guard.actor,source,hero.body,index===poker?poke:0,District.escortProximity(delayedTime,index));
+            const index=Number(guard.id.slice(-1)),phase=(this.ambient*1.45+(index-1)/3)%1,stagger=phase<.07?ease(phase/.07):phase<.16?1:phase<.30?1-ease((phase-.16)/.14):0;
+            const poke=stagger*Math.min(1,this.resistanceLoad*4),near=District.escortProximity(this.sceneTime,index);
+            guard.body=District.guardCoercion(guard.actor,guard.body,hero.body,poke,near);
           }
         }
+
       }
       if(this.familyBridge&&!this.automatic&&this.sceneTime<20){const u=ease((this.sceneTime-familyEnd)/(20-familyEnd));for(const source of this.familyBridge){const parent=frame.actors.find(a=>a.id===source.id);if(parent)parent.body=blend(source.body,parent.body,u);}}
       if(this.sceneTime<District.timing.firstMove){

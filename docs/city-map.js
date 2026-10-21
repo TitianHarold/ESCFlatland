@@ -107,7 +107,7 @@
   ].map(([id,s,t])=>{const[x,y]=at(s,t);return{id,x,y,point:[x,y],heading,approachCurves:[straight(at(s,0),[x,y])]};});
   const forecourtPolygon=[at(-1080,-500),at(-1080,520),at(-790,620),at(-360,560),at(-90,480),at(-90,-480),at(-720,-540)];
   const gatePortal={point:gatePoint,heading,halfWidth:150,halfDepth:18,wallStart:0,wallEnd:110,wallSpan:480,
-    opening:time=>ease((time-56.8)/.8)*(1-ease((time-64)/1.2))};
+    opening:time=>ease((time-56.8)/.8)*(1-ease((time-70)/1.2))};
   const gate={point:gatePoint,width:300,heading,portal:gatePortal,normal:[nx,ny],inward:[ux,uy],slots:forecourtSlots,
     forecourt:{polygon:forecourtPolygon,entry:[-2550,-1580],center:at(-550,0),corridorWidth:220,slots:forecourtSlots},
     innerPoint:at(320,0),innerCurves:[straight(gatePoint,at(320,0))]};

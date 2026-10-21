@@ -42,7 +42,7 @@ function makeRenderer(preset,width,height,version='routine'){
     return{sample,buffer:composite.toBuffer('image/png')};
   }};
 }
-function baseManifest(kind){return{id:'flatland-r2-'+kind,generatedAt:new Date().toISOString(),sourceRepository:repo,sourceCommit,sourceCommitRole:'Base revision before the current working-tree edits',sourceState:'R23 working-tree render before commit',sourceWorkingTree,sourceModuleSHA256:moduleSHA,shotsFile:'../../shots-detailed.json',shotsSHA256:sha(fs.readFileSync(shotsFile)),renderer:'@napi-rs/canvas; actual index.html script order and app.js draw functions in fresh VMs; no browser automation',evidenceBoundary:evidence,isNewHandDrawnArtwork:false,isBrowserScreenshot:false,productionCompositionDifference:'Code frames preserve the implemented upper house opening, planar geometry and continuous scene clock. Hand-drawn source images remain selectable visual references.',storyDuration:138,playbackDuration:detailed.versions.find(v=>v.id==='routine').duration,playbackDurations:Object.fromEntries(detailed.versions.map(v=>[v.id,v.duration])),status:'rendering',frames:[]};}
+function baseManifest(kind){return{id:'flatland-r2-'+kind,generatedAt:new Date().toISOString(),sourceRepository:repo,sourceCommit,sourceCommitRole:'Base revision before the current working-tree edits',sourceState:'R24 working-tree render before commit',sourceWorkingTree,sourceModuleSHA256:moduleSHA,shotsFile:'../../shots-detailed.json',shotsSHA256:sha(fs.readFileSync(shotsFile)),renderer:'@napi-rs/canvas; actual index.html script order and app.js draw functions in fresh VMs; no browser automation',evidenceBoundary:evidence,isNewHandDrawnArtwork:false,isBrowserScreenshot:false,productionCompositionDifference:'Code frames preserve the implemented upper house opening, planar geometry and continuous scene clock. Hand-drawn source images remain selectable visual references.',storyDuration:138,playbackDuration:detailed.versions.find(v=>v.id==='routine').duration,playbackDurations:Object.fromEntries(detailed.versions.map(v=>[v.id,v.duration])),status:'rendering',frames:[]};}
 function saveFrame(out,filename,result,extra,width,height){
   fs.writeFileSync(path.join(out,filename),result.buffer);
   return{...extra,file:filename,src:path.relative(workspace,path.join(out,filename)).split(path.sep).join('/'),sceneTime:result.sample.sceneTime,playbackSeconds:result.sample.playbackSeconds,ambientSeconds:result.sample.playbackSeconds,width,height,bytes:result.buffer.length,sha256:sha(result.buffer),camera:result.sample.camera};
@@ -98,8 +98,8 @@ function refreshHands(){
   console.log('Refreshed POV hand frames with the actual transparent assets');
 }
 async function run(){
-  const [hands,flexedHands,brushHands]=await Promise.all(['pov-hands-open-fair-r19.png','pov-hands-flexed-fair-r19.png','pov-hands-brush-r23.png'].map(file=>loadImage(path.join(docs,'assets',file))));
-  endingAssets={hands,flexedHands,brushHands};
+  const [hands,flexedHands,brushHands,toolsHands]=await Promise.all(['pov-hands-open-fair-r19.png','pov-hands-flexed-fair-r19.png','pov-hands-brush-r23.png','pov-hands-tools-r24.png'].map(file=>loadImage(path.join(docs,'assets',file))));
+  endingAssets={hands,flexedHands,brushHands,toolsHands};
   const mode=process.argv[2]||'all';if(!['all','detailed','palette-preview','refresh','hands'].includes(mode))throw Error('Use all, detailed, palette-preview, refresh, or hands');
   if(mode==='all'||mode==='detailed')renderDetailed();if(mode==='all'||mode==='palette-preview')renderPalettePreview();
   if(mode==='refresh')refreshInnerEnding();if(mode==='hands')refreshHands();

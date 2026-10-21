@@ -63,12 +63,12 @@
     return {distance: distance + (endSpeed - cruise) * settle * (u ** 3 - u ** 4 / 2), speed: cruise + (endSpeed - cruise) * u * u * (3 - 2 * u)};
   }
   function parentReaction(kind, elapsed, reactionDuration = .5) {
-    const isFather=kind==='father',u=clamp(elapsed/reactionDuration);
-    // The contact edge yields first. Only then does the intact body retreat.
-    const dent=elapsed<0?0:(1-(1-clamp(u/.18))**3)*(1-ease((u-.32)/.68)),retreat=ease((u-.16)/.84);
-    const speed=u<=.16||u>=1?0:Math.hypot(isFather?44:46,isFather?-18:28)*easeSpeed((u-.16)/.84)/(.84*reactionDuration);
+    const isFather=kind==='father',u=clamp(elapsed/reactionDuration),move=clamp((u-.14)/.86);
+    // A fast flinch loses speed continuously; the contact edge folds before the body gives way.
+    const dent=elapsed<0?0:(1-(1-clamp(u/.16))**3)*(1-ease((u-.42)/.58)),retreat=1-(1-move)**3;
+    const speed=u<=.14||u>=1?0:Math.hypot(isFather?44:46,isFather?-18:28)*3*(1-move)**2/(.86*reactionDuration);
     const edgeBends=Array(4).fill(0);if(impacts[kind])edgeBends[impacts[kind].edgeIndex]=dent;
-    return{x:(isFather?510:1090)+(isFather?-44:46)*retreat,y:470+(isFather?-18:28)*retreat,angle:(isFather?Math.PI/4:0)+(isFather?-.08:.08)*retreat,sx:1,sy:1,fear:dent,bend:0,edgeBends,speed,strain:0,bounce:0};
+    return{x:(isFather?510:1090)+(isFather?-44:46)*retreat,y:470+(isFather?-18:28)*retreat,angle:(isFather?Math.PI/4:0)+(isFather?-.08:.08)*retreat,sx:isFather?1:1-.12*dent,sy:isFather?1:1-.17*dent,fear:dent,bend:0,edgeBends,speed,strain:0,bounce:0};
   }
   function parent(kind,p){return parentReaction(kind,events[kind]===null?-1:(p-events[kind])*duration,1.05);}
   function childAt(p, fear) {

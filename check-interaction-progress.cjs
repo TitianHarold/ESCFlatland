@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const{WorkProgress,ChaseProgress}=require('./docs/interaction-progress.js');
+const{WorkProgress,ChaseProgress,PaintPeel}=require('./docs/interaction-progress.js');
 function run(controller,seconds,options={}){
   for(let i=0;i<Math.round(seconds*60);i++)controller.update(1/60,options);
   return controller.snapshot();
@@ -45,6 +45,10 @@ assert(cs.rate<coasting&&cs.rate>.31,'release returns smoothly to basic motion')
 cs=run(chase,4.4,{held:true});
 assert.equal(cs.complete,false,'only a full uninterrupted charge unlocks the ending');
 cs=run(chase,.1,{held:true});
+assert.equal(cs.finishing,true);assert.equal(cs.complete,false,'a full ring starts the final peeling burst');
+const peel=new PaintPeel();peel.click();run(peel,.7);assert.equal(peel.snapshot().filter(v=>v===1).length,1);peel.finish();
+run(peel,1.6);assert(peel.snapshot().every(v=>v===1),'the final burst removes every remaining panel in sequence');
+cs=run(chase,1.7,{held:false});
 assert.equal(cs.complete,true);
 assert.equal(cs.raw,132);
 assert.equal(cs.charge,1);

@@ -13,20 +13,29 @@
   function point(id,clock,viewport){const {w,h,s}=size(viewport),p=sites[id],phase=id*1.73,rx=Math.min(w*.065,58*s),ry=Math.min(h*.06,48*s);return{x:w*p[0]+rx*(.74*Math.sin(clock*.95+phase)+.26*Math.sin(clock*1.71+phase*.7)),y:h*p[1]+ry*(.72*Math.cos(clock*.81+phase*1.25)+.28*Math.sin(clock*1.47+phase))};}
   class Session{
     constructor({autoDuration=10}={}){this.autoDuration=Math.max(breakDuration+1,Number.isFinite(autoDuration)?autoDuration:10);this.reset();}
-    reset(){this.clock=0;this.actionClock=0;this.autoElapsed=0;this.found=[];this.breakAge=0;return this;}
+    reset(){this.clock=0;this.actionClock=0;this.autoElapsed=0;this.found=[];this.breakAge=0;this.confirmed=false;return this;}
     collect(id,viewport){
       if(this.found.some(item=>item.id===id)||this.found.length===total)return false;
-      const pair=Math.floor(this.found.length/2)*2;
-      if(id<pair||id>pair+1)return false;
+      const available=this.availableIds();
+      if(!available.includes(id))return false;
       const {w,h}=size(viewport),p=point(id,this.clock,viewport);
       this.found.push({id,u:p.x/w,v:p.y/h,at:this.actionClock,clock:this.clock});
       this.autoElapsed=Math.max(this.autoElapsed,this.found.length*(this.autoDuration-breakDuration)/total);
       if(this.found.length===total)this.breakAge=0;
       return true;
     }
+    availableIds(){
+      const count=this.found.length;
+      return count<2?[0,1].filter(id=>!this.found.some(item=>item.id===id)):count<total?[count]:[];
+    }
     tap(x,y,viewport){
       if(!Number.isFinite(x)||!Number.isFinite(y))return false;
-      const candidates=this.snapshot(viewport).points.filter(p=>p.visible&&!p.collected);
+      const state=this.snapshot(viewport);
+      if(state.awaitingCenter){
+        if(Math.hypot(x-state.center.x,y-state.center.y)>state.center.hitRadius)return false;
+        this.confirmed=true;this.breakAge=2.04;return true;
+      }
+      const candidates=state.points.filter(p=>p.visible&&!p.collected);
       const hit=candidates.find(p=>Math.hypot(x-p.x,y-p.y)<=p.hitRadius);
       return hit?this.collect(hit.id,viewport):false;
     }
@@ -38,34 +47,43 @@
         // Step across each scheduled hit so a long frame behaves like many small frames.
         for(let number=this.found.length+1;number<=total;number++){
           const due=number*step;if(due>end+1e-9)break;
-          const segment=Math.max(0,due-start-advanced);this.advance(segment);advanced+=segment;
+          const segment=Math.max(0,due-start-advanced);this.advance(segment,automatic);advanced+=segment;
           const id=Array.from({length:total},(_,i)=>i).find(i=>!this.found.some(p=>p.id===i));
           this.collect(id,{w:1280,h:760});
         }
       }
-      this.advance(dt-advanced);if(automatic)this.autoElapsed=end;return this;
+      this.advance(dt-advanced,automatic);if(automatic)this.autoElapsed=end;return this;
     }
-    advance(dt){this.actionClock+=dt;if(this.found.length===total){this.breakAge=Math.min(breakDuration,this.breakAge+dt);if(this.breakAge>breakDuration-1e-9)this.breakAge=breakDuration;}}
+    advance(dt,automatic=false){
+      this.actionClock+=dt;
+      if(this.found.length!==total)return;
+      const limit=automatic||this.confirmed?breakDuration:1.44;
+      this.breakAge=Math.max(this.breakAge,Math.min(limit,this.breakAge+dt));
+      if(automatic&&this.breakAge>2.04)this.confirmed=true;
+      if(this.breakAge>breakDuration-1e-9)this.breakAge=breakDuration;
+    }
     seek(progress){
       const p=clamp(Number.isFinite(progress)?progress:0);this.reset();this.clock=this.autoElapsed=p*this.autoDuration;this.actionClock=this.clock;
       const count=p>=collectProgress?total:Math.floor(p/collectProgress*total+1e-8);
       for(let id=0;id<count;id++){const at=Math.min(this.actionClock-.6,(id+1)*(this.autoDuration-breakDuration)/total);this.found.push({id,u:sites[id][0],v:sites[id][1],at,clock:at});}
-      this.breakAge=p>=collectProgress?(p-collectProgress)/(1-collectProgress)*breakDuration:0;return this;
+      this.breakAge=p>=collectProgress?(p-collectProgress)/(1-collectProgress)*breakDuration:0;this.confirmed=this.breakAge>=2.04;return this;
     }
     snapshot(viewport){
-      const {w,h,s}=size(viewport),count=this.found.length,b=clamp(this.breakAge/breakDuration),pair=Math.floor(count/2)*2;
+      const {w,h,s}=size(viewport),count=this.found.length,b=clamp(this.breakAge/breakDuration),available=this.availableIds();
       const points=sites.map((_,id)=>{
         const found=this.found.find(item=>item.id===id),p=found?{x:found.u*w,y:found.v*h}:point(id,this.clock,viewport);
-        const visible=!!found||(count<total&&id>=pair&&id<pair+2),pulse=.55+.45*Math.sin(this.clock*1.55+id*2.1)**2;
-        const unlockedAt=pair?Math.max(...this.found.filter(item=>item.id<pair).map(item=>item.clock)):0,arrival=smooth((this.clock-unlockedAt)/.45);
+        const visible=!!found||available.includes(id),pulse=.55+.45*Math.sin(this.clock*1.55+id*2.1)**2;
+        const unlockedAt=id>=2?Math.max(0,...this.found.map(item=>item.clock)):0,arrival=smooth((this.clock-unlockedAt)/.45);
         const trail=found?[]:Array.from({length:7},(_,i)=>point(id,this.clock-(6-i)*.09,viewport));
         return{id,...p,trail,r:Math.max(2.8,(3.2+.8*pulse)*s),hitRadius:Math.max(28,34*s),alpha:visible?(found?.12:(.68+.32*pulse)*arrival)*(1-smooth(b/.4)):0,collected:!!found,visible};
       });
       const reveals=this.found.map(found=>{const age=Math.max(0,this.actionClock-found.at),strength=smooth(age/.6);return{id:found.id,x:found.u*w,y:found.v*h,age,strength,radius:(138+found.id%3*17)*s};});
       return{points,reveals,collected:count,progress:count<total?collectProgress*count/total:collectProgress+(1-collectProgress)*b,
-        phase:count===total?(b>=1?'done':'break'):count||this.clock>.6?'discover':'dark',breakProgress:b,
+        phase:count===total?(b>=1?'done':this.breakAge>=1.44&&!this.confirmed?'ready':'break'):count||this.clock>.6?'discover':'dark',breakProgress:b,
+        awaitingCenter:count===total&&this.breakAge>=1.44&&!this.confirmed,
+        center:{x:w/2,y:h/2,r:(5.5+.35*Math.sin(this.clock*.9))*s,hitRadius:Math.max(34,42*s),alpha:count===total?smooth((this.breakAge-1.1)/.34)*(1-smooth((this.breakAge-2.04)/.4)):0},
         revealProgress:clamp(this.breakAge/1.44),fullLit:this.breakAge>=1.44,
-        shrinkProgress:smooth((this.breakAge-2.04)/1.96),seedFlight:smooth((this.breakAge-1.4)/2.6),done:b>=1,clock:this.clock};
+        shrinkProgress:smooth((this.breakAge-2.04)/1.96),seedFlight:smooth((this.breakAge-2.04)/1.96),done:b>=1,clock:this.clock};
     }
   }
   let contentCanvas,maskCanvas,grainCanvas;
@@ -120,9 +138,15 @@
     for(const dot of state.points){
       if(!dot.visible||dot.alpha<=0)continue;
       if(dot.trail?.length){ctx.strokeStyle=p.gold;ctx.lineCap='round';for(let i=1;i<dot.trail.length;i++){const a=dot.trail[i-1],b=dot.trail[i];ctx.globalAlpha=dot.alpha*.28*i/dot.trail.length;ctx.lineWidth=Math.max(1,1.7*s)*i/dot.trail.length;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
-      ctx.globalAlpha=dot.alpha;const radius=dot.r*7,glow=ctx.createRadialGradient(dot.x,dot.y,0,dot.x,dot.y,radius);glow.addColorStop(0,p.gold+'dd');glow.addColorStop(.22,p.gold+'72');glow.addColorStop(1,p.gold+'00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(dot.x,dot.y,radius,0,TAU);ctx.fill();ctx.fillStyle=p.gold;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r,0,TAU);ctx.fill();ctx.fillStyle=p.cream;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r*.52,0,TAU);ctx.fill();
+      ctx.globalAlpha=dot.alpha;softGlow(ctx,dot.x,dot.y,dot.r,p);
     }
+    if(state.center?.alpha>0){ctx.globalAlpha=state.center.alpha;softGlow(ctx,state.center.x,state.center.y,state.center.r,p);}
     ctx.restore();
+  }
+  function softGlow(ctx,x,y,r,p){
+    const radius=r*6.5,glow=ctx.createRadialGradient(x,y,0,x,y,radius);
+    glow.addColorStop(0,p.cream+'f2');glow.addColorStop(.07,p.cream+'d2');glow.addColorStop(.2,p.gold+'8c');glow.addColorStop(.48,p.gold+'28');glow.addColorStop(1,p.gold+'00');
+    ctx.fillStyle=glow;ctx.fillRect(x-radius,y-radius,radius*2,radius*2);
   }
   return{Session,draw,total,breakDuration,get background(){return background();}};
 });

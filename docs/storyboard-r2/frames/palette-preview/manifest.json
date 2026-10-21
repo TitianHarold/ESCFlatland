@@ -1,53 +1,53 @@
 {
   "id": "flatland-r2-palette-preview",
-  "generatedAt": "2026-10-21T14:05:21.158Z",
+  "generatedAt": "2026-10-21T15:03:02.025Z",
   "sourceRepository": "/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland",
-  "sourceCommit": "fa2b9bdbfe0654402d601da90f08cd2c2e43cba1",
+  "sourceCommit": "9f2e5fea28eb366baddce6d43d05d542b448c726",
   "sourceCommitRole": "Base revision before the current working-tree edits",
-  "sourceState": "R23 working-tree render before commit",
-  "sourceWorkingTree": "M README.md\n M check-app-interaction.cjs\n M check-escort.cjs\n M check-hero-camera.cjs\n M check-inner-discovery.cjs\n M check-player.cjs\n M check-storyboard.cjs\n M docs/action-input.js\n M docs/app.js\n M docs/camera.js\n M docs/city-map.js\n M docs/dimension.js\n M docs/district.js\n M docs/factory-routine.js\n M docs/factory.js\n M docs/index.html\n M docs/inner-discovery.js\n M docs/interaction-progress.js\n M docs/resistance-indicator.css\n M docs/story-notes.js\n M docs/story-versions.js\n M docs/workbench.html\n?? check-city-map.cjs\n?? check-ending-progress.cjs\n?? check-ending-render.cjs\n?? check-peel-input.cjs\n?? check-r23-transport-integration.cjs\n?? check-transport-clock.cjs\n?? docs/assets/pov-hands-brush-r23.png\n?? docs/ending-progress.js",
+  "sourceState": "R24 working-tree render before commit",
+  "sourceWorkingTree": "M README.md\n M check-app-interaction.cjs\n M check-encounter.cjs\n M check-ending-progress.cjs\n M check-ending-render.cjs\n M check-escort.cjs\n M check-inner-discovery.cjs\n M check-interaction-progress.cjs\n M check-player.cjs\n M check-r23-transport-integration.cjs\n M check-speed-response.cjs\n M check-storyboard.cjs\n M docs/app.js\n M docs/camera.js\n M docs/city-map.js\n M docs/dimension.js\n M docs/district.js\n M docs/encounter-interaction.js\n M docs/ending-progress.js\n M docs/factory-routine.js\n M docs/factory.js\n M docs/family-navigation.js\n M docs/index.html\n M docs/inner-discovery.js\n M docs/interaction-progress.js\n M docs/motion.js\n M docs/story-notes.js\n M docs/story-versions.js\n M docs/workbench.html\n?? check-correction-resistance.cjs\n?? check-gate-escort.cjs\n?? docs/assets/pov-hands-tools-r24.png\n?? docs/assets/tools-r24.json",
   "sourceModuleSHA256": {
     "palette.js": "ac22e69bf491b799f8a8ad2cbcaca50a409b5b7138882cccad073dd4bafb920a",
     "character-geometry.js": "d6c98242138d0227003ab57ba04b1db8fe1f166df9ae63d609990f0a1943647d",
-    "motion.js": "56361a36845d13febfc2d889d2f35fff1b2ccab733c349678b0e72b6e99b0f5d",
+    "motion.js": "5bd8ae525d5fd042e01083de22702bda47bf5d3a0d5dea5aaf76dc71d2c29c89",
     "possibility.js": "3093fd0bcdae939a54c14e5ad1c5b4526be93eda871faea775d0a49cc233f454",
     "emotions.js": "186bbc7f7b11d7b1a8f1603b51a300dfed1cca139addc9254eff24b63676eb06",
-    "camera.js": "c9fcabb4552bf3f42511bb3805e69db48647442a298237afbd36d4717ac28248",
+    "camera.js": "425464a4fbcf9186a10d61c3dc367da957f9ce4a3cecdb0ffc2df24c2222d960",
     "portals.js": "6b4fc900849b12266ea1939fed44795c03548c79af5be81cc8ca796b70ac1fd5",
-    "city-map.js": "565f6472918591deba0298e3241b1f3a7ce92f4d1ef130fefa2f70a76bfeceff",
+    "city-map.js": "5418f8e6cb4c50682610cffbca3ee24abeae39f51820ff63950e1365001f8980",
     "collision-world.js": "739f5d8b0fcb214c8e4820371be89ef6930af770542fd85429ab5a7c42210d2d",
-    "district.js": "73df2c67d50a8653bfdaac2201c0bc3bacf2e3cab82c873cac0d300fc2912cd2",
+    "district.js": "3e4c0e286a48613db6d95dab43379986e23bb23256be0fc8ace582c33e9f6c41",
     "correction-rules.js": "7fcc0a90513d5d66f5c651f879e92730db206ac190dca0e0210a918c77f36968",
-    "factory.js": "a2c145189128117293ee2144d2d4a72a2a3f2743440c7934ca51817a4cd5342c",
+    "factory.js": "ce0df9ebd7d77cef4d510bb76e2197ddc2b3eb47011058745bd7fdd034c6ce9b",
     "restraint.js": "69570f8a0cb9bde0610f09dddc87960348c547e0eebe5728c17213ff23a998d2",
-    "ending-progress.js": "fc49c9b3c67b213cf4254f51282a6044de60e0f986e8644a6e164c9823ffb456",
-    "dimension.js": "e4fcb08d93d59cf8091605d65b89ac7b90849a5c7adfdf08f95cc79a2ebf73a6",
-    "inner-discovery.js": "dcd02652bcb386913600062eac60c6bd93d8b83c08bb9b324e2b847f761221b0",
+    "ending-progress.js": "3eb85f5610f563a8808b34f8b807b5dd711e1747ca46b193d8718fe49e2e3f53",
+    "dimension.js": "68c84c1b7cf06748d30eceb7f876bf74f14f0eb0df68850f61d7e46fdcb43c29",
+    "inner-discovery.js": "17d62c3f6df903a6e803af4c0593679b9b2a9c647850d015ecd2c46902d214e4",
     "inner-world.js": "411f54a7f3c0a7d5460254311c7bf575d157f00e60743a3d8e869de8ebd4661b",
     "story-timing.js": "59338129f445351bf5bb1ca9e2e94dcbfeb35a02549237f8c5fec72198ca4110",
-    "story-notes.js": "b92ab529fc10d56b2b5781d7f1ba017dbb55ce1772ba10c8b5c4c58589634ea5",
+    "story-notes.js": "3aeb48c4fdb9e24dff8c53dd1c5037131e4026648816e4deef72882a065aaf12",
     "office-world.js": "269945825bac9c13227e110c45600ecaedee80a646c01dd8715ef969afe4409e",
-    "factory-routine.js": "71393a0cfad7689b63b63fcdcabdfbf1c0384528e84da4cad66345dae4ab4d57",
-    "story-versions.js": "6776257d655b6da3c3c823021a88a60adfaeed79000f4426fa6d186a5b878ad3",
-    "family-navigation.js": "365b43398af10a9faedea42e41643e42c1e7f9ac712c208248bd74471c20a36b",
-    "encounter-interaction.js": "c4b06532ef38405b988c5eea9c26546f503d34c80799c2ae68fbe64855f6d916",
+    "factory-routine.js": "9110ad36ffd847b37c24c5875299695c1e4c37fe2bd51950961df6d091697931",
+    "story-versions.js": "1725b15578282b49e6d090123445df77cc3159cf9a61eba795ce37b994aa2559",
+    "family-navigation.js": "016bc9f1a0362d74aec05bc29fa9f018367d06a5c667e5ad6ef79913e40e62c8",
+    "encounter-interaction.js": "1fa2637ec3d2ae36729b3fe26cc99d49934ae094ff3dca9e48402b8231fc1bd1",
     "action-input.js": "1c71bbf971eddeb29c5e85468d6a109940339a7590f1772a2bd363843672eff1",
     "story-player.js": "69026a8bf0abf9e0559d26a7c3a4aa4ab23ca0e8823ce405adee464dea6b2adf",
-    "interaction-progress.js": "046fabd9ba54825654d3059cf09d0b45b49dcd0d3ff37e8b5ed5c44a3b5124dd",
-    "app.js": "c3e38417ef0ce57095d229b88226d60ac7a41348895cada303f51ff86083fef1"
+    "interaction-progress.js": "31edba995c583a9c4889fb04a501bad5f54841039e13b96c4e30f0c3c96bd158",
+    "app.js": "e9b069bc7ab03a519e58594398a09b052eba9ee3e35bcae05539528d9fad11be"
   },
   "shotsFile": "../../shots-detailed.json",
-  "shotsSHA256": "49319bda13122906a59983eb22429c8f14a83a264ecbafaf7e92622bb8529ff1",
+  "shotsSHA256": "b56be1b2606161fdcb788609d3746a411edd005b1df66501ef973fdc03435e90",
   "renderer": "@napi-rs/canvas; actual index.html script order and app.js draw functions in fresh VMs; no browser automation",
   "evidenceBoundary": "Offline Node Canvas render of current repository geometry and actual app.js draw functions. This is not a browser screenshot and is not newly generated hand-drawn artwork. Minimal DOM and Canvas rasterization may differ from browser output.",
   "isNewHandDrawnArtwork": false,
   "isBrowserScreenshot": false,
   "productionCompositionDifference": "Code frames preserve the implemented upper house opening, planar geometry and continuous scene clock. Hand-drawn source images remain selectable visual references.",
   "storyDuration": 138,
-  "playbackDuration": 116.7,
+  "playbackDuration": 118.7,
   "playbackDurations": {
-    "rhythm": 105.65,
-    "routine": 116.7
+    "rhythm": 107.65,
+    "routine": 118.7
   },
   "status": "complete",
   "frames": [
@@ -71,8 +71,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 33080,
-      "sha256": "fb8796bc3b2c010c5a5b52b1c8cad7e9479f02eb152333e22c2e20bd9fe8a2a1",
+      "bytes": 32392,
+      "sha256": "e34fb5f6913509845f1e15b0f67912fbdc661e31b2784a29c6c92ea5836b6efc",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -80,7 +80,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -103,8 +104,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 69237,
-      "sha256": "20053f7384552b9c70bc3832e76acbddb69e31fef749caae81ad1a81bf78e25c",
+      "bytes": 69191,
+      "sha256": "04b3735b4c2f331f4c8dcc2a5a3df581aa95f6c0905da62d1eba835d9e578bc3",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -115,7 +116,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -138,8 +140,8 @@
       "ambientSeconds": 41.900000000000006,
       "width": 640,
       "height": 380,
-      "bytes": 164034,
-      "sha256": "6f09d03b299e0484361e44f15dba9f64193df34df274472c6ab6da7d2add3d57",
+      "bytes": 163875,
+      "sha256": "79f2c08fd1ee53f5b1e52391b9489a16f3a55c76a17c7328a21c2139c9913dfd",
       "camera": {
         "space": "flat",
         "x": -4222.3322453025785,
@@ -148,7 +150,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -171,8 +174,8 @@
       "ambientSeconds": 74.20555555555556,
       "width": 640,
       "height": 380,
-      "bytes": 135864,
-      "sha256": "f2195bb8962f9afdec749fc3e31b56d15b85d169230b1bd1625e881cbed012cf",
+      "bytes": 134421,
+      "sha256": "f9862bd5c4ebaf7a8ffce2e0b8a9a465a9576513de455780060200db38ebe002",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -180,7 +183,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -203,8 +207,8 @@
       "ambientSeconds": 87.65,
       "width": 640,
       "height": 380,
-      "bytes": 283950,
-      "sha256": "05eedbcffd51e812e3c6d09904a7be6ac60e43d6b6d0f61c798a96eb93a9691f",
+      "bytes": 283586,
+      "sha256": "56ac60640686be82542e40930b07b9377bbcde07ae0973991c67f67273f6e2bd",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -225,22 +229,22 @@
       "preset": "original",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 98.65,
+      "requestedPlaybackSeconds": 99.65,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "original",
         "colors": {}
       },
-      "file": "rhythm-original-dimension-t98.65.png",
-      "src": "frames/palette-preview/rhythm-original-dimension-t98.65.png",
+      "file": "rhythm-original-dimension-t99.65.png",
+      "src": "frames/palette-preview/rhythm-original-dimension-t99.65.png",
       "sceneTime": 135,
-      "playbackSeconds": 98.65,
-      "ambientSeconds": 98.65,
+      "playbackSeconds": 99.65,
+      "ambientSeconds": 99.65,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -272,8 +276,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 31686,
-      "sha256": "c1606295e4dece8a06497ca7987416bc4cca81c1e5b02a739099a173bfb83e3e",
+      "bytes": 31023,
+      "sha256": "f34f20152c459d754db9ba9fd1f7c0f8bbf4903d235c81b7ea4fda1431fa28ce",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -281,7 +285,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -304,8 +309,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 65984,
-      "sha256": "1b114e2bf6c067f64821a3d27d2f3e7c8b79947615788eafa1b91842035cbd77",
+      "bytes": 65802,
+      "sha256": "2088881dc7f64705d496e85d1b73383d025b28e5d6a86ef98b3538b79770eec7",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -316,7 +321,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -339,8 +345,8 @@
       "ambientSeconds": 41.900000000000006,
       "width": 640,
       "height": 380,
-      "bytes": 160221,
-      "sha256": "80d04e4f9ea1c6954ee0a43ff8bba4c276bc54741ae65085b110af7d78c886a3",
+      "bytes": 160184,
+      "sha256": "fb7e06a1b442dbbe5ddd0bea9910bdacbeb53931927c548ab4466288958ede10",
       "camera": {
         "space": "flat",
         "x": -4222.3322453025785,
@@ -349,7 +355,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -372,8 +379,8 @@
       "ambientSeconds": 74.20555555555556,
       "width": 640,
       "height": 380,
-      "bytes": 124458,
-      "sha256": "951ea309083f65a6f5cac1d2ac4c030d7fca4e8912f5bc672d6c654344a801b2",
+      "bytes": 122243,
+      "sha256": "d6717fea908559c77f7c8e59017f167fa9069b966798b8b80a1a7f976623dc09",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -381,7 +388,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -404,8 +412,8 @@
       "ambientSeconds": 87.65,
       "width": 640,
       "height": 380,
-      "bytes": 266377,
-      "sha256": "c751cdfa5a9b88e5dc765e1877a95061c43dc404bc3d5cf165c3bdfee2293006",
+      "bytes": 265915,
+      "sha256": "c492a324818baf3fc4382d7237c75181a358264ae5ed60d03639a71e50844fd2",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -426,22 +434,22 @@
       "preset": "F2",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 98.65,
+      "requestedPlaybackSeconds": 99.65,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F2",
         "colors": {}
       },
-      "file": "rhythm-F2-dimension-t98.65.png",
-      "src": "frames/palette-preview/rhythm-F2-dimension-t98.65.png",
+      "file": "rhythm-F2-dimension-t99.65.png",
+      "src": "frames/palette-preview/rhythm-F2-dimension-t99.65.png",
       "sceneTime": 135,
-      "playbackSeconds": 98.65,
-      "ambientSeconds": 98.65,
+      "playbackSeconds": 99.65,
+      "ambientSeconds": 99.65,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -473,8 +481,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 33708,
-      "sha256": "9d9174517ea6a4acd70495f6e7058ba5c885dc1f9a8347a0d5702c8e39fa3eae",
+      "bytes": 33012,
+      "sha256": "c94d14f59946d7b66e786861003b6488fcf5528aeb277d59c0585f1b4ae9a4ff",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -482,7 +490,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -505,8 +514,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 67037,
-      "sha256": "f894f9263891df965d25c0bcfbf46b8169697b9ada987e1bde086e47f63f1275",
+      "bytes": 66823,
+      "sha256": "d038cb55ba385e57b23f9529e93e3e4282ed4b324b2e2e095002ae98894261d3",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -517,7 +526,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -540,8 +550,8 @@
       "ambientSeconds": 41.900000000000006,
       "width": 640,
       "height": 380,
-      "bytes": 157012,
-      "sha256": "948556ee073e9080f488735128fc5763e4a24e5fb19406c3cf00f7d51b0b060e",
+      "bytes": 156966,
+      "sha256": "874771c7140523ed8815241f1eb680d501a69dbec77cb59e855f13471163356e",
       "camera": {
         "space": "flat",
         "x": -4222.3322453025785,
@@ -550,7 +560,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -573,8 +584,8 @@
       "ambientSeconds": 74.20555555555556,
       "width": 640,
       "height": 380,
-      "bytes": 126246,
-      "sha256": "e2230a4311a1fc9c5c7950801fd7bb220c6f983882c738a32d67233d903e909f",
+      "bytes": 124167,
+      "sha256": "79051af8b6066d9bbd7d368e26c19e3299ff68124e4a4da677f061fa5ae8059d",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -582,7 +593,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -605,8 +617,8 @@
       "ambientSeconds": 87.65,
       "width": 640,
       "height": 380,
-      "bytes": 264319,
-      "sha256": "6cff2561fa5a69cc5f1889af5273d8f11744ea4f73938398df4ba61ef0fcc411",
+      "bytes": 263943,
+      "sha256": "c4f65020a1d20ee5e5b115dd38ac785a3095e702d5c46d28c703acd66970ded8",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -627,22 +639,22 @@
       "preset": "F3",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 98.65,
+      "requestedPlaybackSeconds": 99.65,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F3",
         "colors": {}
       },
-      "file": "rhythm-F3-dimension-t98.65.png",
-      "src": "frames/palette-preview/rhythm-F3-dimension-t98.65.png",
+      "file": "rhythm-F3-dimension-t99.65.png",
+      "src": "frames/palette-preview/rhythm-F3-dimension-t99.65.png",
       "sceneTime": 135,
-      "playbackSeconds": 98.65,
-      "ambientSeconds": 98.65,
+      "playbackSeconds": 99.65,
+      "ambientSeconds": 99.65,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -674,8 +686,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 28923,
-      "sha256": "54b2a9c646fe0f5b836f8bc6ba5e870ebb316a155cab2468595d664b4929a791",
+      "bytes": 28429,
+      "sha256": "06aff9d06bf6e3ca5d940a617d60a7a791a83e1b695c0416ac4d6f5954a476fe",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -683,7 +695,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -706,8 +719,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 62087,
-      "sha256": "fbc9720b3d1e906fc2df977af867ea4d28a7ca169b14715a21907343d4d6e9f5",
+      "bytes": 61740,
+      "sha256": "c85198fe70528ce6f15fe4648617b1ba909ecc36c4950e9fd65c5cbf5484b3bc",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -718,7 +731,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -741,8 +755,8 @@
       "ambientSeconds": 41.900000000000006,
       "width": 640,
       "height": 380,
-      "bytes": 147662,
-      "sha256": "bee1592b5ea2fd1147d60e1792a602524b124ca7c4109a999ac1700d22530477",
+      "bytes": 147595,
+      "sha256": "431cded8ab0d500dfbd6b06dc595261f784d2982f315f05f1d1d99a253342374",
       "camera": {
         "space": "flat",
         "x": -4222.3322453025785,
@@ -751,7 +765,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "press",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -774,8 +789,8 @@
       "ambientSeconds": 74.20555555555556,
       "width": 640,
       "height": 380,
-      "bytes": 116705,
-      "sha256": "8547918bf37a55cd26799dcf439dd75d4217056cd8ad678a9d4a2d2dd6950343",
+      "bytes": 114684,
+      "sha256": "279be4ad47f173d91c976b3cdb951d3cc25712cfc07f110abd56a5a91a8a5ca5",
       "camera": {
         "space": "flat",
         "shotId": "inner",
@@ -783,7 +798,8 @@
         "y": -3394.861150995069,
         "zoom": 2.8,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -806,8 +822,8 @@
       "ambientSeconds": 87.65,
       "width": 640,
       "height": 380,
-      "bytes": 254019,
-      "sha256": "a198d0b0e4b02dcd4249cdeffb61ee73ea24b95eedc7db2ff2c4615bedef96cb",
+      "bytes": 253750,
+      "sha256": "c1284cc23b209aeb19d2a324026f1366a3b31558908034d8b8158c5f254e80d7",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -828,22 +844,22 @@
       "preset": "F4",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 98.65,
+      "requestedPlaybackSeconds": 99.65,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F4",
         "colors": {}
       },
-      "file": "rhythm-F4-dimension-t98.65.png",
-      "src": "frames/palette-preview/rhythm-F4-dimension-t98.65.png",
+      "file": "rhythm-F4-dimension-t99.65.png",
+      "src": "frames/palette-preview/rhythm-F4-dimension-t99.65.png",
       "sceneTime": 135,
-      "playbackSeconds": 98.65,
-      "ambientSeconds": 98.65,
+      "playbackSeconds": 99.65,
+      "ambientSeconds": 99.65,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -875,8 +891,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 33080,
-      "sha256": "fb8796bc3b2c010c5a5b52b1c8cad7e9479f02eb152333e22c2e20bd9fe8a2a1",
+      "bytes": 32392,
+      "sha256": "e34fb5f6913509845f1e15b0f67912fbdc661e31b2784a29c6c92ea5836b6efc",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -884,7 +900,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -907,8 +924,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 69237,
-      "sha256": "20053f7384552b9c70bc3832e76acbddb69e31fef749caae81ad1a81bf78e25c",
+      "bytes": 69191,
+      "sha256": "04b3735b4c2f331f4c8dcc2a5a3df581aa95f6c0905da62d1eba835d9e578bc3",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -919,7 +936,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -942,8 +960,8 @@
       "ambientSeconds": 41.518,
       "width": 640,
       "height": 380,
-      "bytes": 78005,
-      "sha256": "e8b9c05775c476a2b73c4da78b6cf21d9f2bd2ce7ca953e6bd417728a16f5adc",
+      "bytes": 77907,
+      "sha256": "52250eed0be80e1cfb6fd3393ee65787f80360b0077178c70fa4cd7e86fe6f13",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -952,7 +970,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -975,8 +994,8 @@
       "ambientSeconds": 85.17474747474748,
       "width": 640,
       "height": 380,
-      "bytes": 131290,
-      "sha256": "764b84fb053ad2a3b86408a85c1614a14950d70d37fa494e593edee470465f19",
+      "bytes": 129631,
+      "sha256": "18b337e4b5a96ae0c60a8c88316148d41d16b4fe8d820468825c7f2faf9b986b",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -984,7 +1003,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -1007,8 +1027,8 @@
       "ambientSeconds": 98.7,
       "width": 640,
       "height": 380,
-      "bytes": 235339,
-      "sha256": "06a80eb18640c9a5135b22c4fc637fcff698e44ef77cbcf8ac43e37d84deb98f",
+      "bytes": 235096,
+      "sha256": "5d0fefbf2479d7e3b7dedb3cb026db77a501a0989347fcc0f3a4e70ac3ed563c",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -1029,22 +1049,22 @@
       "preset": "original",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 109.7,
+      "requestedPlaybackSeconds": 110.7,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "original",
         "colors": {}
       },
-      "file": "routine-original-dimension-t109.7.png",
-      "src": "frames/palette-preview/routine-original-dimension-t109.7.png",
+      "file": "routine-original-dimension-t110.7.png",
+      "src": "frames/palette-preview/routine-original-dimension-t110.7.png",
       "sceneTime": 135,
-      "playbackSeconds": 109.7,
-      "ambientSeconds": 109.7,
+      "playbackSeconds": 110.7,
+      "ambientSeconds": 110.7,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -1076,8 +1096,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 31686,
-      "sha256": "c1606295e4dece8a06497ca7987416bc4cca81c1e5b02a739099a173bfb83e3e",
+      "bytes": 31023,
+      "sha256": "f34f20152c459d754db9ba9fd1f7c0f8bbf4903d235c81b7ea4fda1431fa28ce",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -1085,7 +1105,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1108,8 +1129,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 65984,
-      "sha256": "1b114e2bf6c067f64821a3d27d2f3e7c8b79947615788eafa1b91842035cbd77",
+      "bytes": 65802,
+      "sha256": "2088881dc7f64705d496e85d1b73383d025b28e5d6a86ef98b3538b79770eec7",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -1120,7 +1141,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -1143,8 +1165,8 @@
       "ambientSeconds": 41.518,
       "width": 640,
       "height": 380,
-      "bytes": 73113,
-      "sha256": "707ce5387d8370114a405a26539fb7b1dba38a747abad967abfeea0ae008d2fb",
+      "bytes": 73141,
+      "sha256": "a5f942fd1728a8383bc194c22f55882fcaebf07f39469e209926fecacdef9452",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -1153,7 +1175,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1176,8 +1199,8 @@
       "ambientSeconds": 85.17474747474748,
       "width": 640,
       "height": 380,
-      "bytes": 120615,
-      "sha256": "2e27dac3276dfb558c6c854ab0ea800c1a8916cab8255351c2f451461a237aac",
+      "bytes": 118794,
+      "sha256": "9f4b0c4beb58327df272323fe7b18a4cc43aacab5ca0056905ff9876723a3a68",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -1185,7 +1208,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -1208,8 +1232,8 @@
       "ambientSeconds": 98.7,
       "width": 640,
       "height": 380,
-      "bytes": 221174,
-      "sha256": "352b85690d246a144634482a06879688629fd9613f293568a05432b30d9eed9f",
+      "bytes": 220825,
+      "sha256": "322ed7a197cf9aeb6e1724ce79c922b7b398b9676f04b5c4225105a8d4daec13",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -1230,22 +1254,22 @@
       "preset": "F2",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 109.7,
+      "requestedPlaybackSeconds": 110.7,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F2",
         "colors": {}
       },
-      "file": "routine-F2-dimension-t109.7.png",
-      "src": "frames/palette-preview/routine-F2-dimension-t109.7.png",
+      "file": "routine-F2-dimension-t110.7.png",
+      "src": "frames/palette-preview/routine-F2-dimension-t110.7.png",
       "sceneTime": 135,
-      "playbackSeconds": 109.7,
-      "ambientSeconds": 109.7,
+      "playbackSeconds": 110.7,
+      "ambientSeconds": 110.7,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -1277,8 +1301,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 33708,
-      "sha256": "9d9174517ea6a4acd70495f6e7058ba5c885dc1f9a8347a0d5702c8e39fa3eae",
+      "bytes": 33012,
+      "sha256": "c94d14f59946d7b66e786861003b6488fcf5528aeb277d59c0585f1b4ae9a4ff",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -1286,7 +1310,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1309,8 +1334,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 67037,
-      "sha256": "f894f9263891df965d25c0bcfbf46b8169697b9ada987e1bde086e47f63f1275",
+      "bytes": 66823,
+      "sha256": "d038cb55ba385e57b23f9529e93e3e4282ed4b324b2e2e095002ae98894261d3",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -1321,7 +1346,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -1344,8 +1370,8 @@
       "ambientSeconds": 41.518,
       "width": 640,
       "height": 380,
-      "bytes": 74379,
-      "sha256": "b0a05e29c02d441babde9816ae5d91ad0581fb4b18acb4b97ee0749ceb539fc3",
+      "bytes": 74292,
+      "sha256": "da67f73d7300c37d9f527e78b499a3f2933dc41cdcf199467edbf47a3464216f",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -1354,7 +1380,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1377,8 +1404,8 @@
       "ambientSeconds": 85.17474747474748,
       "width": 640,
       "height": 380,
-      "bytes": 121165,
-      "sha256": "5c0c241886a43fb101243ddf1b36a9c9fd2c7400a91f6e17faa7ccd21616a61b",
+      "bytes": 119307,
+      "sha256": "33d993e1ec3038b6507de1073b12a6f95e7fd60bab564419746e2669c11f7cf9",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -1386,7 +1413,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -1409,8 +1437,8 @@
       "ambientSeconds": 98.7,
       "width": 640,
       "height": 380,
-      "bytes": 219375,
-      "sha256": "cbb31b95916d38237d954d0d5a5121cc276e0ef5746eab30e56e80a340ed84ab",
+      "bytes": 219037,
+      "sha256": "eb81cfc596d667c49fb702afab92101a1c523fe745385a5e5aa209620afa47b8",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -1431,22 +1459,22 @@
       "preset": "F3",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 109.7,
+      "requestedPlaybackSeconds": 110.7,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F3",
         "colors": {}
       },
-      "file": "routine-F3-dimension-t109.7.png",
-      "src": "frames/palette-preview/routine-F3-dimension-t109.7.png",
+      "file": "routine-F3-dimension-t110.7.png",
+      "src": "frames/palette-preview/routine-F3-dimension-t110.7.png",
       "sceneTime": 135,
-      "playbackSeconds": 109.7,
-      "ambientSeconds": 109.7,
+      "playbackSeconds": 110.7,
+      "ambientSeconds": 110.7,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",
@@ -1478,8 +1506,8 @@
       "ambientSeconds": 1.7647058823529411,
       "width": 640,
       "height": 380,
-      "bytes": 28923,
-      "sha256": "54b2a9c646fe0f5b836f8bc6ba5e870ebb316a155cab2468595d664b4929a791",
+      "bytes": 28429,
+      "sha256": "06aff9d06bf6e3ca5d940a617d60a7a791a83e1b695c0416ac4d6f5954a476fe",
       "camera": {
         "space": "flat",
         "shotId": "family",
@@ -1487,7 +1515,8 @@
         "y": 500,
         "zoom": 1.4,
         "tilt": 0,
-        "yaw": 0
+        "yaw": 0,
+        "resisting": false
       }
     },
     {
@@ -1510,8 +1539,8 @@
       "ambientSeconds": 21.15,
       "width": 640,
       "height": 380,
-      "bytes": 62087,
-      "sha256": "fbc9720b3d1e906fc2df977af867ea4d28a7ca169b14715a21907343d4d6e9f5",
+      "bytes": 61740,
+      "sha256": "c85198fe70528ce6f15fe4648617b1ba909ecc36c4950e9fd65c5cbf5484b3bc",
       "camera": {
         "space": "flat",
         "shotId": "escort",
@@ -1522,7 +1551,8 @@
         "yaw": 0,
         "followBody": true,
         "focalOffsetY": 160,
-        "followReference": true
+        "followReference": true,
+        "resisting": false
       }
     },
     {
@@ -1545,8 +1575,8 @@
       "ambientSeconds": 41.518,
       "width": 640,
       "height": 380,
-      "bytes": 68318,
-      "sha256": "5688205f53a13023e9ac564c77f4cbfbb8cd6207b0775449042869c46ae37bd0",
+      "bytes": 68268,
+      "sha256": "dfb03c94a1a211074418dca00bf4d9748c5a4fee541935be7c6475f14f971297",
       "camera": {
         "space": "flat",
         "x": -4050.6243845001245,
@@ -1555,7 +1585,8 @@
         "tilt": 0,
         "yaw": 0,
         "shotId": "mold",
-        "followBody": true
+        "followBody": true,
+        "resisting": false
       }
     },
     {
@@ -1578,8 +1609,8 @@
       "ambientSeconds": 85.17474747474748,
       "width": 640,
       "height": 380,
-      "bytes": 114701,
-      "sha256": "98bf58220e270352c3e6226e509c92273cc0e4c36bdcbfcc77569d8838bfdb21",
+      "bytes": 112872,
+      "sha256": "2c2d0164bb2a81eac59508c47a67e1c9d2d535aa626807154eb7e203940955e9",
       "camera": {
         "space": "flat",
         "x": -6408.472588807443,
@@ -1587,7 +1618,8 @@
         "zoom": 1.5,
         "tilt": 0,
         "yaw": 0,
-        "shotId": "inner"
+        "shotId": "inner",
+        "resisting": false
       }
     },
     {
@@ -1610,8 +1642,8 @@
       "ambientSeconds": 98.7,
       "width": 640,
       "height": 380,
-      "bytes": 211468,
-      "sha256": "2c871cff96a865f5d9106fff33591c2f6466bb778e96a1570c2f53cb4fa0de50",
+      "bytes": 211191,
+      "sha256": "6e8620eebc53ee99958da5994a8e583e979ee53c360591c6c74ac847b81d4c93",
       "camera": {
         "space": "journey",
         "shotId": "chase",
@@ -1632,22 +1664,22 @@
       "preset": "F4",
       "moment": "dimension",
       "title": "双手",
-      "requestedPlaybackSeconds": 109.7,
+      "requestedPlaybackSeconds": 110.7,
       "position": "sample",
       "paletteConfig": {
         "version": 1,
         "preset": "F4",
         "colors": {}
       },
-      "file": "routine-F4-dimension-t109.7.png",
-      "src": "frames/palette-preview/routine-F4-dimension-t109.7.png",
+      "file": "routine-F4-dimension-t110.7.png",
+      "src": "frames/palette-preview/routine-F4-dimension-t110.7.png",
       "sceneTime": 135,
-      "playbackSeconds": 109.7,
-      "ambientSeconds": 109.7,
+      "playbackSeconds": 110.7,
+      "ambientSeconds": 110.7,
       "width": 640,
       "height": 380,
-      "bytes": 64409,
-      "sha256": "3fcbbfaab9436121838883377dcd6d434a0abfed9de6a34653d1e4512431261e",
+      "bytes": 86223,
+      "sha256": "489c2aa974f3a3b7e355b902c7ea891059ab60ac91c4c47f173ed4831df9565a",
       "camera": {
         "space": "pov",
         "shotId": "dimension",

@@ -319,8 +319,8 @@
   }
   function paintSeedGlow(ctx,x,y,r,opacity=1){
     const extent=Math.max(.1,r)*4.5,glow=ctx.createRadialGradient(x,y,0,x,y,extent);
-    glow.addColorStop(0,'rgba(255,255,248,1)');glow.addColorStop(.08,'rgba(255,246,211,.97)');
-    glow.addColorStop(.22,'rgba(250,215,139,.73)');glow.addColorStop(.50,'rgba(236,181,78,.22)');glow.addColorStop(1,'rgba(236,181,78,0)');
+    glow.addColorStop(0,'rgba(255,255,249,.95)');glow.addColorStop(.08,'rgba(255,251,234,.78)');
+    glow.addColorStop(.22,'rgba(250,226,170,.47)');glow.addColorStop(.50,'rgba(236,196,116,.14)');glow.addColorStop(1,'rgba(236,181,78,0)');
     ctx.save();ctx.globalAlpha*=opacity;ctx.fillStyle=glow;ctx.fillRect(x-extent,y-extent,extent*2,extent*2);ctx.restore();
   }
   function paintLight(ctx,p,position,radius=7){
@@ -540,11 +540,11 @@
       }
     });
   }
-  const endingAssets={open:null,flexed:null,brush:null,status:'empty',version:0,layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}};
+  const endingAssets={open:null,flexed:null,brush:null,tools:null,status:'empty',version:0,layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}};
   const endingSprites=new Map();
   function setEndingAssets(config={}){
     const version=++endingAssets.version;endingSprites.clear();
-    endingAssets.open=null;endingAssets.flexed=null;endingAssets.brush=null;endingAssets.status='loading';
+    endingAssets.open=null;endingAssets.flexed=null;endingAssets.brush=null;endingAssets.tools=null;endingAssets.status='loading';
     if(config.layout)Object.assign(endingAssets.layout,config.layout);
     function load(value,key){
       if(!value)return Promise.resolve(false);
@@ -552,53 +552,64 @@
       if(typeof Image==='undefined')return Promise.resolve(false);
       return new Promise(resolve=>{const image=new Image();image.onload=()=>{if(version===endingAssets.version){endingAssets[key]=image;endingSprites.clear();}resolve(true);};image.onerror=()=>resolve(false);image.src=value;});
     }
-    return Promise.all([load(config.hands||config.open,'open'),load(config.flexedHands||config.flexed,'flexed'),load(config.brushHands||config.brush,'brush')]).then(()=>{
+    return Promise.all([load(config.hands||config.open,'open'),load(config.flexedHands||config.flexed,'flexed'),load(config.brushHands||config.brush,'brush'),load(config.toolsHands||config.tools,'tools')]).then(()=>{
       if(version===endingAssets.version)endingAssets.status=endingAssets.open?'ready':'empty';
-      return{status:endingAssets.status,open:!!endingAssets.open,flexed:!!endingAssets.flexed,brush:!!endingAssets.brush};
+      return{status:endingAssets.status,open:!!endingAssets.open,flexed:!!endingAssets.flexed,brush:!!endingAssets.brush,tools:!!endingAssets.tools};
     });
   }
   function endingPose(time,state=Ending.snapshotAt(time)){
-    return{...state,left:{raise:state.raise,turn:state.flex,flex:state.flex,grasp:state.grasp,opacity:state.handsOpacity,rotation:mix(-.10,.055,state.flex)},
-      right:{raise:ease(state.raise,.05,1),turn:state.flex,flex:state.flex,grasp:state.grasp,opacity:state.handsOpacity,rotation:mix(.085,-.045,state.flex)}};
+    return{...state,left:{raise:state.raise,turn:state.flex,flex:state.flex,grasp:state.grasp,toolsReveal:state.toolsReveal,opacity:state.handsOpacity,rotation:mix(-.10,.055,state.flex)},
+      right:{raise:ease(state.raise,.05,1),turn:state.flex,flex:state.flex,grasp:state.grasp,toolsReveal:state.toolsReveal,opacity:state.handsOpacity,rotation:mix(.085,-.045,state.flex)}};
   }
   function endingSprite(key,side){
     const image=endingAssets[key];if(!image)return null;
     const cacheKey=endingAssets.version+':'+key+':'+side;if(endingSprites.has(cacheKey))return endingSprites.get(cacheKey);
-    const rect=endingAssets.layout[side],iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
+    const regular=endingAssets.layout[side],rect=key==='tools'?(side==='left'?[0,0,.57,1]:[.57,0,.43,1]):regular,iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
     if(!iw||!ih)return null;
     const canvas=makeCanvas();if(!canvas)return null;
     canvas.width=768;canvas.height=Math.round(768*(ih*rect[3])/(iw*rect[2]));
     canvas.getContext('2d').drawImage(image,iw*rect[0],ih*rect[1],iw*rect[2],ih*rect[3],0,0,canvas.width,canvas.height);
+    const wrist=endingAssets.layout[side==='left'?'wristLeft':'wristRight'];
+    canvas.handWrist=[(regular[0]+wrist[0]*regular[2]-rect[0])/rect[2],wrist[1]];
     endingSprites.set(cacheKey,canvas);return canvas;
   }
   function drawEndingHand(ctx,side,pose,w,h){
     if(pose.raise<=0)return;
     const open=endingSprite('open',side);if(!open)return;
-    const flexed=endingSprite('flexed',side),brush=endingSprite('brush',side);
-    // Each hand rolls briefly toward its edge before changing finger pose; no doubled finger silhouettes.
-    const roll=Math.max(flexed?Math.sin(Math.PI*pose.flex):0,brush?Math.sin(Math.PI*pose.grasp):0);
-    const texture=brush&&pose.grasp>=.5?brush:flexed&&pose.flex>=.5?flexed:open;
-    const wrist=endingAssets.layout[side==='left'?'wristLeft':'wristRight'],height=h*.78,width=height*texture.width/texture.height;
+    const flexed=endingSprite('flexed',side),tools=endingSprite('tools',side)||endingSprite('brush',side);
+    const roll=flexed?Math.sin(Math.PI*pose.flex):0,texture=flexed&&pose.flex>=.5?flexed:open;
+    const wrist=endingAssets.layout[side==='left'?'wristLeft':'wristRight'],height=h*.78;
     const angle=pose.rotation,anchor=[w*(side==='left'?.355:.655),h*mix(1.29,.71,pose.raise)];
-    // Separate wrist pivots and pose atlases preserve the fine hand drawing without mesh clip seams.
-    ctx.save();ctx.globalAlpha=ease(pose.raise,0,.15)*(pose.opacity??1);ctx.imageSmoothingEnabled=true;
-    ctx.translate(...anchor);ctx.rotate(angle);
-    ctx.transform((1-.075*pose.turn)*(1-.78*roll),pose.turn*height*.027/width,0,1-.025*roll,0,0);
-    ctx.drawImage(texture,-wrist[0]*width,-wrist[1]*height,width,height);
-    ctx.restore();
+    function paint(image,opacity,turn=true){
+      if(!image||opacity<=0)return;
+      const width=height*image.width/image.height;
+      ctx.save();ctx.globalAlpha=ease(pose.raise,0,.15)*(pose.opacity??1)*opacity;ctx.imageSmoothingEnabled=true;
+      ctx.translate(...anchor);ctx.rotate(angle);
+      if(turn)ctx.transform((1-.075*pose.turn)*(1-.78*roll),pose.turn*height*.027/width,0,1-.025*roll,0,0);
+      const pivot=image.handWrist||wrist;
+      ctx.drawImage(image,-pivot[0]*width,-pivot[1]*height,width,height);ctx.restore();
+    }
+    // The central bloom covers the change of pose; the tools appear only after it opens.
+    const reveal=tools?pose.toolsReveal||0:0;
+    paint(texture,1-reveal);paint(tools,reveal,false);
   }
   function endingLight(time,viewport={},state=Ending.snapshotAt(time),lightOrigin){
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760),t=state.clock,settle=ease(t,0,2.4),drop=state.lightDrop,center=state.seedCenter;
-    const startX=clamp(finite(lightOrigin?.x,.70),0,1),startY=clamp(finite(lightOrigin?.y,.28),0,1),baseRadius=Math.max(3.8,Math.min(w,h)*.008);
-    const x=mix(mix(startX,.52,settle)+Math.sin(t*1.2)*.006,.655,drop),y=mix(mix(startY,.40,settle)+Math.sin(t*1.7)*.008,.55,drop);
-    return{entityId:'hero-seed',x:w*mix(x,.5,center),y:h*mix(y,.48,center),r:mix(finite(lightOrigin?.r,baseRadius/Math.min(w,h))*Math.min(w,h),baseRadius,settle),phase:state.phase};
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760),t=state.clock,settle=ease(t,0,4),drop=state.lightDrop;
+    const startX=clamp(finite(lightOrigin?.x,.70),0,1),startY=clamp(finite(lightOrigin?.y,.28),0,1),baseRadius=Math.max(3.8,Math.min(w,h)*.008),drift=ease(t,0,1.8);
+    const x=mix(mix(startX,.52,settle)+Math.sin(t*.72)*.006*drift,.5,drop),y=mix(mix(startY,.40,settle)+Math.sin(t*.91)*.008*drift,.5,drop);
+    return{entityId:'hero-seed',x:w*x,y:h*y,r:mix(finite(lightOrigin?.r,baseRadius/Math.min(w,h))*Math.min(w,h),baseRadius,settle),
+      opacity:mix(finite(lightOrigin?.opacity,0),1,ease(t,0,1.1))*(state.lightOpacity??1),phase:state.phase};
   }
   let endingWorldCanvas;
   function drawEnding(ctx,time,viewport={},options={}){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760),state=options.state||Ending.snapshotAt(time),pose=endingPose(time,state),light=endingLight(time,{w,h},state,options.lightOrigin);
     ctx.save();ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
-    // An unloaded asset leaves the deliberate white stop; no schematic hands are substituted.
     if(endingAssets.open){drawEndingHand(ctx,'left',pose.left,w,h);drawEndingHand(ctx,'right',pose.right,w,h);}
+    if(state.lightBloom>0){
+      const radius=light.r+Math.hypot(w,h)*.47*state.lightBloom,bloom=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,radius);
+      bloom.addColorStop(0,'rgba(255,255,255,.99)');bloom.addColorStop(.34,'rgba(255,253,243,.90)');bloom.addColorStop(.7,'rgba(255,247,217,.27)');bloom.addColorStop(1,'rgba(255,247,217,0)');
+      ctx.fillStyle=bloom;ctx.fillRect(0,0,w,h);
+    }
     if(state.expansion>0){
       const drawContents=options.drawContents||(Inner||globalThis.FlatlandInner)?.drawContents;
       if(drawContents){
@@ -607,17 +618,15 @@
           if(endingWorldCanvas.width!==Math.ceil(w)||endingWorldCanvas.height!==Math.ceil(h)){endingWorldCanvas.width=Math.ceil(w);endingWorldCanvas.height=Math.ceil(h);}
           const field=endingWorldCanvas.getContext('2d');field.setTransform(1,0,0,1,0,0);field.globalAlpha=1;field.globalCompositeOperation='source-over';field.clearRect(0,0,w,h);
           drawContents(field,{w,h},options.ambient??state.clock);
-          if(state.expansion<1){
-            const radius=light.r+Math.hypot(w,h)*Math.pow(state.expansion,.9),mask=field.createRadialGradient(light.x,light.y,0,light.x,light.y,radius);
-            mask.addColorStop(0,'#ffffff');mask.addColorStop(.68,'#ffffff');mask.addColorStop(1,'#ffffff00');field.globalCompositeOperation='destination-in';field.fillStyle=mask;field.fillRect(0,0,w,h);field.globalCompositeOperation='source-over';
-          }
-          ctx.drawImage(endingWorldCanvas,0,0,w,h);
+          ctx.save();ctx.globalAlpha=state.expansion;ctx.drawImage(endingWorldCanvas,0,0,w,h);ctx.restore();
         }
       }
     }
-    if(state.expansion<1)paintSeedGlow(ctx,light.x,light.y,light.r,1-state.expansion);
+    if(light.opacity>0)paintSeedGlow(ctx,light.x,light.y,light.r,light.opacity);
     if(state.textOpacity>0){
-      ctx.save();ctx.globalAlpha=state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='500 '+Math.max(14,Math.min(28,w*.025))+'px Georgia, serif';ctx.fillStyle=Palette.cream;ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=9;ctx.fillText(state.text,w/2,h/2,w*.88);ctx.restore();
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=Palette.cream;ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=9;
+      ctx.globalAlpha=state.textOpacity;ctx.font='500 '+Math.max(14,Math.min(28,w*.025))+'px Georgia, serif';ctx.fillText(state.text,w/2,h*.47,w*.88);
+      ctx.globalAlpha=state.titleOpacity??0;ctx.font='500 '+Math.max(15,Math.min(34,w*.031))+'px Georgia, serif';ctx.fillText(state.title||Ending.title,w/2,h*.56,w*.88);ctx.restore();
     }
     ctx.restore();return{...pose,light,assetStatus:endingAssets.status};
   }
@@ -629,8 +638,13 @@
     return{...guide,x:mix(origin[0],guide.x,flight),y:mix(origin[1],guide.y,flight),z:4,
       r:mix(6,guide.r||10,flight),inside:flight===0,phase:flight===0?'enclosed':flight<1?'emerge':guide.phase,entityId:'hero-seed'};
   }
+  function arrivalLight(point,time,radius,w,h){
+    if(!point)return null;
+    const arrival=ease(time,131,132),r=mix(Math.max(3.3,radius*point[3]),endingLight(132,{w,h}).r,arrival);
+    return{x:point[0]/w,y:point[1]/h,r:r/Math.min(w,h),opacity:1-ease(time,131.72,132)};
+  }
   function paintArrivalLight(ctx,point,time,radius,w,h,enclosed=false){
-    if(!point)return;const arrival=ease(time,131,132),r=mix(Math.max(3.3,radius*point[3]),endingLight(132,{w,h}).r,arrival),spread=r*4+Math.hypot(w,h)*Math.pow(arrival,2.2)*1.3;
+    if(!point)return;const arrival=ease(time,131,132),r=arrivalLight(point,time,radius,w,h).r*Math.min(w,h),spread=r*4+Math.hypot(w,h)*Math.pow(arrival,2.2)*1.3;
     ctx.save();paintSeedGlow(ctx,point[0],point[1],r);
     if(arrival>0){
       const halo=ctx.createRadialGradient(point[0],point[1],0,point[0],point[1],Math.max(1,spread));
@@ -643,10 +657,11 @@
   function journeyView(time,camera,viewport,data,state=journeyPose(time,data)){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);
     const pathHeading=(Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(Motion.chaseProgress(time).q).heading)+bridgeAngle;
-    const lower=ease(time,128,131.6),tilt=mix(finite(camera.tilt,1.25*ease(time,122,138)),1.25,lower),screenHeading=-Math.PI/5;
+    const fast=data.chase?.holdGate?ease(finite(data.chase.inputRate,.32),.5,3.6):1;
+    const lower=ease(time,128,131.6),tilt=mix(.12*ease(time,122,125),mix(finite(camera.tilt,1.25*ease(time,122,138)),1.25,lower),fast),screenHeading=-Math.PI/5;
     const groundHeading=Math.atan2(Math.sin(screenHeading)/Math.cos(tilt),Math.cos(screenHeading));
     const focus=time<122?worldToCity([finite(camera.x,journeyStart.x),finite(camera.y,journeyStart.y),0]):state.center;
-    const view={...camera,x:focus[0],y:focus[1],yaw:time<122?finite(camera.yaw,-bridgeAngle):groundHeading-pathHeading,zoom:1.2,tilt,focal:mix(1600,620,ease(time,123.5,130)),screenY:.5};
+    const view={...camera,x:focus[0],y:focus[1],yaw:time<122?finite(camera.yaw,-bridgeAngle):groundHeading-pathHeading,zoom:mix(.95,1.2,fast),tilt,focal:mix(1800,mix(1600,620,ease(time,123.5,130)),fast),screenY:.5};
     return{state,view,w,h,pathHeading};
   }
   function projectJourneyLight(time,layout,data,project=projection(layout.view,layout)){
@@ -664,6 +679,7 @@
     return projectJourneyLight(time,journeyView(time,camera,viewport,data),data);
   }
   function chaseArrivalTime(time,data){
+    if(data.chase?.finishing)return 131.7+.3*ease(data.chase.finishAge||0,1.2,1.6);
     return data.chase?.holdGate?Math.min(time,131+.7*ease(data.chase.charge||0,.8,1)):time;
   }
   function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
@@ -679,5 +695,5 @@
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,endingLight,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,paintSeedGlow,seedLight});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,endingLight,anchor,defaultProjection,journeyPose,journeyView,journeyLightPoint,arrivalLight,chaseArrivalTime,paintArrivalLight,paintSeedGlow,seedLight});
 });

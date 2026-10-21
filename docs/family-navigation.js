@@ -31,8 +31,8 @@
   }
   class FamilyNavigation{
     constructor(frame,{visited=[],center={x:800,y:660},handoffAngle=0}={}){
-      this.body=clone(frame.actors.find(a=>a.id==='hero').body);this.parents=['father','mother'].map(id=>{const a=frame.actors.find(a=>a.id===id);return{id,actor:a.actor,body:clone(a.body),reaction:null};});
-      this.world=new CollisionWorld([CityMap.mainHouse.boundary]);this.visited=new Set(visited);this.center=center;this.handoffAngle=handoffAngle;this.state='explore';this.intent=null;this.route=[];this.velocity=0;this.clock=0;this.idleOrigin={x:this.body.x,y:this.body.y};this.mark=visited.length?'exclamation':null;this.markAt=0;this.returnProgress=0;this.done=false;this.lastContact=null;
+      this.body=clone(frame.actors.find(a=>a.id==='hero').body);this.parents=['father','mother'].map(id=>{const a=frame.actors.find(a=>a.id===id);return{id,actor:a.actor,body:clone(a.body),rest:clone(a.body),reaction:null};});
+      this.world=new CollisionWorld([CityMap.mainHouse.boundary]);this.visited=new Set(visited);this.center=center;this.handoffAngle=handoffAngle;this.state='explore';this.intent=null;this.route=[];this.velocity=0;this.clock=0;this.idleOrigin={x:this.body.x,y:this.body.y};this.idleFacing=this.body.angle;this.mark=visited.length?'exclamation':null;this.markAt=0;this.returnProgress=0;this.done=false;this.lastContact=null;
       if(this.visited.size===2)this.beginReturn();
     }
     entries(){return[...this.parents.map(p=>({id:p.id,actor:p.actor,body:clone(p.body)})),{id:'hero',actor:child,body:clone(this.body)}];}
@@ -53,7 +53,7 @@
         candidates.sort((a,b)=>a.score-b.score);
         for(const candidate of candidates){result=plan(this.body,candidate.stage,this.parents);if(result&&distance(result.goal,candidate.stage)<1){result.points.push({...candidate.goal,contact:true});this.intent.parentAt={x:parent.body.x,y:parent.body.y};break;}result=null;}
       }else result=plan(this.body,this.intent.point,this.parents);
-      if(!result){this.route=[];this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};return false;}
+      if(!result){this.route=[];this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};this.idleFacing=this.body.angle;return false;}
       this.route=result.points;this.intent.age=0;this.intent.obstacles=this.parents.map(p=>({x:p.body.x,y:p.body.y}));return true;
     }
     beginReturn(){
@@ -61,8 +61,14 @@
     }
     remaining(){let p=this.body,total=0;for(const q of this.route){total+=distance(p,q);p=q;}return total;}
     updateParents(dt){
-      for(const parent of this.parents){const r=parent.reaction;if(!r)continue;r.age+=dt;const model=Motion.parentReaction(parent.id,r.age,.5),zero=Motion.parentReaction(parent.id,0,.5),span=parent.id==='father'?Math.hypot(44,18):Math.hypot(46,28),q=Math.hypot(model.x-zero.x,model.y-zero.y)/span;
-        const edgeBends=parent.actor.vertices.map((_,i)=>i===r.edge?model.fear:0);parent.body={...r.from,x:r.from.x+r.away.x*span*q,y:r.from.y+r.away.y*span*q,angle:r.from.angle+model.angle-zero.angle,edgeBends,fear:model.fear,strain:0,speed:0,bend:0};
+      for(const parent of this.parents){
+        const r=parent.reaction,phase=parent.id==='father'?0:1.8;
+        if(!r){
+          const rest=parent.rest;parent.body={...rest,x:rest.x+2.1*(Math.sin(this.clock*.38+phase)-Math.sin(phase)),y:rest.y+1.6*(Math.sin(this.clock*.31+phase)-Math.sin(phase)),angle:rest.angle+.016*(Math.sin(this.clock*.44+phase)-Math.sin(phase)),speed:0,strain:0};continue;
+        }
+        r.age+=dt;const model=Motion.parentReaction(parent.id,r.age,.5),zero=Motion.parentReaction(parent.id,0,.5),span=parent.id==='father'?Math.hypot(44,18):Math.hypot(46,28),q=Math.hypot(model.x-zero.x,model.y-zero.y)/span;
+        const edgeBends=parent.actor.vertices.map((_,i)=>i===r.edge?model.fear:0),settled=ease((r.age-.5)/1.4);
+        parent.body={...r.from,x:r.from.x+r.away.x*span*q+settled*1.8*Math.sin(this.clock*.38+phase),y:r.from.y+r.away.y*span*q+settled*1.4*Math.sin(this.clock*.31+phase),angle:r.from.angle+model.angle-zero.angle+settled*.012*Math.sin(this.clock*.44+phase),sx:(r.from.sx??1)*model.sx,sy:(r.from.sy??1)*model.sy,edgeBends,fear:model.fear,strain:0,speed:0,bend:0};
         if(r.age>=.5)this.visited.add(parent.id);
       }
       if(this.state==='explore'&&this.visited.size===2)this.beginReturn();
@@ -70,7 +76,7 @@
     contact(parent){
       if(parent.reaction&&parent.reaction.age<.65)return;
       const head=child.headPoint(this.body),boundary=C.closestBoundary(parent.id,parent.body,head),dx=parent.body.x-this.body.x,dy=parent.body.y-this.body.y,length=Math.hypot(dx,dy)||1;
-      parent.reaction={age:0,from:clone(parent.body),away:{x:dx/length,y:dy/length},edge:boundary.edgeIndex};this.lastContact={id:parent.id,clock:this.clock,point:boundary.point};this.mark='exclamation';this.markAt=this.clock;this.route=[];this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};
+      parent.reaction={age:0,from:clone(parent.body),away:{x:dx/length,y:dy/length},edge:boundary.edgeIndex};this.lastContact={id:parent.id,clock:this.clock,point:boundary.point};this.mark='exclamation';this.markAt=this.clock;this.route=[];this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};this.idleFacing=this.body.angle;
     }
     tick(dt){
       dt=clamp(Number(dt)||0,0,.1);this.clock+=dt;const before=this.entries();this.updateParents(dt);let intended=clone(this.body);
@@ -79,17 +85,25 @@
         if(this.breathAge>=.9){this.state='done';this.done=true;intended.angle=this.handoffAngle;}
       }else if(this.route.length){
         if(this.intent){this.intent.age+=dt;if(this.intent.age>.18&&this.intent.obstacles?.some((p,i)=>distance(p,this.parents[i].body)>4))this.replan();}
-        const next=this.route[0],gap=distance(this.body,next),remaining=this.remaining(),keepFacing=this.state==='return'||next.backout,heading=Math.atan2(next.y-this.body.y,next.x-this.body.x),targetAngle=next.angle??(heading-child.headAxis(this.body).angle),turn=keepFacing?0:clamp(delta(this.body.angle,targetAngle),-5*dt,5*dt);
+        const next=this.route[0];
+        if(next.contact){
+          const parent=this.parents.find(p=>p.id===this.intent?.target);
+          if(parent){const outline=parent.actor.outline(parent.body),dx=this.body.x-parent.body.x,dy=this.body.y-parent.body.y,length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length;let low=0,high=280;
+            for(let n=0;n<24;n++){const d=(low+high)/2,pose={...this.body,x:parent.body.x+ux*d,y:parent.body.y+uy*d,angle:next.angle};if(C.penetrates(child.outline(pose),outline))low=d;else high=d;}
+            next.x=parent.body.x+ux*(high+.000001);next.y=parent.body.y+uy*(high+.000001);
+          }
+        }
+        const gap=distance(this.body,next),remaining=this.remaining(),keepFacing=this.state==='return'||next.backout,heading=Math.atan2(next.y-this.body.y,next.x-this.body.x),targetAngle=next.angle??(heading-child.headAxis(this.body).angle),turn=keepFacing?0:clamp(delta(this.body.angle,targetAngle),-5*dt,5*dt);
         intended.angle=keepFacing?this.body.angle:this.body.angle+turn;
         const align=keepFacing?1:Math.max(.12,Math.cos(delta(intended.angle,targetAngle))),targetSpeed=Math.min(this.state==='return'?180:285,Math.sqrt(Math.max(0,remaining)*1200))*align;
         this.velocity+=clamp(targetSpeed-this.velocity,-1000*dt,1000*dt);const move=Math.min(gap,this.velocity*dt)*(keepFacing?1:align);if(gap>1e-8){intended.x+=((next.x-this.body.x)/gap)*move;intended.y+=((next.y-this.body.y)/gap)*move;}intended.speed=this.velocity;intended.strain=Math.min(.28,this.velocity/1000);intended.bend=this.state==='return'?.18:0;
       }else{
-        this.velocity=Math.max(0,this.velocity-1000*dt);const x=this.idleOrigin.x+8*Math.sin(this.clock*.55),y=this.idleOrigin.y+11*Math.sin(this.clock*.47),d=Math.hypot(x-this.body.x,y-this.body.y),amount=Math.min(1,dt*3);intended.x+=(x-this.body.x)*amount;intended.y+=(y-this.body.y)*amount;intended.speed=Math.min(14,d*3);intended.strain=0;intended.bend=this.mark==='exclamation'?.14:0;
+        this.velocity=Math.max(0,this.velocity-1000*dt);const x=this.idleOrigin.x+23*Math.sin(this.clock*.38),y=this.idleOrigin.y+17*Math.sin(this.clock*.29),d=Math.hypot(x-this.body.x,y-this.body.y),amount=1-Math.exp(-dt*1.5);intended.x+=(x-this.body.x)*amount;intended.y+=(y-this.body.y)*amount;intended.angle+=delta(intended.angle,this.idleFacing+.14*Math.sin(this.clock*.74))*(1-Math.exp(-dt*2));intended.speed=Math.min(15,d*1.5);intended.strain=.025*Math.abs(Math.sin(this.clock*.74));intended.bend=this.mark==='exclamation'?.14:.025*Math.sin(this.clock*.74)**2;
       }
       const resolved=this.world.resolve(before,[...this.parents.map(p=>({id:p.id,actor:p.actor,body:p.body})),{id:'hero',actor:child,body:intended}]);
       for(const parent of this.parents)parent.body=clone(resolved.find(a=>a.id===parent.id).body);this.body=clone(resolved.find(a=>a.id==='hero').body);
       if(this.intent&&(this.intent.target==='father'||this.intent.target==='mother')){const parent=this.parents.find(p=>p.id===this.intent.target);if(C.distance(child.outline(this.body),parent.actor.outline(parent.body))<.0001)this.contact(parent);}
-      if(this.route.length&&!this.route[0].contact&&distance(this.body,this.route[0])<(this.state==='return'?.06:.8)){this.route.shift();if(!this.route.length){if(this.state==='return'){this.state='breath';this.breathAge=0;this.returnFacing=this.body.angle;this.returnProgress=1;}else{this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};}}}
+      if(this.route.length&&!this.route[0].contact&&distance(this.body,this.route[0])<(this.state==='return'?.06:.8)){this.route.shift();if(!this.route.length){if(this.state==='return'){this.state='breath';this.breathAge=0;this.returnFacing=this.body.angle;this.returnProgress=1;}else{this.intent=null;this.velocity=0;this.idleOrigin={x:this.body.x,y:this.body.y};this.idleFacing=this.body.angle;}}}
       if(this.state==='return')this.returnProgress=clamp(1-this.remaining()/(this.returnLength||1));return this;
     }
     snapshot(){return{body:clone(this.body),parents:this.parents.map(p=>({id:p.id,body:clone(p.body),reactionAge:p.reaction?.age})),target:this.intent?.target||(this.state==='return'||this.state==='breath'?'return':null),moving:!!this.route.length,waiting:this.state==='explore'&&!this.intent&&!this.parents.some(p=>p.reaction&&p.reaction.age<.5),visited:[...this.visited],done:this.done,state:this.state,returnProgress:this.returnProgress,breathAge:this.breathAge||0,mark:this.mark,markAt:this.markAt,clock:this.clock,lastContact:this.lastContact};}

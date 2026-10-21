@@ -94,8 +94,8 @@ for(const offset of[6.51,11.51,13]){
   assert.equal(entry.damage,departedDamage,'Empty fixture cycles cannot keep damaging the departed hero');
   assert.equal(entry.machine.contact,false,'A later empty closure cannot contact the departed hero');
 }
-assert.equal(A.timing.duration,105.65);assert.equal(B.timing.duration,116.7);
-assert.equal(A.duration,105.65);assert.equal(B.duration,116.7);
+assert.equal(A.timing.duration,107.65);assert.equal(B.timing.duration,118.7);
+assert.equal(A.duration,107.65);assert.equal(B.duration,118.7);
 assert(Math.abs(A.timing.playbackAt(98)-A.timing.playbackAt(77)-15.15)<1e-8,'Longer transfers leave time for sustained resistance');
 assert(Math.abs(A.timing.playbackAt(119)-A.timing.playbackAt(104)-15)<1e-8,'The inner closure adds two seconds without slowing the struggle');
 assert(Math.abs(A.timing.playbackAt(132)-A.timing.playbackAt(119)-13)<1e-8,'Chase speed is unchanged');
@@ -155,6 +155,6 @@ const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.pl
 injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
 assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
 assert.equal(injected.target,alternateTiming.playbackAt(132));
-console.log('Version A/B: real-time offset fixtures, slower 105.65s/116.7s edits, continuous office pullback/inner episode, containment and chase hold passed.');
+console.log('Version A/B: real-time offset fixtures, slower 107.65s/118.7s edits, continuous office pullback/inner episode, containment and chase hold passed.');
 
 } finally {Factory.setPlaybackClock(time=>time);}

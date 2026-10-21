@@ -45,6 +45,16 @@
   const entryStart=local(entrance),entryHeading=CityMap.gate.heading-angle;
   const entryCurves=[[[entryStart.x,entryStart.y],[entryStart.x+120*Math.cos(entryHeading),entryStart.y+120*Math.sin(entryHeading)],[1220,130],[1100,130]]];
   const entryPath=makePath(entryCurves),entryPortal=CityMap.gate.portal;
+  function entryEscortBody(actor,hero,backDistance,sideOffset=0){
+    const body=hero.body||hero,span=entryPath.length/48,distance=d=>{const p=pathPoint(entryPath,d);return(p.x-body.x)**2+(p.y-body.y)**2;};
+    let closest=0,best=Infinity;
+    for(let i=0;i<=48;i++){const d=i*span,value=distance(d);if(value<best){best=value;closest=d;}}
+    let low=Math.max(0,closest-span),high=Math.min(entryPath.length,closest+span);
+    for(let i=0;i<22;i++){const a=low+(high-low)/3,b=high-(high-low)/3;if(distance(a)<distance(b))high=b;else low=a;}
+    const end=pathPoint(entryPath,entryPath.length),beyond=(body.x-end.x)*Math.cos(end.heading)+(body.y-end.y)*Math.sin(end.heading),projected=beyond>0?entryPath.length+beyond:(low+high)/2;
+    const at=back=>{const d=projected-back,p=d<0?{x:entrance.x+d*Math.cos(CityMap.gate.heading),y:entrance.y+d*Math.sin(CityMap.gate.heading),heading:CityMap.gate.heading}:d>entryPath.length?{x:end.x+(d-entryPath.length)*Math.cos(end.heading),y:end.y+(d-entryPath.length)*Math.sin(end.heading),heading:end.heading}:pathPoint(entryPath,d);return hardPose(actor,p.x-Math.sin(p.heading)*sideOffset,p.y+Math.cos(p.heading)*sideOffset,p.heading);};
+    return at(backDistance);
+  }
   const exitPoint=world(leftWall,390),exitPortal={point:[exitPoint.x,exitPoint.y],heading:angle+Math.PI,halfWidth:110,halfDepth:12,wallSpan:180,opening:t=>between(t,100.9,101.45)};
   const escortCurves=[
     [[-730,130],[-1030,130],[-1330,130],[-1630,130]],
@@ -431,5 +441,5 @@
     }
   }
   const anchors=Object.freeze({approach:Object.freeze(world(900,130)),entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:1100,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,650),zoom:.28}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
-  return{drawBase,drawEntry,frame,drawOverlay,backgroundLayout,overviewPoint:time=>baseHeroBody(Math.max(64,Math.min(70,time))),guideOffset,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,setAmbientTime,resistTravel,resistanceWindow,withResistance};
+  return{drawBase,drawEntry,entryEscortBody,frame,drawOverlay,backgroundLayout,overviewPoint:time=>baseHeroBody(Math.max(64,Math.min(70,time))),guideOffset,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,setAmbientTime,resistTravel,resistanceWindow,withResistance};
 });

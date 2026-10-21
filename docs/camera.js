@@ -85,7 +85,7 @@
           desired.y=previous.y+outside(goal.y-previous.y,deadY);
         }
       }
-      const blend=1-Math.exp(-Math.max(0,dt)/.18),next={...goal};
+      const blend=1-Math.exp(-Math.max(0,dt)/(goal.resisting?.32:.18)),next={...goal};
       for(const key of ['x','y','zoom'])next[key]=previous[key]+(desired[key]-previous[key])*blend;
       if(goal.followBody&&body){
         // Only the outer soft boundary can demand an immediate correction.

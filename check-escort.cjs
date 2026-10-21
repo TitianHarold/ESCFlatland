@@ -40,25 +40,23 @@ for(const t of[D.timing.firstMove+1,38.5,42,55]){
     }
   }
 }
-// Refusal and renewed coercion also happen without any user click.
-const contacts=new Set();
-assert(D.timing.hesitationStarts.length>=6,'refusals must recur throughout the road');
-for(const start of D.timing.hesitationStarts){
-  let closest=Infinity,reversed=false,previous=D.frame(start).hero;
-  const before=D.frame(start-.1).hero,axis=[previous.x-before.x,previous.y-before.y];
-  for(let t=start+.025;t<start+1.7;t+=.025){
-    const f=D.frame(t),h=actor(f,'hero'),outline=h.actor.outline(h.body),v=[h.body.x-previous.x,h.body.y-previous.y];
-    if(v[0]*axis[0]+v[1]*axis[1]<-.001)reversed=true;
-    for(const other of f.actors)if(other.id!==h.id)assert(!C.penetrates(outline,other.actor.outline(other.body)),h.id+' must not penetrate '+other.id+' during baseline refusal');
-    let simultaneous=0;
-    for(const guard of f.actors.filter(a=>/^guard-/.test(a.id))){const d=C.distance(outline,guard.actor.outline(guard.body));closest=Math.min(closest,d);if(d<.01){contacts.add(guard.id);simultaneous++;}}
-    assert(simultaneous<=1,'three guards alternate real contacts instead of squeezing at the same time');
-    previous=f.hero;
-  }
-  assert(reversed,'baseline escort includes backward resistance near '+start);
-  assert(closest<.01,'the next guard poke really contacts the resisting child near '+start);
+// Unprompted travel never inserts a backwards beat or faster catch-up.
+assert.deepEqual(D.timing.hesitationStarts,[],'only interaction creates route resistance');
+let nominalPrevious=D.frame(D.timing.firstMove+1).hero;
+for(let t=D.timing.firstMove+1.025;t<58;t+=.025){
+  const f=D.frame(t),h=actor(f,'hero');
+  assert(D.escortResistance(t).lag===0,'baseline does not change the route clock');
+  assert(gap(nominalPrevious,h.body)<D.timing.heroCruise*.026,'baseline cannot surge ahead');
+  for(const guard of f.actors.filter(a=>/^guard-/.test(a.id)))assert(!C.penetrates(h.actor.outline(h.body),guard.actor.outline(guard.body)),'nearby guards preserve silhouette clearance');
+  nominalPrevious=h.body;
 }
-assert.deepEqual([...contacts].sort(),['guard-1','guard-2','guard-3'],'all three guards participate in alternating pokes');
+for(const t of [54,55,56,57,57.95]){
+  const f=D.frame(t),h=actor(f,'hero');
+  for(const guard of f.actors.filter(a=>/^guard-/.test(a.id))){
+    assert(D.escortProximity(t,Number(guard.id.slice(-1)))>.99,'guards do not leave the queue near the gate');
+    assert(C.distance(h.actor.outline(h.body),guard.actor.outline(guard.body))<21,'all three guards stay close through the last approach');
+  }
+}
 for(const id of ['guard-1','guard-2','guard-3']){
   const f=D.frame(42.9),h=actor(f,'hero'),guard=actor(f,id),rest=D.guardCoercion(guard.actor,guard.body,h.body,0),jab=D.guardCoercion(guard.actor,guard.body,h.body,1);
   assert(gap(rest,jab)>8&&gap(rest,jab)<=20.01,'the '+id+' jab stays within twenty nearby pixels');
@@ -104,4 +102,4 @@ for(const start of D.timing.hesitationStarts){
   assert(moving);
 }
 D.configureEntranceViewport({w:1280,h:760,time:0});
-console.log('PASS escort: seven spontaneous refusals, three staggered real twenty-pixel pokes, short street formation, collision-safe doors, continuous offscreen entrances in five viewports, and exact 58 handoff.');
+console.log('PASS escort: continuous unwilling travel, three nearby real twenty-pixel pokes, guard formation through the gate approach, collision-safe doors, continuous offscreen entrances in five viewports, and exact 58 handoff.');

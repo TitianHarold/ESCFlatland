@@ -12,7 +12,7 @@
   factory.setPlaybackClock?.(timing.playbackAt);
   const palette=window.FlatlandPalette;
   // Paths are supplied with the final transparent hand assets; white remains until they load.
-  dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open-fair-r19.png',flexedHands:'assets/pov-hands-flexed-fair-r19.png',brushHands:'assets/pov-hands-brush-r23.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
+  dimension.setEndingAssets(window.FlatlandEndingAssets||{hands:'assets/pov-hands-open-fair-r19.png',flexedHands:'assets/pov-hands-flexed-fair-r19.png',brushHands:'assets/pov-hands-brush-r23.png',toolsHands:'assets/pov-hands-tools-r24.png',layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}});
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const mode=params.get('mode')==='auto'?'auto':'interactive';
   const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
@@ -20,8 +20,9 @@
   const encounterAPI=window.FlatlandEncounterInteraction,encounter=new encounterAPI.EncounterController({sceneTime:timing.sceneAt(player.time)}),actions=new window.FlatlandActionInput.Actions();
   const progressAPI=window.FlatlandInteractionProgress,workProgress=new progressAPI.WorkProgress({raw:timing.sceneAt(player.time)}),chaseProgress=new progressAPI.ChaseProgress({raw:timing.sceneAt(player.time)});
   const peel=new progressAPI.PaintPeel(),ending=new window.FlatlandEndingProgress.Session(),follow=new window.FlatlandCamera.Follow();
+  const correction=factory.NodeResistance?new factory.NodeResistance():null;
   const discovery=window.FlatlandInnerDiscovery,inner=new discovery.Session({autoDuration:timing.playbackAt(119)-timing.playbackAt(110)});
-  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,scenePointer:false,innerActive:false,workActive:false,chaseActive:false,endingActive:false,chaseOrigin:Math.max(119,timing.sceneAt(player.time)),reviewPaused:workbench,modalResume:false,inputAt:-Infinity,pressAge:0,chasePointer:false,cameraView:null,factoryAmbient:timing.sceneAt(player.time),lookOffset:0,lookTrail:[],lastLight:null};
+  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,scenePointer:false,innerActive:false,workActive:false,chaseActive:false,endingActive:false,chaseOrigin:Math.max(119,timing.sceneAt(player.time)),reviewPaused:workbench,modalResume:false,inputAt:-Infinity,pressAge:0,chasePointer:false,cameraView:null,factoryAmbient:timing.sceneAt(player.time),lookOffset:0,lookTrail:[],lastLight:null,factoryKeyHeld:false,factoryPressPoint:null,correction:null};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
   function familyPhase(time=sceneTime()){return time<encounterAPI.familyEnd-1e-7;}
@@ -29,8 +30,8 @@
     if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};
     if(time<119&&cameraTrack.track){
       const hero=time<58?homeFrame(time).hero:factoryFrame(time).hero;
-      const reference=time>=district.timing.firstMove&&time<58&&encounter.snapshot().effects.lag<.01?district.cameraTarget?.(time):undefined;
-      return cameraTrack.track(time,hero,reference);
+      const reference=time>=district.timing.firstMove&&time<58?district.cameraTarget?.(time):undefined;
+      return{...cameraTrack.track(time,hero,reference),resisting:time<58&&encounter.snapshot().effects.load>.05};
     }
     const v=cameraTrack.pose(time);
     if(v.follow==='hero'){const hero=factoryFrame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}
@@ -45,11 +46,11 @@
   function factoryPhase(time=sceneTime()){return time>=58&&time<(version.id==='routine'?94:98);}
   function chasePhase(time=sceneTime()){return time>=119&&time<132;}
   function inputPhase(){const t=sceneTime();return inInner(t)?'inner':familyPhase(t)?'family':t<district.timing.firstMove?'authority':t<58?'escort':factoryPhase(t)?'factory':workPhase(t)?'work':t>=132?'ending':t>=119?'chase':'transfer';}
-  function homeFrame(time=sceneTime()){return encounter.applyFrame(district.frame(time));}
+  function homeFrame(time=sceneTime()){const frame=encounter.applyFrame(district.frame(time));return time>=58&&time<(version.id==='routine'?67.4:70)?district.withGateEscort(frame,time,factoryFrame(time).hero,factory.entryEscortBody):frame;}
   let factoryCache={key:null,frames:new Map()};
   function factoryFrame(time,bounds){
     const effort={...actions.snapshot().factory,transportResolved:true},cacheable=time>=58&&time<96;
-    const key=cacheable?[time,state.factoryAmbient,effort.offset,effort.preload,effort.effort,effort.stride,effort.pulse,effort.exhausted].join(':'):null;
+    const key=cacheable?[time,state.factoryAmbient,effort.offset,effort.preload,effort.effort,effort.stride,effort.pulse,effort.exhausted,state.correction?.age,state.correction?.level].join(':'):null;
     const region=bounds?Object.values(bounds).join(':'):'all';
     if(cacheable){if(factoryCache.key!==key)factoryCache={key,frames:new Map()};if(factoryCache.frames.has(region))return factoryCache.frames.get(region);}
     const base=factory.frame(time,bounds);
@@ -144,7 +145,7 @@
     const entry=original?{...original,body}:undefined;
     const guide=base.light&&body?{...base.light,x:body.x+(base.light.x-body.x)*1.10,y:body.y+(base.light.y-body.y)*1.10,guideOffset:base.light.guideOffset?.map(value=>value*1.10),guideDistanceScale:1.10}:base.light;
     const light=sprinting?dimension.seedLight(time,entry,guide):guide;
-    const sample=sprinting?{...base,hero:body,light,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost,...(interactive?{travel:drive.travel+state.chaseOrigin-119,baseTravel:time-119,holdGate:true,charge:drive.charge}:{})},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
+    const sample=sprinting?{...base,hero:body,light,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost,...(interactive?{travel:drive.travel+state.chaseOrigin-119,baseTravel:time-119,holdGate:true,charge:drive.charge,finishing:drive.finishing,finishAge:drive.finishAge}:{})},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
     const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){
@@ -179,7 +180,7 @@
       top.translate(x,y);top.scale(radius/50,radius/50);top.clip(cavity);top.scale(50/radius,50/radius);top.translate(-x,-y);
     }
     discovery.draw(top,box,snapshot,{drawContents:(ctx,v)=>window.FlatlandInner.drawContents(ctx,v,state.ambient)});top.restore();
-    if(b>.35){
+    if(u>0){
       const flight=snapshot.seedFlight,scale=Math.max(state.w/1280,state.h/760);
       const x=state.w/2+(point[0]-state.w/2)*flight,y=state.h/2+(point[1]-state.h/2)*flight,k=scale+(point[3]-scale)*flight;
       screenOverlay();top.save();top.globalAlpha=clamp((b-.35)/.15);dimension.paintArrivalLight(top,[x,y,0,k],119,6,state.w,state.h,true);top.restore();
@@ -193,7 +194,7 @@
     else{world(low,v);const regions=time>=64&&time<104&&!state.open&&state.layer<.001?materialWindows(plant,bounds):undefined;window.FlatlandPossibility.draw(low,state.ambient,regions);}
     if(time>=119){
       screen(top);const data=journeyData(time),viewport={w:state.w,h:state.h,dpr:state.dpr};
-      const point=dimension.journeyLightPoint(time,v,viewport,data);if(point)state.lastLight={x:point[0]/state.w,y:point[1]/state.h,r:dimension.endingLight(132,viewport).r/Math.min(state.w,state.h)};
+      const point=dimension.journeyLightPoint(time,v,viewport,data);if(point)state.lastLight=dimension.arrivalLight(point,dimension.chaseArrivalTime(time,data),data.light?.r||10,state.w,state.h);
       if(time<138)dimension.drawJourney(top,time,v,viewport,state.ambient,data);
       else dimension.draw(top,time,v,viewport,state.ambient,data);
       return;
@@ -219,6 +220,8 @@
       screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);
       plant.actors.filter(actor=>actor.id==='hero').forEach(entry=>drawActor(plant.light?{...entry,core:0}:entry));if(time<110)drawLight(plant.light);factory.drawOverlay(top,time,bounds);
     }
+    const escortEnd=version.id==='routine'?67.4:70;
+    if(time>=61&&time<escortEnd){const fade=clamp((time-escortEnd+.6)/.6);top.save();top.globalAlpha=1-fade*fade*(3-2*fade);homeFrame(time).actors.filter(entry=>/^guard-/.test(entry.id)).forEach(drawActor);top.restore();}
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
@@ -230,9 +233,10 @@
   function actionNotes(time,base){
     if(player.mode!=='interactive'||inInner(time))return base;
     const e=encounter.snapshot(),a=actions.snapshot();
-    if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子留在当前位置，保留上次接触后的符号，等待下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
+    if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻摇晃、缓慢试探周围，父母保持沉稳的小幅动作；接触后的符号保留到下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
+    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子向点击的边慢慢逃去；对应边段突然扣合，将他挡回槽内。':state.correction.node==='compact'?'孩子围绕稳定中心收紧、左右挣扎，夹具进一步夹紧。':'孩子逆着机器转向扭动，喷漆前仍被强制转正，逐边涂黑。'};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'长按让孩子收紧、左右向后挣扎，圆环随持续用力而消耗；输送带与机器继续运行。'};
     if(workPhase(time)){const progress=workProgress.snapshot();return{...base,action:progress.phase==='fade'?'画面持续、平滑地变黑；更密集的点击会加快变黑，工位继续循环。':progress.phase==='wide'?'镜头已到最远，密集工位保持循环，画面自动连续变黑。':'点击让所有工位的循环加快，镜头进一步拉远；等待时继续当前的机械循环。'};}
     if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸，圆环逐渐蓄满。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
@@ -246,7 +250,7 @@
     stage.dataset.endingPhase=time>=132?ending.snapshot().phase:'';stage.dataset.peeled=String(peel.snapshot().filter(value=>value>=1).length);stage.dataset.paused=String(state.reviewPaused);stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
     if(!workbench){$('replay').hidden=time<132||!ending.snapshot().complete;return;}
     const snapshot=inInner(time)?innerState():null;
-    const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；照亮后缩回身体，光种子再从体内飞出，引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
+    const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.awaitingCenter?'内心已经全部点亮，中央柔光等待点击；点亮它后，画面才缓慢收回光中。':snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；全亮后等待点击中央光点，再缩回身体，从体内飞出并引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(displayTime*100);$('progress').style.setProperty('--p',`${displayTime/duration*100}%`);
@@ -257,11 +261,12 @@
   }
   function updateEffortIndicator(v,time){
     const node=$('effort-indicator');if(!node)return;
-    const effort=actions.snapshot().factory,visible=player.mode==='interactive'&&factoryPhase(time)&&(effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted);
-    node.dataset.visible=String(visible);node.dataset.state=effort.exhausted?'exhausted':'ready';
-    node.style.setProperty('--effort-progress',String(effort.fatigue));
-    node.style.setProperty('--effort-color',palette.gold);
-    stage.dataset.fatigue=effort.fatigue.toFixed(3);stage.dataset.exhausted=String(effort.exhausted);
+    const effort=actions.snapshot().factory,progress=correction&&time>=71.7&&time<96?factory.nodeProgress(time):null;
+    const visible=player.mode==='interactive'&&(factoryPhase(time)||!!progress)&&(progress?(progress.node||progress.redFraction>0):(effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted));
+    const spent=progress?progress.redFraction:effort.fatigue,exhausted=progress?spent===1:effort.exhausted;
+    node.dataset.visible=String(!!visible);node.dataset.state=exhausted?'exhausted':'ready';
+    node.style.setProperty('--effort-progress',String(spent));node.style.setProperty('--effort-color',progress?'#e74b47':palette.gold);
+    stage.dataset.fatigue=spent.toFixed(3);stage.dataset.exhausted=String(exhausted);stage.dataset.correctionNode=progress?.node||'';
     if(!visible)return;
     const hero=factoryFrame(time).hero;if(!hero)return;
     const s=scale(v),x=state.w/2+(hero.x-v.x)*s,y=state.h/2+(hero.y-v.y)*s;
@@ -293,6 +298,14 @@
     }
     return 150;
   }
+  function updateCorrection(dt){
+    if(!correction)return;
+    const time=sceneTime(),held=state.factoryKeyHeld||state.scenePointer==='factory'&&state.pointer!==null;
+    const node=factory.nodeProgress(time).node;
+    if(held&&node&&node!==state.correction?.node)correction.press(time,state.factoryPressPoint);
+    state.correction=correction.update(dt,{time,held,advance:!state.reviewPaused});
+    factory.setNodeResistance(player.mode==='interactive'?state.correction:null);
+  }
   function tickStory(dt){
     if(state.reviewPaused)return;
     const time=sceneTime(),rawRate=(timing.sceneAt(Math.min(duration,player.time+.01))-time)/.01;
@@ -301,7 +314,7 @@
       state.factoryAmbient=timing.sceneAt(timing.playbackAt(Math.max(state.factoryAmbient,time))+dt);
       factory.setAmbientTime?.(state.factoryAmbient);
     }else factory.setAmbientTime?.(null);
-    if(player.mode==='interactive'&&chasePhase(time)){peel.update(dt);factory.setPeelState?.(peel.snapshot());}
+    if(player.mode==='interactive'&&chasePhase(time)){if(chaseProgress.snapshot().finishing)peel.finish();peel.update(dt);factory.setPeelState?.(peel.snapshot());}
     else factory.setPeelState?.(null);
     if(player.mode==='interactive'&&(familyPhase(time)||time<=encounterAPI.familyEnd+1e-7&&!encounter.snapshot().familyDone)){
       encounter.tick(dt,{automatic:false,advance:!state.reviewPaused});const family=encounter.snapshot();
@@ -330,17 +343,22 @@
     }else{
       state.innerActive=false;
       if(player.mode==='interactive'&&!familyPhase(time)&&time<110&&!state.reviewPaused)resumeFlow();
-      actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)?'factory':'',time,rawRate,beltSpeed:conveyorSpeed(time,rawRate),advance:player.playing});
+      const atNode=correction&&factory.nodeProgress(time).node;
+      if(factoryPhase(time)&&time>=64&&!atNode&&(state.factoryKeyHeld||state.scenePointer==='factory'&&state.pointer!==null))actions.holdResistance(true);
+      actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)&&!atNode?'factory':'',time,rawRate,beltSpeed:conveyorSpeed(time,rawRate),advance:player.playing});
       factory.setWorkTime?.(workPhase(time)?actions.snapshot().work.time:null);
       player.tick(dt,time<110?timing.playbackAt(player.mode==='interactive'&&version.id==='routine'&&time<98?98:110):Infinity);
-      if(player.mode==='interactive'&&factoryPhase(time)){
+      if(player.mode==='interactive'&&factoryPhase(time)&&time>=64&&!atNode){
         const adjusted=factory.resistTravel?.(time,sceneTime(),actions.snapshot().factory.backwardStep);
         if(Number.isFinite(adjusted))player.time=timing.playbackAt(adjusted);
       }
+      // The doorway hands the child to the conveyor with no inherited resistance.
+      if(time<61&&sceneTime()>=61){actions.seek(sceneTime());state.factoryKeyHeld=false;if(state.scenePointer==='factory')state.scenePointer='transfer';}
       if(inInner()&&!state.innerActive)syncInner();
-      encounter.tick(dt,{automatic:player.mode==='auto',sceneTime:sceneTime()});
+      encounter.tick(dt,{automatic:player.mode==='auto',sceneTime:sceneTime(),transportResolved:true});
+      if(player.mode==='interactive'&&time<58)player.time=timing.playbackAt(encounter.snapshot().sceneTime);
     }
-    updateLook(dt);updateCamera(dt);
+    updateCorrection(dt);updateLook(dt);updateCamera(dt);
   }
   function updateLook(dt){
     const time=sceneTime();
@@ -360,6 +378,7 @@
     syncInner(true);state.pointer=null;state.innerPointer=false;state.scenePointer=false;state.reviewPaused=true;
     peel.reset();factory.setPeelState?.(player.mode==='interactive'&&chasePhase()?peel.snapshot():null);
     factory.setAmbientTime?.(null);state.factoryAmbient=sceneTime();state.pressAge=0;state.chasePointer=false;
+    correction?.reset();state.correction=null;state.factoryKeyHeld=false;state.factoryPressPoint=null;updateCorrection(0);
     ending.seek(sceneTime());state.endingActive=sceneTime()>=132;state.lookOffset=0;state.lookTrail=[];state.lastLight=null;updateCamera(0,true);
   }
   function restart(){
@@ -370,7 +389,7 @@
   }
   function resumeInner(){player.target=Math.max(player.target,timing.playbackAt(119));player.playing=true;}
   function touchInner(x,y){
-    if(['break','done'].includes(innerState().phase)){resumeInner();return true;}
+    if(innerState().done){resumeInner();return true;}
     if(!inner.tap(x,y,viewport()))return false;
     if(!player.playing)resumeInner();
     return true;
@@ -382,7 +401,7 @@
       state.reviewPaused=false;encounter.activatePoint(worldPoint(point));return;
     }
     if(time<58){encounter.activate(time<district.timing.firstMove?'authority':'escort');resumeFlow();return;}
-    if(factoryPhase(time)){actions.resist();resumeFlow();return;}
+    if(factoryPhase(time)){if(!correction?.press(time,point?worldPoint(point):undefined))actions.resist();resumeFlow();return;}
     if(workPhase(time)){if(!state.workActive){workProgress.seek(time);state.workActive=true;}actions.work();workProgress.click();state.reviewPaused=false;return;}
     if(time>=132){ending.click();state.reviewPaused=false;state.endingActive=true;player.playing=true;return;}
     if(time<110)resumeFlow();
@@ -395,7 +414,7 @@
   }
   function setMode(mode){
     if(inInner())player.time=innerDisplayTime();
-    actions.holdResistance(false);player.setMode(mode);state.reviewPaused=false;
+    actions.holdResistance(false);state.factoryKeyHeld=false;correction?.reset();state.correction=null;player.setMode(mode);state.reviewPaused=false;updateCorrection(0);
     workProgress.seek(sceneTime());chaseProgress.seek(sceneTime());state.workActive=false;state.chaseActive=false;state.chaseOrigin=Math.max(119,sceneTime());
     encounter.tick(0,{automatic:mode==='auto',sceneTime:sceneTime()});
     peel.reset();factory.setPeelState?.(mode==='interactive'&&chasePhase()?peel.snapshot():null);ending.seek(sceneTime());state.endingActive=sceneTime()>=132;state.pressAge=0;state.chasePointer=false;updateCamera(0,true);
@@ -420,27 +439,36 @@
   on('play','click',togglePlay);on('restart','click',restart);on('replay','click',restart);
   on('progress','input',e=>seek(Number(e.target.value)/100));
   on('layers','click',()=>{state.open=!state.open;$('layers').setAttribute('aria-pressed',String(state.open));});
-  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat){if(player.mode==='interactive'&&factoryPhase()){actions.holdResistance(true);resumeFlow();}else if(player.mode==='interactive'&&chasePhase()){state.reviewPaused=false;state.pressAge=0;player.press();}else if(player.mode==='interactive'&&sceneTime()>=132)localTap();else togglePlay();}}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
-  document.addEventListener('keyup',e=>{if([' ','Enter'].includes(e.key)&&actions.snapshot().factory.held){e.preventDefault();actions.holdResistance(false);}if([' ','Enter'].includes(e.key)&&player.pressChase){e.preventDefault();if(state.pressAge<.25&&chasePhase())peel.click();player.release(true);}});
+  function beginFactory(point){
+    state.factoryPressPoint=point?worldPoint(point):undefined;
+    if(!correction?.press(sceneTime(),state.factoryPressPoint))actions.holdResistance(true);
+    resumeFlow();
+  }
+  function endFactory(){actions.holdResistance(false);correction?.release();state.factoryKeyHeld=false;}
+  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat){if(player.mode==='interactive'&&factoryPhase()){state.factoryKeyHeld=true;beginFactory();}else if(player.mode==='interactive'&&chasePhase()){state.reviewPaused=false;state.pressAge=0;player.press();}else if(player.mode==='interactive'&&sceneTime()>=132)localTap();else togglePlay();}}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
+  document.addEventListener('keyup',e=>{if([' ','Enter'].includes(e.key)&&(state.factoryKeyHeld||actions.snapshot().factory.held)){e.preventDefault();endFactory();}if([' ','Enter'].includes(e.key)&&player.pressChase){e.preventDefault();if(state.pressAge<.25&&chasePhase())peel.click();player.release(true);}});
   stage.addEventListener('pointerdown',e=>{
     if(e.button!==0||state.pointer!==null)return;
-    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();state.chasePointer=chasePhase();state.pressAge=0;stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(state.scenePointer==='factory'){actions.holdResistance(true);resumeFlow();}if(!state.innerPointer&&!state.scenePointer){if(chasePhase()){state.reviewPaused=false;const p=pointerPoint(e),indicator=$('hold-indicator');if(indicator){indicator.style.left=p.x+'px';indicator.style.top=p.y+'px';}}player.press();}
+    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();state.chasePointer=chasePhase();state.pressAge=0;stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);
+    if(state.scenePointer==='factory')beginFactory(pointerPoint(e));
+    if(state.scenePointer==='escort'||state.scenePointer==='authority'){localTap(pointerPoint(e));state.scenePointer='coercion';}
+    if(!state.innerPointer&&!state.scenePointer){if(chasePhase()){state.reviewPaused=false;const p=pointerPoint(e),indicator=$('hold-indicator');if(indicator){indicator.style.left=p.x+'px';indicator.style.top=p.y+'px';}}player.press();}
   });
   function worldPoint(p,time=sceneTime()){const v=view(time),s=scale(v);return{x:v.x+(p.x-state.w/2)/s,y:v.y+(p.y-state.h/2)/s};}
   function pointerPoint(e){const box=stage.getBoundingClientRect();return{x:(e.clientX-box.left)*state.w/box.width,y:(e.clientY-box.top)*state.h/box.height};}
   function release(e,cancelled=false){
     if(state.pointer!==e.pointerId)return;state.pointer=null;
     if(state.innerPointer){state.innerPointer=false;if(!cancelled&&inInner()){const p=pointerPoint(e);touchInner(p.x,p.y);}return;}
-    if(state.scenePointer){const phase=state.scenePointer;state.scenePointer=false;if(phase==='factory'){actions.holdResistance(false);return;}if(!cancelled&&phase===inputPhase())localTap(pointerPoint(e));return;}
+    if(state.scenePointer){const phase=state.scenePointer;state.scenePointer=false;if(phase==='factory'){endFactory();return;}if(!cancelled&&phase===inputPhase())localTap(pointerPoint(e));return;}
     if(state.chasePointer&&!cancelled&&state.pressAge<.25&&chasePhase())peel.click();
     state.chasePointer=false;player.release(cancelled);
   }
-  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()&&!!encounter.hitTest(worldPoint(p)));stage.style.cursor=target?'pointer':'default';});
+  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),s=innerState(),target=player.mode==='interactive'&&(inInner()?(s.awaitingCenter?Math.hypot(s.center.x-p.x,s.center.y-p.y)<=s.center.hitRadius:s.points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius)):familyPhase()&&!!encounter.hitTest(worldPoint(p)));stage.style.cursor=target?'pointer':'default';});
   stage.addEventListener('pointerup',e=>release(e));
   stage.addEventListener('pointercancel',e=>release(e,true));
   stage.addEventListener('contextmenu',e=>e.preventDefault());
   function cancelInput(){
-    actions.holdResistance(false);if(player.pressed)player.release(true);
+    endFactory();if(player.pressed)player.release(true);
     state.pointer=null;state.innerPointer=false;state.scenePointer=false;state.chasePointer=false;state.pressAge=0;state.last=0;
   }
   stage.addEventListener('blur',cancelInput);window.addEventListener?.('blur',cancelInput);

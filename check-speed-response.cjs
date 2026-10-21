@@ -5,6 +5,9 @@ const rest={axialStretch:0,strain:0,perspectiveStretch:1};
 assert.deepEqual(Motion.speedShape(0),rest);
 assert.deepEqual(Motion.speedShape(NaN),rest);
 assert.deepEqual(Motion.speedShape(-1600),Motion.speedShape(1600));
+const chaseData=Factory.frame(130),coast=Dimension.journeyView(130,{}, {w:1280,h:760},{...chaseData,chase:{...chaseData.chase,holdGate:true,inputRate:.32}}).view;
+const sprint=Dimension.journeyView(130,{}, {w:1280,h:760},{...chaseData,chase:{...chaseData.chase,holdGate:true,inputRate:4.2}}).view;
+assert(coast.tilt<.15&&sprint.tilt>.8,'coasting uses an open low-speed perspective');assert(coast.focal>sprint.focal*2&&coast.zoom<sprint.zoom,'the close foreshortened lens belongs to sprinting');
 let previous=rest;
 for(let speed=1;speed<=15000;speed+=17){
   const shape=Motion.speedShape(speed);

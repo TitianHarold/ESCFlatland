@@ -187,19 +187,13 @@
   const heroCurves=[[[hx,hy],[hx+(door[0]-hx)/3,hy+(door[1]-hy)/3],[hx+(door[0]-hx)*2/3,hy+(door[1]-hy)*2/3],door],...road];
   const takeAway=entryFinish[3],firstMove=takeAway+.38,cruiseStart=firstMove;
   const heroRoute=path(heroCurves),heroCruise=heroRoute.length/(58-cruiseStart-.25),heroDoorDistance=heroRoute.segments[0].length;
-  const hesitationStart=heroDoorDistance+220,hesitationEnd=Math.min(heroRoute.length-680,walking(53.6-firstMove,heroCruise)),hesitationSpacing=460;
-  const hesitationStarts=Array.from({length:Math.max(0,Math.floor((hesitationEnd-hesitationStart-340)/hesitationSpacing)+1)},(_,i)=>firstMove+.25+(hesitationStart+i*hesitationSpacing)/heroCruise);
+  const hesitationStarts=[];
   function escortResistance(time){
-    const baseDistance=Math.min(heroRoute.length,walking(time-firstMove,heroCruise));
-    if(time>=54||baseDistance<hesitationStart||baseDistance>hesitationEnd)return{lag:0,poke:0,strain:0,tremble:0,load:0};
-    const cycle=Math.floor((baseDistance-hesitationStart)/hesitationSpacing),at=hesitationStart+cycle*hesitationSpacing,phase=baseDistance-at;
-    if(cycle>=hesitationStarts.length||phase>340)return{lag:0,poke:0,strain:0,tremble:0,load:0};
-    const load=ease(phase/125)*(1-ease((phase-165)/175)),lag=105*load/heroCruise,start=firstMove+.25+at/heroCruise;
-    return{lag,start,cycle,poker:cycle===0?2:(cycle-1)%3+1,load,poke:ease((phase-80)/85)*(1-ease((phase-195)/55)),strain:.25*ease(phase/55)*(1-ease((phase-210)/130)),tremble:0};
+    // Unprompted walking stays continuous. User resistance owns any stop or backwards travel.
+    const moving=time>=firstMove&&time<58,phase=(time-firstMove)*3.8;
+    return{lag:0,poke:0,strain:moving?.07+.025*Math.sin(phase):0,tremble:0,load:moving?.18+.04*Math.sin(phase):0};
   }
-  function heroDistance(time){
-    return Math.min(heroRoute.length,walking(time-firstMove-escortResistance(time).lag,heroCruise));
-  }
+  function heroDistance(time){return Math.min(heroRoute.length,walking(time-firstMove,heroCruise));}
   function heroSpeed(time){return time>=58?0:(heroDistance(time+.002)-heroDistance(time-.002))/.004;}
   function cameraTarget(time){
     if(time<firstMove)return{x:homeCenter.x,y:homeCenter.y-160};
@@ -263,7 +257,7 @@
     const body=i===2?releasedPoke:person.body,h=headingOf(person.actor,body);
     // All three guards merge behind the child's starting point before using the same doorway spine.
     const departure=i===0?joinAt(person.actor,body,door,-Math.PI/2,90):[...joinAt(person.actor,body,[hx,hy],Math.atan2(door[1]-hy,door[0]-hx),35),heroCurves[0]];
-    const street=courtyardCurves(person.id,i);
+    const street=i===0?courtyardCurves(person.id,i):road;
     person.exit=path([...departure,...escortLane(street,i===1?-75:i===3?75:0)],h);
     person.roadOffset=path(departure,h).length;
   });
@@ -283,7 +277,12 @@
     body.x+=Math.cos(direction)*travel;body.y+=Math.sin(direction)*travel;
     return body;
   }
-  function escortProximity(time,index){return ease((heroDistance(time)-heroDoorDistance-(index===2?50:480))/(index===2?180:260))*(1-ease((time-53.5)/.5));}
+  function closeEscortBody(actor,child,index,poke=0){
+    const heading=child.angle+heroActor.headAxis(child).angle,offset=index===1?.88:index===3?-.88:0,direction=heading+Math.PI+offset;
+    const source={...child,x:child.x+Math.cos(direction)*270,y:child.y+Math.sin(direction)*270,axialStretch:0,bend:0,fear:0,strain:0,edgeBends:[]};
+    return guardCoercion(actor,source,child,poke,1);
+  }
+  function escortProximity(time,index){return ease((heroDistance(time)-heroDoorDistance-(index===2?50:480))/(index===2?180:260));}
   function policeBody(person,time,index){
     if(time<takeAway)return entrance(person,index,time);
     if(index===2&&time<firstMove)return threatBody(time);
@@ -295,7 +294,7 @@
     const body=poseOn(person.actor,person.exit,d,d<wanted?0:speed),reluctant=escortResistance(time);
     if(index===0&&reluctant.lag>.03){const child=heroBody(time),axis=person.actor.headAxis(body),look=Math.atan2(child.y-body.y,child.x-body.x)-axis.angle;body.angle+=Math.atan2(Math.sin(look-body.angle),Math.cos(look-body.angle))*clamp(reluctant.lag/.3);}
     const near=escortProximity(time,index);
-    if(index>0&&near>0)return guardCoercion(person.actor,body,heroBody(time),reluctant.poker===index?reluctant.poke:0,near);
+    if(index>0&&near>0){const child=heroBody(time),roadPose=guardCoercion(person.actor,body,child,0,near),close=closeEscortBody(person.actor,child,index,0),fan=ease((time-52.5)/1.4);return{...roadPose,x:roadPose.x+(close.x-roadPose.x)*fan,y:roadPose.y+(close.y-roadPose.y)*fan,angle:roadPose.angle+Math.atan2(Math.sin(close.angle-roadPose.angle),Math.cos(close.angle-roadPose.angle))*fan};}
     return body;
   }
   const yieldStart=21.5*ratio+recoveryDelay,yieldSources=Motion.pose(yieldStart/duration),yieldPaths={
@@ -310,10 +309,9 @@
   }
   function familyEmotion(time){
     const father=Motion.contactTimes.father*duration,mother=Motion.contactTimes.mother*duration;
-    if(time<1.2)return null;
-    if(time<father)return 'curiosity';
+    if(time<father)return null;
     if(time<6.8)return 'exclamation';
-    if(time<mother)return 'curiosity';
+    if(time<mother)return null;
     return time<firstMove?'exclamation':null;
   }
   function plannedFrame(value){
@@ -351,6 +349,24 @@
     while(resolvedFrames.length<=index){const i=resolvedFrames.length;resolvedFrames.push(resolvedAt(i*collisionStep,resolvedFrames[i-1]));}
     return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
   }
+  function withGateEscort(input,time,hero,follower){
+    if(!(time>=58&&time<70)||!hero)return input;
+    const body=hero.body||hero,heading=body.angle+heroActor.headAxis(body).angle,merge=ease((time-58)/.8);
+    const actors=input.actors.map(entry=>{
+      if(!/^guard-/.test(entry.id))return entry;
+      const index=Number(entry.id.slice(-1)),close=closeEscortBody(entry.actor,body,index),along=-240,side=index===1?-55:index===3?55:0;
+      const target=typeof follower==='function'?follower(entry.actor,body,-along,side):still(entry.actor,body.x+Math.cos(heading)*along-Math.sin(heading)*side,body.y+Math.sin(heading)*along+Math.cos(heading)*side,heading);
+      return{...entry,body:{...target,x:close.x+(target.x-close.x)*merge,y:close.y+(target.y-close.y)*merge,angle:close.angle+Math.atan2(Math.sin(target.angle-close.angle),Math.cos(target.angle-close.angle))*merge}};
+    });
+    // Keep the complete formation inside the doorway corridor while it rounds the inner bend.
+    const cs=Math.cos(CityMap.gate.heading),sn=Math.sin(CityMap.gate.heading),limits=[];
+    for(const entry of actors.filter(a=>/^guard-/.test(a.id))){
+      const polygon=entry.actor.outline(entry.body).map(([x,y])=>{const dx=x-gate[0],dy=y-gate[1];return[dx*cs+dy*sn,-dx*sn+dy*cs];});
+      polygon.forEach((a,i)=>{const b=polygon[(i+1)%polygon.length],ds=b[0]-a[0];let lo=0,hi=1;if(Math.abs(ds)<1e-9){if(a[0]<-60||a[0]>170)return;}else{const u=(-60-a[0])/ds,v=(170-a[0])/ds;lo=Math.max(0,Math.min(u,v));hi=Math.min(1,Math.max(u,v));if(lo>hi)return;}limits.push(a[1]+(b[1]-a[1])*lo,a[1]+(b[1]-a[1])*hi);});
+    }
+    if(limits.length){const minimum=Math.min(...limits),maximum=Math.max(...limits),shift=Math.max(-148-minimum,Math.min(0,148-maximum));for(const entry of actors.filter(a=>/^guard-/.test(a.id))){entry.body.x-=sn*shift;entry.body.y+=cs*shift;}}
+    return{...input,actors};
+  }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,cameraTarget,escortResistance,escortProximity,guardCoercion,configureEntranceViewport,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),hesitationStarts,heroCruise,entryDuration:entryFinish[0]-entryStarts[0],detainees:[]},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,withGateEscort,closeEscortBody,cameraTarget,escortResistance,escortProximity,guardCoercion,configureEntranceViewport,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),hesitationStarts,heroCruise,entryDuration:entryFinish[0]-entryStarts[0],detainees:[]},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

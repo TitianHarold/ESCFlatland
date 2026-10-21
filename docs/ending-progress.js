@@ -1,4 +1,4 @@
-/* Three deliberate discoveries lead from hands back into the inner world. */
+/* Four deliberate discoveries turn one guiding light into a new way to create. */
 (function(root,factory){
   if(typeof module==='object'&&module.exports)module.exports=factory();
   else root.FlatlandEndingProgress=factory();
@@ -7,15 +7,15 @@
   const clamp=n=>Math.max(0,Math.min(1,n)),smooth=n=>{n=clamp(n);return n*n*(3-2*n);};
   const stages=Object.freeze([
     ['stopped',.8,1],['raise',1.2],['open',.9,2],['flex',1],['half',.8,3],
-    ['drop',1.5],['grasp',.8],['vanish',1.1],['seed',.7],['expand',2.6],['message',2.6]
+    ['drop',1.8],['bloom',1.1],['reveal',.9],['tools',1,4],['white',.9],['world',2],['message',3.6]
   ].map(Object.freeze));
-  const duration=14,text='welcome to explore a new dimension';
+  const duration=stages.reduce((sum,stage)=>sum+stage[1],0),text='Welcome to explore new dimensional',title='Alice escape flatland';
   const starts=stages.map((_,i)=>stages.slice(0,i).reduce((sum,stage)=>sum+stage[1],0));
   class Session{
     constructor(){this.reset();}
     reset(){this.index=0;this.age=0;this.clock=0;this.clicks=0;return this;}
     click(){
-      if(this.index>=stages.length||this.clicks>=3)return false;
+      if(this.index>=stages.length||this.clicks>=4)return false;
       this.clicks++;this.releaseWaitingStage();return true;
     }
     releaseWaitingStage(){
@@ -41,17 +41,20 @@
       const stageProgress=stage?clamp(age/stage[1]):1,progress=index>=stages.length?1:(starts[index]+age)/duration;
       const raise=index>1?1:index===1?smooth(age/1.2):0;
       const flex=index>3?1:index===3?smooth(age):0;
-      const lightDrop=index>5?1:index===5?smooth(age/1.1):0;
-      const grasp=index>5?1:index===5?smooth((age-.55)/.9):0;
-      const handsOpacity=index>7?0:index===7?1-smooth(age/1.1):1;
-      const seedCenter=index>7?1:index===7?smooth(age/1.1):0;
-      const expansion=index>9?1:index===9?smooth(age/2.6):0;
-      const textOpacity=index>10?1:index===10?smooth(age/.8):0;
+      const lightDrop=index>5?1:index===5?smooth(age/1.8):0;
+      const lightBloom=index===6?smooth(age/1.1):index===7?1-smooth(age/.9):0;
+      const lightOpacity=index>6?0:index===6?1-smooth(age/1.1):1;
+      const toolsReveal=index>7?1:index===7?smooth(age/.9):0;
+      const handsOpacity=index>9?0:index===9?1-smooth(age/.9):1;
+      const expansion=index>10?1:index===10?smooth(age/2):0;
+      const textOpacity=index>11?1:index===11?smooth(age/.9):0;
+      const titleOpacity=index>11?1:index===11?smooth((age-1.05)/.9):0;
       return{phase,clicks:this.clicks,age,clock:this.clock,stageProgress,progress,raw:132+6*progress,
-        raise,flex,grasp,lightDrop,handsOpacity,seedCenter,expansion,textOpacity,text,
+        raise,flex,grasp:toolsReveal,lightDrop,lightBloom,lightOpacity,toolsReveal,handsOpacity,seedCenter:lightDrop,
+        expansion,textOpacity,titleOpacity,text,title,
         awaiting:!!stage?.[2]&&this.clicks<stage[2],complete:index>=stages.length};
     }
   }
   function snapshotAt(raw){return new Session().seek(raw).snapshot();}
-  return Object.freeze({Session,duration,text,snapshotAt});
+  return Object.freeze({Session,duration,text,title,snapshotAt});
 });
