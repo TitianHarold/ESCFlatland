@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
-const {createCanvas,Path2D,DOMMatrix}=require('/Users/harold/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/@napi-rs/canvas');
+const {createCanvas,Path2D,DOMMatrix,loadImage}=require('/Users/harold/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/@napi-rs/canvas');
 const repo='/Users/harold/Documents/ChatGPT/视频制作/ESCFlatland',docs=path.join(repo,'docs'),workspace=__dirname;
 const shotsFile=path.join(workspace,'shots-detailed.json'),detailed=JSON.parse(fs.readFileSync(shotsFile,'utf8'));
 const scripts=[...fs.readFileSync(path.join(docs,'index.html'),'utf8').matchAll(/<script\s+src="([^"?]+)(?:\?[^\"]*)?"/g)].map(m=>m[1]);
@@ -10,6 +10,7 @@ const moduleSHA=Object.fromEntries(Object.entries(sources).map(([filename,source
 const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim();
 const sourceWorkingTree=execFileSync('git',['status','--short'],{cwd:repo,encoding:'utf8'}).trim();
 const evidence='Offline Node Canvas render of current repository geometry and actual app.js draw functions. This is not a browser screenshot and is not newly generated hand-drawn artwork. Minimal DOM and Canvas rasterization may differ from browser output.';
+let endingAssets;
 function createStorage(){const values=new Map();return{getItem:key=>values.has(key)?values.get(key):null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};}
 function makeRenderer(preset,width,height,version='routine'){
   const localStorage=createStorage();
@@ -25,7 +26,7 @@ function makeRenderer(preset,width,height,version='routine'){
     nodes.set(id,node);return node;
   }
   const document={body:{classList:{contains(){return false;}}},hidden:false,getElementById:element,querySelector(){return null;},addEventListener(){},createElement:tag=>tag==='canvas'?createCanvas(300,150):element('created-'+(++created))};
-  const sandbox={console,document,localStorage,Path2D,DOMMatrix,URLSearchParams,location:{search:'?mode=auto&version='+version,href:'https://titianharold.github.io/ESCFlatland/?version='+version},performance:{now:()=>0},devicePixelRatio:1,matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}},requestAnimationFrame(){},OffscreenCanvas:class{constructor(w,h){return createCanvas(w,h);}},setTimeout,clearTimeout};
+  const sandbox={console,document,localStorage,Path2D,DOMMatrix,FlatlandEndingAssets:endingAssets,URLSearchParams,location:{search:'?mode=auto&version='+version,href:'https://titianharold.github.io/ESCFlatland/?version='+version},performance:{now:()=>0},devicePixelRatio:1,matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}},requestAnimationFrame(){},OffscreenCanvas:class{constructor(w,h){return createCanvas(w,h);}},setTimeout,clearTimeout};
   sandbox.window=sandbox;sandbox.globalThis=sandbox;const context=vm.createContext(sandbox);
   for(const filename of scripts){
     const source=sources[filename],executable=filename==='app.js'?source.replace(/\}\)\(\);\s*$/,`window.__renderScene=(scene,ambient)=>{player.seek(timing.playbackAt(scene));encounter.seek(scene);encounter.tick(0,{automatic:true,sceneTime:scene});actions.seek(scene);factory.setWorkTime?.(null);state.reviewPaused=true;state.ambient=ambient;state.last=0;const v=view();draw(sceneTime(),v);return{sceneTime:sceneTime(),playbackSeconds:player.time,camera:v};};\n})();`):source;
@@ -84,7 +85,23 @@ function refreshInnerEnding(){
   }
   manifest.shotsSHA256=sha(fs.readFileSync(shotsFile));manifest.sourceModuleSHA256=moduleSHA;manifest.generatedAt=new Date().toISOString();fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');console.log('Refreshed inner/chase/ending frames');
 }
-const mode=process.argv[2]||'all';if(!['all','detailed','palette-preview','refresh'].includes(mode))throw Error('Use all, detailed, or palette-preview');
-if(mode==='all'||mode==='detailed')renderDetailed();if(mode==='all'||mode==='palette-preview')renderPalettePreview();
-
-if(mode==='refresh')refreshInnerEnding();
+function refreshHands(){
+  for(const [folder,width,height,selected] of [['detailed',1280,760,f=>f.sceneTime>=132],['palette-preview',640,380,f=>f.moment==='dimension']]){
+    const out=path.join(workspace,'frames',folder),manifest=JSON.parse(fs.readFileSync(path.join(out,'manifest.json'))),renderers=new Map();
+    for(let i=0;i<manifest.frames.length;i++){
+      const frame=manifest.frames[i];if(!selected(frame))continue;
+      const key=frame.version+':'+(frame.preset||frame.palette);if(!renderers.has(key))renderers.set(key,makeRenderer(frame.preset||frame.palette,width,height,frame.version));
+      manifest.frames[i]=saveFrame(out,frame.file,renderers.get(key).renderScene(frame.sceneTime),frame,width,height);
+    }
+    manifest.generatedAt=new Date().toISOString();fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
+  }
+  console.log('Refreshed POV hand frames with the actual transparent assets');
+}
+async function run(){
+  const [hands,flexedHands]=await Promise.all(['pov-hands-open-fair-r19.png','pov-hands-flexed-fair-r19.png'].map(file=>loadImage(path.join(docs,'assets',file))));
+  endingAssets={hands,flexedHands};
+  const mode=process.argv[2]||'all';if(!['all','detailed','palette-preview','refresh','hands'].includes(mode))throw Error('Use all, detailed, palette-preview, refresh, or hands');
+  if(mode==='all'||mode==='detailed')renderDetailed();if(mode==='all'||mode==='palette-preview')renderPalettePreview();
+  if(mode==='refresh')refreshInnerEnding();if(mode==='hands')refreshHands();
+}
+run().catch(error=>{console.error(error);process.exitCode=1;});

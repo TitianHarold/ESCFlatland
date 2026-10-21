@@ -7,7 +7,7 @@
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   class Actions{
     constructor(){this.seek(0);}
-    seek(time){this.offset=0;this.velocity=0;this.push=0;this.fatigue=0;this.exhausted=0;this.pulse=0;this.effort=0;this.facing=0;this.stride=0;this.heat=0;this.workRate=1;this.workTime=Math.max(98,time);this.workClicks=0;this.extraDark=0;this.darkness=0;this.wasWork=false;return this;}
+    seek(time){this.offset=0;this.velocity=0;this.push=0;this.fatigue=0;this.exhausted=0;this.pulse=0;this.effort=0;this.stride=0;this.heat=0;this.workRate=1;this.workTime=Math.max(98,time);this.workClicks=0;this.extraDark=0;this.darkness=0;this.wasWork=false;return this;}
     resist(){
       this.pulse=1;
       if(this.exhausted>0)return false;
@@ -31,7 +31,6 @@
       if(this.offset===0&&this.velocity<0)this.velocity=0;
       const resisting=phase==='factory'&&!this.exhausted&&this.push>.08;
       this.effort+=((resisting?clamp(this.push):0)-this.effort)*(1-Math.exp(-dt*10));
-      this.facing+=((resisting?1:0)-this.facing)*(1-Math.exp(-dt*(resisting?17:9)));
       this.stride+=dt*(5+10*this.effort);
       if(phase==='work'){
         if(!this.wasWork)this.workTime=Math.max(98,time);
@@ -39,7 +38,7 @@
       }else{this.heat=0;this.workRate=1;}
       this.wasWork=phase==='work';return this;
     }
-    snapshot(){return{factory:{offset:this.offset,velocity:this.velocity,fatigue:this.fatigue,exhausted:this.exhausted>0,pulse:this.pulse,effort:this.effort,facing:this.facing,stride:this.stride},work:{time:this.workTime,rate:this.workRate,darkness:this.darkness,extraDarkness:this.extraDark,clicks:this.workClicks,progress:clamp(this.workClicks/8)}};}
+    snapshot(){return{factory:{offset:this.offset,velocity:this.velocity,fatigue:this.fatigue,exhausted:this.exhausted>0,pulse:this.pulse,effort:this.effort,stride:this.stride},work:{time:this.workTime,rate:this.workRate,darkness:this.darkness,extraDarkness:this.extraDark,clicks:this.workClicks,progress:clamp(this.workClicks/8)}};}
   }
   return{Actions};
 });

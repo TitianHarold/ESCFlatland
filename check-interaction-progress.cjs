@@ -22,7 +22,8 @@ assert.equal(run(work,30).darkness,0,'the furthest view waits for the next click
 work.click();
 assert.equal(work.snapshot().darkness,0,'starting the fade cannot jump its opacity');
 assert(run(work,1).darkness>0,'one final click starts a continuous fade');
-assert(run(work,7.1).complete,'the fade finishes without more clicks');
+assert(!run(work,3.3).complete,'the faster base fade still has a readable continuous transition');
+assert(run(work,.3).complete,'one click completes the base fade in about 4.5 seconds without more clicks');
 const fast=new WorkProgress({raw:104});fast.click();
 for(let i=0;i<12;i++){const before=fast.snapshot().darkness;fast.click();assert.equal(fast.snapshot().darkness,before);run(fast,.12);}
 assert(fast.snapshot().darkness>.5,'frequent clicks smoothly accelerate the continuous fade');

@@ -54,5 +54,12 @@ for(const start of [35.4,43.6,50.8]){
   assert(reversed,'baseline escort includes backward resistance near '+start);
   assert(closest<.01,'the next guard poke really contacts the resisting child near '+start);
 }
+// No side arrest teams or automatically joining children survive the edit.
+assert.deepEqual(D.timing.detainees,[]);
+const fixed=new Map(D.frame(0).actors.filter(a=>/^(west|northwest)-/.test(a.id)).map(a=>[a.id,a.body]));
+for(const t of [30,36,44,50,57])for(const a of D.frame(t).actors){
+  assert(!/-escort-/.test(a.id),'side enforcement parties are removed');
+  if(fixed.has(a.id)){const b=fixed.get(a.id);assert(Math.hypot(a.body.x-b.x,a.body.y-b.y)<.001,'other households remain static');assert(Math.abs(a.body.angle-b.angle)<.001,'static residents do not turn to join a queue');}
+}
 const handoff=D.frame(58).hero;assert(Math.hypot(handoff.x-D.handoff.x,handoff.y-D.handoff.y)<.001,'The delayed departure must still reach the shared factory handoff exactly');
 console.log('PASS escort: pre-poke contraction, real repeated pokes, spontaneous refusal, continuous initial departure, inspector ahead, three guards behind, doorway cleared by 34, no wall/actor penetration after departure and at 34/42/55.');

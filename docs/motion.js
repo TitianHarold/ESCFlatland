@@ -62,15 +62,15 @@
     const u = (t - total + settle) / settle;
     return {distance: distance + (endSpeed - cruise) * settle * (u ** 3 - u ** 4 / 2), speed: cruise + (endSpeed - cruise) * u * u * (3 - 2 * u)};
   }
-  function parentReaction(kind, elapsed, reactionDuration = 1.45) {
+  function parentReaction(kind, elapsed, reactionDuration = .5) {
     const isFather=kind==='father',u=clamp(elapsed/reactionDuration);
     // The contact edge yields first. Only then does the intact body retreat.
-    const dent=elapsed<0?0:ease(u/.24)*(1-ease((u-.36)/.64)),retreat=ease((u-.2)/.8);
-    const speed=u<=.2||u>=1?0:Math.hypot(isFather?44:46,isFather?-18:28)*easeSpeed((u-.2)/.8)/(.8*reactionDuration);
+    const dent=elapsed<0?0:(1-(1-clamp(u/.18))**3)*(1-ease((u-.32)/.68)),retreat=ease((u-.16)/.84);
+    const speed=u<=.16||u>=1?0:Math.hypot(isFather?44:46,isFather?-18:28)*easeSpeed((u-.16)/.84)/(.84*reactionDuration);
     const edgeBends=Array(4).fill(0);if(impacts[kind])edgeBends[impacts[kind].edgeIndex]=dent;
     return{x:(isFather?510:1090)+(isFather?-44:46)*retreat,y:470+(isFather?-18:28)*retreat,angle:(isFather?Math.PI/4:0)+(isFather?-.08:.08)*retreat,sx:1,sy:1,fear:dent,bend:0,edgeBends,speed,strain:0,bounce:0};
   }
-  function parent(kind,p){return parentReaction(kind,events[kind]===null?-1:(p-events[kind])*duration);}
+  function parent(kind,p){return parentReaction(kind,events[kind]===null?-1:(p-events[kind])*duration,1.05);}
   function childAt(p, fear) {
     const second = p > .34, kind = second ? 'mother' : 'father', path = second ? motherRoute : fatherRoute, impact = impacts[kind], stopped = impact && p >= impact.time;
     const span = second ? .37 : .18, travelTime = stopped ? impact.travelTime : p;

@@ -16,7 +16,7 @@
       const time=Number(raw)||this.start;
       this.zoom=clamp((time-this.start)/(this.wide-this.start));this.target=this.zoom;
       this.darkness=clamp((time-this.wide)/(this.end-this.wide));this.fading=time>this.wide;
-      this.clicks=0;this.energy=0;this.fadeRate=1/8;return this;
+      this.clicks=0;this.energy=0;this.fadeRate=1/4.5;return this;
     }
     click(){
       this.clicks++;
@@ -31,7 +31,7 @@
       this.zoom+=(this.target-this.zoom)*(1-Math.exp(-dt*9));
       if(this.target-this.zoom<.0001)this.zoom=this.target;
       this.energy*=Math.exp(-dt/1.15);
-      this.fadeRate+=((1+3*this.energy)/8-this.fadeRate)*(1-Math.exp(-dt*5));
+      this.fadeRate+=((1+3*this.energy)/4.5-this.fadeRate)*(1-Math.exp(-dt*5));
       if(this.fading)this.darkness=clamp(this.darkness+dt*this.fadeRate);
       return this.snapshot();
     }

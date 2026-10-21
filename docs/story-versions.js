@@ -14,9 +14,9 @@
     }
     return Object.freeze({duration:cuts.at(-1)[1],sceneAt:t=>map(t,1,0),playbackAt:t=>map(t,0,1)});
   }
-  const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,18],[58,25],[64,28]];
+  const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,18],[58,23.2],[64,26.2]];
   const rhythmTiming=edit([...opening,[70,30.5],[72,31.5],[77,36.5],[87,41],[90,42],[98,46],[104,49],[110,54],[119,62],[122,65],[132,75],[138,79]]);
-  const routineTiming=edit([...opening,[67.4,29.2],[71.7,31.9],[76.7,34.6],[78.5,37.6],[81.6,39.6],[83.2,42.6],[94,47],[108,63],[119,73],[122,76],[132,86],[138,90]]);
+  const routineTiming=edit([...opening,[67.4,29.2],[71.7,31.9],[76.7,34.6],[78.5,37.6],[81.6,39.6],[83.2,42.6],[94,47],[98,51.57142857142857],[104,60.31818181818182],[110,64.81818181818181],[119,73],[122,76],[132,86],[138,90]]);
   const point=(value,fallback)=>Array.isArray(value)?{x:value[0],y:value[1]}:value||fallback;
   function fixed(points,zoom=.6){
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
@@ -73,8 +73,8 @@
         const from=fixed([start],start.zoom||.22),to=id==='routine'?(time>=70?{...v}:fixed([point(b.approach,stage.m1)],b.mold?.zoom||1.5)):fixed((a.pressStations||[stage.m1]).map(p=>point(p)),.65),u=ease((time-68.3)/2.5);
         for(const key of ['x','y','zoom'])v[key]=from[key]+(to[key]-from[key])*u;
       }
-      if(id==='routine'&&time>=66.2&&time<68.3){
-        const start=RoutineFactory.anchors.overview,from=fixed([start],start.zoom),to=time<67.4?fixed([RoutineFactory.anchors.approach],.95):{...v},u=ease((time-66.2)/2.1);
+      if(id==='routine'&&time>=67.4&&time<69.5){
+        const start=RoutineFactory.anchors.overview,from=fixed([start],start.zoom),to={...v},u=ease((time-67.4)/2.1);
         for(const key of ['x','y','zoom'])v[key]=from[key]+(to[key]-from[key])*u;
       }
       return{...v,shotId:current.id};
@@ -108,7 +108,7 @@
     if(time<64)return StoryNotes.at(time);
     if(time<67.4)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
     if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿传送带接近张开的五边套模工位。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
-    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长的传送带移入成型压块；点击会转身向后跑，失力后继续被输送。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
+    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长的传送带移入成型压块；点击会保持原朝向直接向后退，失力后继续被输送。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
     if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长的输送段上向喷涂工位移动；点击可逆向挣扎，接近机器前重新归位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
     if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'从喷涂工位平移到工厂出口。':time<98?'经过门口遮挡切入办公室，平滑移向主角工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
     if(time<119)return StoryNotes.at(time);

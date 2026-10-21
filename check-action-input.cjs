@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),{Actions}=require('./docs/action-input.js');
 const step=(a,seconds,options)=>{for(let i=0;i<Math.round(seconds*100);i++)a.update(.01,options);};
 const a=new Actions();a.resist();assert.equal(a.snapshot().factory.offset,0,'click changes intent, never teleports the body');
-step(a,.15,{phase:'factory'});assert(a.offset>150&&a.offset<340,'one click creates visible travel rather than a few pixels of slowdown');assert(a.facing>.9,'the actor turns toward its escape direction');const first=a.offset;
+step(a,.15,{phase:'factory'});assert(a.offset>150&&a.offset<340,'one click creates visible travel rather than a few pixels of slowdown');assert(a.effort>.65,'the backward effort is visibly active');assert(!('facing' in a.snapshot().factory),'resistance carries no turn-around intent');const first=a.offset;
 a.resist();step(a,.12,{phase:'factory'});assert(a.offset>first+50,'repeated effort increases backward travel');assert(a.effort>.8&&a.stride>0,'intent drives a continuous effort and stride pose');
 for(let i=0;i<9;i++)a.resist();assert(a.snapshot().factory.exhausted);step(a,2,{phase:'factory'});assert(a.offset<1,'exhaustion returns control to the conveyor');
 const w=new Actions();step(w,1,{phase:'work',time:100,rawRate:1});const plain=w.workTime;assert.equal(w.workRate,1);assert.equal(w.darkness,0,'waiting alone cannot advance work darkness');w.work();w.work();step(w,1,{phase:'work',time:100,rawRate:1});assert(w.workTime-plain>1);assert(w.workRate>1);assert(w.extraDark>0);

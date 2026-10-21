@@ -66,6 +66,7 @@ for(let t=69;t<98;t+=.007){
   assert(result.appliedOffset>=0&&result.appliedOffset<=110+1e-9);
   assert.deepEqual(source.hero,original,'an input reaction cannot mutate cached animation poses');
   assert.equal(result.actors.find(e=>e.id==='hero').body,result.hero,'the renderer and collision silhouette share one body');
+  assert.equal(result.hero.angle,source.hero.angle,'backward transport must never turn the child around');
   if(result.appliedOffset){
     windows++;
     const dx=result.hero.x-source.hero.x,dy=result.hero.y-source.hero.y;
@@ -88,4 +89,11 @@ assert(windows>100,'plain transport spaces remain playable');
 for(const program of Factory.pressProgram.programs){
   for(const t of[program.arrivalTime,program.contactTime,program.clearTime])assert.equal(Factory.withResistance(Factory.frame(t),100,t).appliedOffset,0);
 }
-console.log('One smooth actual-speed response, continuous launch, no double stretch and contact-safe conveyor reaction passed.');
+// The forward chase already faces the route; resistance cannot leak into this phase.
+for(let t=122.05;t<131.95;t+=.1){
+  const source=Factory.frame(t),next=Factory.frame(t+.001),entry=source.actors.find(e=>e.id==='hero'),heading=entry.body.angle+entry.actor.headAxis(entry.body).angle;
+  const dx=next.hero.x-source.hero.x,dy=next.hero.y-source.hero.y;
+  assert(dx*Math.cos(heading)+dy*Math.sin(heading)>0,'the chase keeps facing its forward travel');
+  assert.deepEqual(Factory.withResistance(source,340,t).hero,source.hero,'factory resistance cannot rotate or displace the chase');
+}
+console.log('One smooth actual-speed response, continuous launch, no double stretch and heading-preserving reverse conveyor travel passed.');

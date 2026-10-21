@@ -14,7 +14,7 @@
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
       this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
       this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
-      this.reactions={};this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
+      this.reactions={};this.resistanceFacing=null;this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
     activate(target){
@@ -23,11 +23,12 @@
         const phaseStart=this.stage==='father'?1.2:6.8,end=this.stage==='father'?6.8:contactEnd,start=Math.min(end,Math.max(phaseStart,this.sceneTime));
         // A workbench scrub resumes the remaining action; only the short body join returns from idle to its route.
         const duration=(target==='father'?1.75:2.45)*(end-start)/(end-phaseStart);
-        const contact=Motion.contactTimes[target]*Motion.duration,touched=start>=contact,reactionDuration=.9*(1-clamp((start-contact)/1.45));if(touched)this.reactions[target]=Math.max(0,(start-contact)/1.45*.8);
+        const contact=Motion.contactTimes[target]*Motion.duration,touched=start>=contact,reactionDuration=.58*(1-clamp((start-contact)/1.05));if(touched)this.reactions[target]=Math.max(0,(start-contact)/1.05*.5);
         this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),reactionDuration,touched,from:this.previous?.hero?.body};this.mark=touched?'exclamation':'curiosity';this.markAtAmbient=this.ambient;this.wait=0;this.epoch++;return true;
       }
       if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
       if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
+        if(this.lag<.03||this.resistanceFacing===null)this.resistanceFacing=this.previous?.hero?.body?.angle??District.frame(this.sceneTime).hero.body.angle;
         this.resistance=Math.min(.9,this.resistance+.26);this.fatigue+=.27;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;
       }
       return false;
@@ -79,7 +80,7 @@
       const frame={...input,actors:input.actors.map(entry=>({...entry,body:{...entry.body}}))},hero=frame.actors.find(entry=>entry.id==='hero');
       if(!hero)return frame;
       if(this.stage!=='done'&&!this.automatic){
-        for(const kind of Object.keys(this.reactions)){const parent=frame.actors.find(entry=>entry.id===kind);if(parent)parent.body=Motion.parentReaction(kind,this.reactions[kind],.8);}
+        for(const kind of Object.keys(this.reactions)){const parent=frame.actors.find(entry=>entry.id===kind),age=this.reactions[kind];if(parent){parent.body=Motion.parentReaction(kind,age,.5);delete parent.emotion;if(age<1.25)Object.assign(parent,{emotion:'exclamation',emotionElapsed:age,emotionDuration:1.25,emotionStrength:.9});}}
         if(this.action&&this.action.elapsed<.24&&this.action.from){
           const destination=District.frame(this.action.start).hero.body;
           hero.body=blend(this.action.from,destination,ease(this.action.elapsed/.24));
@@ -92,8 +93,9 @@
         if(this.shiver>0){const age=.58-this.shiver;hero.body.x+=5*Math.sin(age*78)*Math.sin(Math.PI*age/.58);hero.body.edgeBends=C.actors.child.vertices.map((_,i)=>.25+.12*Math.sin(age*54+i));hero.body.fear=.35;}
         if(this.sceneTime>=District.timing.firstMove&&this.lag>0){
           const delayed=District.frame(Math.max(District.timing.firstMove,this.sceneTime-this.lag)).hero.body;
-          hero.body={...delayed,bend:Math.max(delayed.bend||0,this.resistance>0?.28:0),fear:this.resistance>0?.4:delayed.fear};
-          if(this.resistance>0){hero.body.angle+=.14*Math.sin(this.ambient*29);hero.body.strain=.28;}
+          const facing=hero.body.angle,locked=this.resistanceFacing??facing;
+          hero.body={...delayed,angle:facing+shortest(facing,locked)*clamp(this.lag/.35),bend:Math.max(delayed.bend||0,this.resistance>0?.28:0),fear:this.resistance>0?.4:delayed.fear};
+          if(this.resistance>0){hero.body.strain=.28;hero.body.axialStretch=-.07*clamp(this.resistance/.9);}
           const inspector=frame.actors.find(entry=>entry.id==='inspector');
           if(inspector){const head=inspector.actor.headAxis(inspector.body);inspector.body.angle+=shortest(inspector.body.angle,Math.atan2(hero.body.y-inspector.body.y,hero.body.x-inspector.body.x)-head.angle)*clamp(this.lag/.2);}
           const guard=frame.actors.find(entry=>entry.id==='guard-2');

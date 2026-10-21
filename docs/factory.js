@@ -233,6 +233,7 @@
   function withResistance(source,offset,time){
     const window=resistanceWindow(time),requested=Number.isFinite(offset)?Math.max(0,offset):0,appliedOffset=Math.min(requested,window.maxOffset);
     if(!source.hero||!appliedOffset)return{...source,appliedOffset:0,resistance:window};
+    // Reverse along the belt while retaining the authored body angle and shape.
     const body={...source.hero,x:source.hero.x-window.tangent.x*appliedOffset,y:source.hero.y-window.tangent.y*appliedOffset};
     const actors=source.actors.map(entry=>entry.id==='hero'?{...entry,body}:entry);
     return{...source,hero:body,actors,appliedOffset,resistance:window};

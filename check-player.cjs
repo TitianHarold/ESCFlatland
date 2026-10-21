@@ -101,10 +101,13 @@ assert.equal(A.timing.playbackAt(119)-A.timing.playbackAt(104),13,'The struggle 
 assert.equal(A.timing.playbackAt(138)-A.timing.playbackAt(119),17,'Chase and POV retain their previous speed');
 assert(A.notes.at(74.1).action.includes('第一、第二、第三、第四组夹具同时回升'),'Notes show concurrent fixture motion, not a single current group');
 assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
-assert.equal(B.timing.playbackAt(94)-B.timing.playbackAt(64),19,'The longer open-belt travel fits the existing factory edit');
+assert(Math.abs(B.timing.playbackAt(67.4)-B.timing.playbackAt(64)-3)<1e-8,'B holds its opening factory overview for three seconds');
+assert(Math.abs(B.timing.playbackAt(110)-B.timing.playbackAt(104)-4.5)<1e-8,'B automatic fade matches the faster continuous input fade');
 for(const [start,end]of[[76.7,78.5],[81.6,83.2]])assert(Math.abs(B.timing.playbackAt(end)-B.timing.playbackAt(start)-3)<1e-8,'Each inter-station transfer leaves three real seconds for resistance');
-assert.equal(B.timing.playbackAt(108)-B.timing.playbackAt(94),16);
-assert.equal(B.timing.playbackAt(119)-B.timing.playbackAt(108),10);
+assert(Math.abs(B.timing.playbackAt(119)-B.timing.playbackAt(110)-90/11)<1e-8,'The inner discovery preview keeps its original duration');
+const overview=B.camera.pose(64);
+for(const raw of[64.5,65.5,66.5,67.3999])for(const key of['x','y','zoom'])assert.equal(B.camera.pose(raw)[key],overview[key],'The full overview stays still before its later dolly');
+for(const raw of[67.4,69.5]){const before=B.camera.pose(raw-.0001),after=B.camera.pose(raw+.0001);assert(Math.hypot(before.x-after.x,before.y-after.y)<1&&Math.abs(before.zoom-after.zoom)<.0001,'The delayed overview dolly rejoins without a camera jump');}
 const workView=B.camera.pose(98),officeView=B.camera.pose(104);
 assert.equal(workView.x,Office.anchors.work.x);assert.equal(workView.y,Office.anchors.work.y);
 assert.equal(officeView.x,Office.anchors.overview.x);assert.equal(officeView.y,Office.anchors.overview.y);

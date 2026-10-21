@@ -134,7 +134,9 @@
   function withResistance(data,offset,t,effort={}){
     const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0));
     if(!data.hero||!appliedOffset)return{...data,appliedOffset};
-    const dx=appliedOffset*cs,dy=appliedOffset*sn,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*clearance,facing=clamp(effort.facing||0)*clearance,gait=Math.sin((effort.stride||0)*Math.PI*2),actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,angle:e.body.angle+Math.PI*facing+.055*gait*strength,bend:.045*gait*strength,strain:.12*strength,axialStretch:.07*strength},resistance:{strength,facing,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
+    const dx=-window.tangent.x*appliedOffset,dy=-window.tangent.y*appliedOffset,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*clearance,gait=Math.sin((effort.stride||0)*Math.PI*2);
+    // Backward effort changes travel and outline, never the body's authored heading.
+    const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,bend:.045*gait*strength,strain:.12*strength,axialStretch:.07*strength},resistance:{strength,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
     return{...data,actors,hero,appliedOffset};
   }
   return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,transferProgram,setWorkTime:Office.setWorkTime};

@@ -15,7 +15,7 @@
     {id:'family',label:'001 · 家庭',start:0,end:17.3,frames:[frame(0,800,500,1.4),frame(17.3,800,500,1.4)]},
     {id:'district',label:'002 · 包围后带走 · 拉远',start:17.3,end:27.6,frames:[frame(17.3,800,500,1.4),frame(27.6,100,-50,.9)]},
     {id:'inspection',label:'003 · 押送离家 · 持续拉远',start:27.6,end:42,frames:[frame(27.6,100,-50,.9),frame(42,-800,-550,.34)]},
-    {id:'escort',label:'004 · 广角押送 · 他家并入',start:42,end:58,frames:[frame(42,-800,-550,.34),frame(44,-950,-650,.3),frame(48,-1350,-850,.3),frame(53.2,-2000,-1300,.3),frame(58,-2750,-1850,.3)]},
+    {id:'escort',label:'004 · 主队前行',start:42,end:58,frames:[frame(42,-800,-550,.34),frame(44,-950,-650,.3),frame(48,-1350,-850,.3),frame(53.2,-2000,-1300,.3),frame(58,-2750,-1850,.3)]},
     {id:'gate',label:'005 · 穿过入口',start:58,end:64,frames:[frame(58,-2750,-1850,.3),frame(60,-3000,-2100,1.05),frame(61,-3080,-2180,1.2),frame(64,-4255,-2300,.22)]},
     {id:'factory',label:'006 · 全厂概览',start:64,end:70,frames:[frame(64,-4255,-2300,.22)]},
     {id:'press',label:'007 · 第一关 · 内窗挤压',start:70,end:77,frames:[factoryMedium(70)]},

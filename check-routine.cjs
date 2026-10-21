@@ -77,19 +77,23 @@ const {Actions}=require('./docs/action-input.js'),timing=require('./docs/story-v
 const localX=b=>(b.x-Routine.anchors.factoryCenter.x)*c+(b.y-Routine.anchors.factoryCenter.y)*s;
 const reverseEvidence=[];
 for(const [clickAt,minimumRetreat]of[[70,180],[77.6,100],[82.3,60]]){
-  const input=new Actions(),start=timing.playbackAt(clickAt);let previous,retreat=0,reverseFrames=0,turned=false;
+  const input=new Actions(),start=timing.playbackAt(clickAt);let previous,retreat=0,reverseFrames=0,effortVisible=false;
   for(let i=0;i<85;i++){
     const t=timing.sceneAt(start+i*.01);if(i===0)input.resist();input.update(.01,{phase:'factory',time:t});
     const intent=input.snapshot().factory,original=Routine.frame(t),changed=Routine.withResistance(original,intent.offset,t,intent),x=localX(changed.hero);
     if(previous!==undefined&&x>previous+.001){retreat+=x-previous;reverseFrames++;}
-    if(changed.actors.find(e=>e.id==='hero').resistance?.facing>.9)turned=true;
+    const changedEntry=changed.actors.find(e=>e.id==='hero'),originalEntry=original.actors.find(e=>e.id==='hero');
+    if(changedEntry.resistance?.strength>.5)effortVisible=true;
+    assert.equal(changed.hero.angle,original.hero.angle,'backward travel keeps the authored body angle');
+    const oldHead=original.hero.angle+originalEntry.actor.headAxis(original.hero).angle,newHead=changed.hero.angle+changedEntry.actor.headAxis(changed.hero).angle;
+    assert(Math.cos(newHead-oldHead)>1-1e-8,'the deformed silhouette still points in its original direction');
     assert.equal(changed.actors.find(e=>e.id==='hero').body,changed.hero);
     const window=Routine.resistanceWindow(t);if(changed.appliedOffset&&window.clearance)assert(x<=window.from-window.clearance+1e-8,'backward movement stays outside the previous machine');
     previous=x;
   }
-  assert(retreat>minimumRetreat,'one click must produce visibly reversed world motion at '+clickAt);assert(reverseFrames>=12);assert(turned,'the child turns to face its attempted escape');reverseEvidence.push({clickAt,retreat:Math.round(retreat),reverseSeconds:reverseFrames/100});
+  assert(retreat>minimumRetreat,'one click must produce visibly reversed world motion at '+clickAt);assert(reverseFrames>=12);assert(effortVisible,'the child visibly strains while backing up without turning');reverseEvidence.push({clickAt,retreat:Math.round(retreat),reverseSeconds:reverseFrames/100});
 }
-for(const t of[71.7,78.5,79.25,79.5,83.2]){const original=Routine.frame(t),changed=Routine.withResistance(original,340,t,{effort:1,facing:1,stride:.5});assert.deepEqual(changed.hero,original.hero,'real machine contact overrides resistance, including its pose');}
+for(const t of[71.7,78.5,79.25,79.5,83.2]){const original=Routine.frame(t),changed=Routine.withResistance(original,340,t,{effort:1,stride:.5});assert.deepEqual(changed.hero,original.hero,'real machine contact overrides resistance, including its pose');}
 for(const t of[67.4,71.7,76.7,78.5,81.6,83.2])assert(Math.abs(localX(hero(t-1e-6).body)-localX(hero(t).body))<.001,'extended transfers remain continuous at '+t);
 console.log(JSON.stringify({actualReverseTravel:reverseEvidence,contactTimingUnchanged:true}));
 
