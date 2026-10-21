@@ -2,10 +2,12 @@
 const assert=require('node:assert/strict'),{Actions}=require('./docs/action-input.js');
 const step=(a,seconds,options)=>{for(let i=0;i<Math.round(seconds*100);i++)a.update(.01,options);};
 const a=new Actions();a.resist();assert.equal(a.snapshot().factory.offset,0,'click changes intent, never teleports the body');
-step(a,.15,{phase:'factory'});assert(a.offset>0&&a.offset<160);const first=a.offset;
-a.resist();step(a,.12,{phase:'factory'});assert(a.offset>first,'repeated effort increases backward travel');
+step(a,.15,{phase:'factory'});assert(a.offset>150&&a.offset<340,'one click creates visible travel rather than a few pixels of slowdown');assert(a.facing>.9,'the actor turns toward its escape direction');const first=a.offset;
+a.resist();step(a,.12,{phase:'factory'});assert(a.offset>first+50,'repeated effort increases backward travel');assert(a.effort>.8&&a.stride>0,'intent drives a continuous effort and stride pose');
 for(let i=0;i<9;i++)a.resist();assert(a.snapshot().factory.exhausted);step(a,2,{phase:'factory'});assert(a.offset<1,'exhaustion returns control to the conveyor');
-const w=new Actions();step(w,1,{phase:'work',time:100,rawRate:1});const plain=w.workTime;w.work();w.work();step(w,1,{phase:'work',time:100,rawRate:1});assert(w.workTime-plain>1);assert(w.workRate>1);assert(w.extraDark>0);
+const w=new Actions();step(w,1,{phase:'work',time:100,rawRate:1});const plain=w.workTime;assert.equal(w.workRate,1);assert.equal(w.darkness,0,'waiting alone cannot advance work darkness');w.work();w.work();step(w,1,{phase:'work',time:100,rawRate:1});assert(w.workTime-plain>1);assert(w.workRate>1);assert(w.extraDark>0);
+const heldRate=w.workRate,heldDarkness=w.darkness;step(w,10,{phase:'work',time:107,rawRate:1});assert.equal(w.workRate,heldRate,'work speed is retained until another click');assert.equal(w.darkness,heldDarkness,'the passage of time never adds discovery progress');assert.equal(w.snapshot().work.clicks,2);assert.equal(w.snapshot().work.progress,.25);
 const paused=w.snapshot();step(w,1,{phase:'work',time:105,advance:false});assert.deepEqual(w.snapshot(),paused);
-w.seek(105);assert.equal(w.workTime,105);assert.equal(w.offset,0);assert.equal(w.extraDark,0);
+w.update(.01,{phase:'chase',time:119});assert.equal(w.heat,0);assert.equal(w.workRate,1,'leaving the work phase clears its accumulated speed');
+w.seek(105);assert.equal(w.workTime,105);assert.equal(w.offset,0);assert.equal(w.extraDark,0);assert.equal(w.snapshot().work.clicks,0);
 console.log('Continuous resistance, fatigue, shared work acceleration and pause/reset passed.');

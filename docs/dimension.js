@@ -395,8 +395,30 @@
     // The route has small forms first and large forms farther on; local motion cannot reveal a huge early ring.
     return base*(item.index<18?mix(.82,1.10,q):item.index%2===0?mix(.85,1.12,q):mix(1.12,.92,q));
   }
-  function apparition(list,item,time,clock,alpha){
+  function referenceDeformation(speed,index=0,side=1){
+    const response=(Motion.speedShape(speed).perspectiveStretch-1)/2;
+    const stretch=1+response*(2.3+(index%5)*.24);
+    return{stretch,across:1/Math.sqrt(stretch),shear:side*.22*response,response};
+  }
+  function deformReference(point,heading,deformation){
+    const c=Math.cos(heading),s=Math.sin(heading),along=point[0]*c+point[1]*s,across=-point[0]*s+point[1]*c;
+    const u=along*deformation.stretch+across*deformation.shear,v=across*deformation.across;
+    return[c*u-s*v,s*u+c*v,point[2]];
+  }
+  const journeyFlowLength=journeyDX*Math.cos(endHeading)+journeyDY*Math.sin(endHeading);
+  function referenceFlow(item,hero,time,data){
+    const base=finite(data.chase?.baseTravel,time-119),travel=finite(data.chase?.travel,base);
+    let shift=-Math.max(0,travel-base)*pathLengths[32]*Motion.chaseProgress(132).qSpeed,repeat=0;
+    if(Number.isFinite(data.chase?.travel)&&time>130){
+      const along=(item.x+forward[0]*shift-hero[0])*forward[0]+(item.y+forward[1]*shift-hero[1])*forward[1];
+      if(along<-900){repeat=Math.ceil((-900-along)/journeyFlowLength);shift+=repeat*journeyFlowLength;}
+    }
+    if(!shift&&!repeat)return item;
+    return{...item,x:item.x+forward[0]*shift,y:item.y+forward[1]*shift,index:item.index+repeat*journeyObjectCount};
+  }
+  function apparition(list,item,time,clock,alpha,speed=0){
     const r=item.r*shapeScale(item,time),phase=item.index*.91+item.side*.6;
+    const deformation=referenceDeformation(speed,item.index,item.side);
     const volume=ease(time,item.growAt,item.growUntil);
     const thickness=r*.038*volume,bend=r*.32*volume;
     const turn=clock*.21+phase,ax=.92*Math.sin(phase+clock*.19),ay=.78*Math.cos(phase*.6-clock*.17);
@@ -418,7 +440,8 @@
       const shear=volume*offset*.16;
       const x=px+nx/n*separation+shear*Math.sin(b),y=py+ny/n*separation+shear*Math.cos(a),zz=z+separation/n;
       const xx=x*ca-y*sa,yy=x*sa+y*ca,rotatedZ=yy*sx+zz*cx;
-      return[item.x+xx*cy+rotatedZ*sy,item.y+yy*cx-zz*sx,22-xx*sy+rotatedZ*cy];
+      const warped=deformReference([xx*cy+rotatedZ*sy,yy*cx-zz*sx,-xx*sy+rotatedZ*cy],item.heading,deformation);
+      return[item.x+warped[0],item.y+warped[1],22+warped[2]];
     };
     function panel(points,color,offset,opacity=1){
       const center=points.reduce((sum,p)=>[sum[0]+p[0]/points.length,sum[1]+p[1]/points.length],[0,0]);
@@ -453,12 +476,13 @@
       rim(contour(u,.42),contour(v,.42),item.color,4);
     }
   }
-  function addJourneyObjects(list,hero,time,clock=time){
+  function addJourneyObjects(list,hero,time,clock=time,data={}){
     const exit=ease(time,122.15,122.45);if(exit<=0)return;
-    for(const item of journeyObjects){
+    for(const original of journeyObjects){
+      const item=referenceFlow(original,hero,time,data);
       if(item.index<18&&item.side!==(item.index%2?1:-1))continue;
       const alpha=distanceAlpha([item.x,item.y],hero)*exit*ease(time,item.enterAt,item.enterAt+.45);
-      if(alpha>=.002)apparition(list,item,time,clock,alpha);
+      if(alpha>=.002)apparition(list,item,time,clock,alpha,data.chase?.speed||0);
     }
   }
   const speedRibbons=Array.from({length:560},(_,i)=>{
@@ -466,13 +490,14 @@
     return{center,heading,side,offset:135+(i%7)*76,length:90+(i%5)*65,width:1.5+(i%4)*1.8,color:[Palette.teal,Palette.lavender,Palette.coral,Palette.gold][i%4]};
   });
   function addSpeedRibbons(list,hero,time,data){
-    const speed=clamp((data.chase?.speed||0)/4500,0,1),kick=clamp(data.chase?.effort||0,0,1);
+    const speed=(Motion.speedShape(data.chase?.speed||0).perspectiveStretch-1)/2,kick=clamp(data.chase?.effort||0,0,1);
     const amount=ease(time,122,122.3)*(1-ease(time,132,137));
     if(amount<=0)return;
-    for(const item of speedRibbons){
+    for(const original of speedRibbons){
+      const moved=referenceFlow({x:original.center[0],y:original.center[1],index:0},hero,time,data),item={...original,center:[moved.x,moved.y]};
       const alpha=distanceAlpha(item.center,hero)*amount*(.18+.62*speed+.18*kick);if(alpha<.005)continue;
       const c=Math.cos(item.heading),s=Math.sin(item.heading),n=[-s,c],x=item.center[0]+n[0]*item.side*item.offset,y=item.center[1]+n[1]*item.side*item.offset;
-      const length=item.length*(.7+4.8*speed+1.0*kick),width=item.width*(1+.7*kick);
+      const length=item.length*(.7+7.8*speed),width=item.width*(1+.25*speed);
       const points=[[-length/2,0],[-length*.25,-width],[length/2,0],[length*.22,width]].map(([u,v])=>[x+c*u+n[0]*v,y+s*u+n[1]*v,2]);
       surface(list,points,item.color,'pigment',alpha);
     }
@@ -499,7 +524,8 @@
     const supplied=typeof data.darkness==='number'?data.darkness:data.darkness?.amount;
     const darkness=clamp(finite(supplied,1-ease(time,119,128)),0,1),speed=clamp((data.chase?.speed||0)/1150,0,1),amount=darkness*(1-speed*.65)*ease(time,122,124);
     if(amount<.002)return;
-    journeyObjects.slice(0,24).forEach((item,index)=>{
+    journeyObjects.slice(0,24).forEach((original,index)=>{
+      const item=referenceFlow(original,hero,time,data);
       const alpha=distanceAlpha([item.x,item.y],hero)*amount*.85;if(alpha<.002)return;
       for(let strand=0;strand<2;strand++){
         const points=Array.from({length:18},(_,i)=>{const u=i/17,a=u*Math.PI*3+index*.6+strand*1.7,along=(u-.5)*540,across=Math.sin(a)*64+Math.sin(a*2+clock*.15)*22;return[item.x+forward[0]*along-forward[1]*across,item.y+forward[1]*along+forward[0]*across,3+18*Math.pow(Math.sin(a),2)];});
@@ -597,15 +623,18 @@
     if(time>=132)return null;
     return projectJourneyLight(time,journeyView(time,camera,viewport,data),data);
   }
+  function chaseArrivalTime(time,data){
+    return data.chase?.holdGate?Math.min(time,131+.7*ease(data.chase.charge||0,.8,1)):time;
+  }
   function drawJourney(ctx,time,camera={},viewport={},ambient=time,data={}){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);if(w<=0||h<=0)return;
     if(time>=132){drawEnding(ctx,time,{w,h});return;}
     if(data.heroTexture){journeyTexture=data.heroTexture;journeyTextureExtent=data.textureExtent||160;}
     const layout=journeyView(time,camera,viewport,data),state=layout.state,list=[],clock=finite(ambient,time);
-    addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock);addJourneyDarkness(list,state.center,time,clock,data);
+    addSpeedRibbons(list,state.center,time,data);addJourneyObjects(list,state.center,time,clock,data);addJourneyDarkness(list,state.center,time,clock,data);
     addJourneyHero(list,state,data);if(data.detachedTag)addTag(list,{...data.detachedTag,opacity:(data.detachedTag.opacity??1)*(1-ease(time,130.5,132))},state.center);
     const project=render(ctx,list,layout.view,{w,h},sharedMaterial(clock),Palette.outside.background),lightPoint=projectJourneyLight(time,layout,data,project);
-    if(!data.hideLight)paintArrivalLight(ctx,lightPoint,time,data.light?.r||10,w,h);
+    if(!data.hideLight)paintArrivalLight(ctx,lightPoint,chaseArrivalTime(time,data),data.light?.r||10,w,h);
   }
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);

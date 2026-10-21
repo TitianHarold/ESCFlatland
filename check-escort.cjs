@@ -19,7 +19,7 @@ for(let t=D.timing.firstMove+.3;t<D.timing.firstMove+3;t+=.1){
 }
 
 // Check the requested escort snapshots against the same silhouettes and wall assets as rendering.
-for(const t of[24,31,42,55]){
+for(const t of[D.timing.firstMove+1,34,42,55]){
   const frame=D.frame(t),hero=actor(frame,'hero'),axis=hero.actor.headAxis(hero.body),heading=hero.body.angle+axis.angle;
   const forward=entry=>(entry.body.x-hero.body.x)*Math.cos(heading)+(entry.body.y-hero.body.y)*Math.sin(heading);
   assert(forward(actor(frame,'inspector'))>40,'The inspector leads at '+t);
@@ -32,8 +32,9 @@ for(const t of[24,31,42,55]){
       assert(forward(entry)<-20,id+' must remain behind the child at '+t);
       // The longer observation beat deliberately postpones departure; the first
       // snapshot is now still inside the home, with the same collision rules.
-      if(t>=31)assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
+      if(t>=34)assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
     }
   }
 }
-console.log('PASS escort: one real poke, continuous departure, inspector ahead, three guards behind, doorway cleared by 31, no wall/actor penetration at 24/31/42/55.');
+const handoff=D.frame(58).hero;assert(Math.hypot(handoff.x-D.handoff.x,handoff.y-D.handoff.y)<.001,'The delayed departure must still reach the shared factory handoff exactly');
+console.log('PASS escort: one real poke, continuous departure, inspector ahead, three guards behind, doorway cleared by 34, no wall/actor penetration after departure and at 34/42/55.');

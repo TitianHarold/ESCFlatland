@@ -71,3 +71,31 @@ for(const n of[3,4,5,6,7,8,9,10]){
 for(let t=70;t<94;t+=.025){const original=Routine.frame(t),changed=Routine.withResistance(original,1000,t),w=Routine.resistanceWindow(t);assert(changed.appliedOffset<=w.maxOffset+1e-8);assert.equal(changed.actors.find(e=>e.id==='hero').body,changed.hero);if(original.actors.find(e=>e.id==='hero').routine.compacting.force)assert.equal(changed.appliedOffset,0);}
 for(const t of[71.7,78.5,83.2])assert.equal(Routine.withResistance(Routine.frame(t),1000,t).appliedOffset,0,'resistance clears before the machine closes');
 console.log(JSON.stringify({stagedStandardFrame:'3..10 edges',safeResistanceWindows:true}));
+
+// Check actual signed movement in playback seconds: slowing the belt is not escape.
+const {Actions}=require('./docs/action-input.js'),timing=require('./docs/story-versions.js').get('routine').timing;
+const localX=b=>(b.x-Routine.anchors.factoryCenter.x)*c+(b.y-Routine.anchors.factoryCenter.y)*s;
+const reverseEvidence=[];
+for(const [clickAt,minimumRetreat]of[[70,180],[77.6,100],[82.3,60]]){
+  const input=new Actions(),start=timing.playbackAt(clickAt);let previous,retreat=0,reverseFrames=0,turned=false;
+  for(let i=0;i<85;i++){
+    const t=timing.sceneAt(start+i*.01);if(i===0)input.resist();input.update(.01,{phase:'factory',time:t});
+    const intent=input.snapshot().factory,original=Routine.frame(t),changed=Routine.withResistance(original,intent.offset,t,intent),x=localX(changed.hero);
+    if(previous!==undefined&&x>previous+.001){retreat+=x-previous;reverseFrames++;}
+    if(changed.actors.find(e=>e.id==='hero').resistance?.facing>.9)turned=true;
+    assert.equal(changed.actors.find(e=>e.id==='hero').body,changed.hero);
+    const window=Routine.resistanceWindow(t);if(changed.appliedOffset&&window.clearance)assert(x<=window.from-window.clearance+1e-8,'backward movement stays outside the previous machine');
+    previous=x;
+  }
+  assert(retreat>minimumRetreat,'one click must produce visibly reversed world motion at '+clickAt);assert(reverseFrames>=12);assert(turned,'the child turns to face its attempted escape');reverseEvidence.push({clickAt,retreat:Math.round(retreat),reverseSeconds:reverseFrames/100});
+}
+for(const t of[71.7,78.5,79.25,79.5,83.2]){const original=Routine.frame(t),changed=Routine.withResistance(original,340,t,{effort:1,facing:1,stride:.5});assert.deepEqual(changed.hero,original.hero,'real machine contact overrides resistance, including its pose');}
+for(const t of[67.4,71.7,76.7,78.5,81.6,83.2])assert(Math.abs(localX(hero(t-1e-6).body)-localX(hero(t).body))<.001,'extended transfers remain continuous at '+t);
+console.log(JSON.stringify({actualReverseTravel:reverseEvidence,contactTimingUnchanged:true}));
+
+// Read the renderer's actual strokes: pressing permanently blackens the whole frame.
+const palette=require('./docs/palette.js');
+function frameStrokes(t){const strokes=[],ctx={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},fill(){},arc(){},translate(){},rotate(){},stroke(){strokes.push({color:this.strokeStyle,width:this.lineWidth});}};Routine.drawActorOverlay(ctx,hero(t));return strokes;}
+const beforeCompact=frameStrokes(79.1);assert(beforeCompact.some(s=>s.color===palette.metal&&s.width===12));assert(beforeCompact.some(s=>s.color===palette.industrial&&s.width===2.5));
+for(const t of[79.65,80,94,124.5]){const strokes=frameStrokes(t);assert(strokes.length);assert(strokes.every(s=>s.color===palette.black),'the pressed frame and its detached strips remain entirely black at '+t);}
+console.log(JSON.stringify({frameMaterial:'gray with black center before compact; solid black after compact and during release'}));

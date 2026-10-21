@@ -4,7 +4,7 @@
   else root.FlatlandEncounterInteraction=factory(root.FlatlandDistrict,root.FlatlandCharacters,root.FlatlandMotion,root.FlatlandCityMap,root.FlatlandCollisionWorld);
 })(typeof globalThis!=='undefined'?globalThis:this,function(District,C,Motion,CityMap,CollisionWorld){
   'use strict';
-  const familyEnd=13.7,clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),ease=u=>{u=clamp(u);return u*u*(3-2*u);};
+  const contactEnd=District.timing.contactEnd,familyEnd=District.timing.familyEnd,clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n)),ease=u=>{u=clamp(u);return u*u*(3-2*u);};
   const shortest=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   function blend(a,b,u){const body={...b};for(const key of ['x','y','sx','sy','strain','fear','bend','bounce','speed'])body[key]=(a[key]||0)+((b[key]||0)-(a[key]||0))*u;body.angle=(a.angle||0)+shortest(a.angle||0,b.angle||0)*u;return body;}
   class EncounterController{
@@ -12,21 +12,22 @@
     seek(raw=0){
       this.sceneTime=Math.max(0,Number(raw)||0);this.ambient=0;this.action=null;this.wait=0;this.previous=null;this.automatic=false;
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
-      this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=6.8?'mother':'father';
+      this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
+      this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
       this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
     activate(target){
       if(this.stage!=='done'){
-        if(this.action||target!==this.stage)return false;
-        const phaseStart=this.stage==='father'?1.2:6.8,end=this.stage==='father'?6.8:familyEnd,start=Math.min(end,Math.max(phaseStart,this.sceneTime));
+        if(this.action||this.stage==='return'||target!==this.stage)return false;
+        const phaseStart=this.stage==='father'?1.2:6.8,end=this.stage==='father'?6.8:contactEnd,start=Math.min(end,Math.max(phaseStart,this.sceneTime));
         // A workbench scrub resumes the remaining action; only the short body join returns from idle to its route.
         const duration=(target==='father'?1.75:2.45)*(end-start)/(end-phaseStart);
-        this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),from:this.previous?.hero?.body};this.wait=0;this.epoch++;return true;
+        this.action={target,elapsed:0,start,end,duration:Math.max(.001,duration),from:this.previous?.hero?.body};this.mark='curiosity';this.markAtAmbient=this.ambient;this.wait=0;this.epoch++;return true;
       }
-      if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.epoch++;return true;}
+      if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
       if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
-        this.resistance=Math.min(.9,this.resistance+.26);this.fatigue+=.27;this.epoch++;return true;
+        this.resistance=Math.min(.9,this.resistance+.26);this.fatigue+=.27;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;
       }
       return false;
     }
@@ -35,16 +36,19 @@
       this.automatic=!!options.automatic;
       this.shiver=Math.max(0,this.shiver-dt);this.poke=Math.max(0,this.poke-dt);
       if(this.automatic&&Number.isFinite(options.sceneTime)){
-        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=6.8?'mother':'father';this.action=null;return this.snapshot();
+        this.sceneTime=Math.max(0,options.sceneTime);this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';this.mark=this.markAt(this.sceneTime);this.markAtAmbient=this.ambient-.3;this.action=null;return this.snapshot();
       }
       if(this.stage!=='done'){
-        if(!this.action&&options.automatic&&this.wait>.4)this.activate(this.stage);
-        if(this.action){
+        if(options.advance===false)return this.snapshot();
+        if(this.stage==='return'){
+          this.sceneTime=Math.min(familyEnd,this.sceneTime+dt*(familyEnd-contactEnd)/2.15);
+          if(this.sceneTime>=familyEnd-1e-8){this.sceneTime=familyEnd;this.stage='done';}
+        }else if(this.action){
           const action=this.action;action.elapsed+=dt;
           const before=this.sceneTime,contact=Motion.contactTimes[action.target]*Motion.duration;
           this.sceneTime=action.start+(action.end-action.start)*clamp((action.elapsed-.24)/action.duration);
-          if(!action.touched&&before<contact&&this.sceneTime>=contact){this.sceneTime=contact;action.touched=true;}
-          if(action.elapsed>=action.duration+.24-1e-8){this.sceneTime=action.end;this.stage=action.target==='father'?'mother':'done';this.action=null;this.wait=0;}
+          if(!action.touched&&this.sceneTime>=contact){if(before<contact)this.sceneTime=contact;action.touched=true;this.mark='exclamation';this.markAtAmbient=this.ambient;}
+          if(action.elapsed>=action.duration+.24-1e-8){this.sceneTime=action.end;this.stage=action.target==='father'?'mother':'return';this.action=null;this.wait=0;}
         }
       }else{
         if(Number.isFinite(options.sceneTime))this.sceneTime=Math.max(familyEnd,options.sceneTime);
@@ -58,7 +62,12 @@
       }
       return this.snapshot();
     }
-    snapshot(){return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&!this.action,familyDone:this.stage==='done',familyTarget:this.stage==='done'?null:this.stage,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke}};}
+    markAt(time){
+      if(time<1.2)return null;
+      const father=Motion.contactTimes.father*Motion.duration,mother=Motion.contactTimes.mother*Motion.duration;
+      return time<father||time>6.8&&time<mother?'curiosity':'exclamation';
+    }
+    snapshot(){return{sceneTime:this.sceneTime,familyWaiting:this.stage!=='done'&&this.stage!=='return'&&!this.action,familyDone:this.stage==='done',familyTarget:this.stage==='done'?null:this.stage,effects:{shiver:this.shiver,resistance:this.resistance,lag:this.lag,fatigue:this.fatigue,poke:this.poke}};}
     applyFrame(input){
       if(!input?.actors)return input;
       if(this.sceneTime>=58)return input;
@@ -69,10 +78,10 @@
         if(this.action&&this.action.elapsed<.24&&this.action.from){
           const destination=District.frame(this.action.start).hero.body;
           hero.body=blend(this.action.from,destination,ease(this.action.elapsed/.24));
-        }else if(!this.action){
+        }else if(!this.action&&this.stage!=='return'){
           const t=this.ambient,base=District.frame(this.sceneTime).hero.body;
           hero.body={...base,x:base.x+14*Math.sin(t*.62),y:base.y+19*Math.sin(t*.47),angle:base.angle+.2*Math.sin(t*.75),speed:12,strain:.08};
-          hero.emotion='curiosity';hero.emotionElapsed=t%1.6;hero.emotionDuration=1.6;hero.emotionStrength=.6;
+          // Idle exploration never invents a new emotion mark.
         }
       }else if(this.sceneTime<58){
         if(this.shiver>0){const age=.58-this.shiver;hero.body.x+=5*Math.sin(age*78)*Math.sin(Math.PI*age/.58);hero.body.edgeBends=C.actors.child.vertices.map((_,i)=>.25+.12*Math.sin(age*54+i));hero.body.fear=.35;}
@@ -93,6 +102,10 @@
           }
         }
       }
+      if(this.sceneTime<District.timing.firstMove){
+        delete hero.emotion;delete hero.emotionElapsed;delete hero.emotionDuration;delete hero.emotionStrength;
+        if(this.mark){hero.emotion=this.mark;hero.emotionElapsed=Math.max(.16,this.ambient-this.markAtAmbient);hero.emotionDuration=1e6;hero.emotionStrength=1;}
+      }
       // Preserve previous reservations across real-time idle and reaction frames; no drawing-only collision approximation.
       const previous=this.previous?.actors||frame.actors;
       frame.actors=this.world.resolve(previous,frame.actors);
@@ -106,5 +119,5 @@
       this.previous=frame;this.appliedEpoch=this.epoch;this.appliedTime=input.time;return frame;
     }
   }
-  return{EncounterController,familyEnd};
+  return{EncounterController,contactEnd,familyEnd};
 });

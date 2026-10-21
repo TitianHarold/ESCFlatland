@@ -12,6 +12,9 @@
   const discard=Base.anchors.discard,workCenter=Office.cellAt(0,0);
   const heroActor=C.create('child'),lanes=[-390,-130,130,390,650,910,1170,1430],stations=[480,-170,-890];
   const ordinary=lanes.map((_,i)=>[C.create({sides:i+3,radius:42,regular:false}),C.create({sides:i+3,radius:42,regular:false})]);
+  // Transfer uses the available open-belt time. Tool contact times stay fixed.
+  const transfers=[[67.4,71.7,900,480,0],[76.7,78.5,480,-170,170],[81.6,83.2,-170,-890,170]];
+  function transferAt(t){return transfers.find(([a,b])=>t>=a&&t<b);}
   function pose(actor,x,y,rotation=0){const p=world(x,y),b={x:p.x,y:p.y,angle:0,sx:1,sy:1,bend:0,strain:0,bounce:0,edgeBends:actor.vertices.map(()=>0),edgeStretch:actor.vertices.map(()=>1)};b.angle=angle-Math.PI+rotation-actor.headAxis(b).angle;return b;}
   function vertices(actor,radius=71){const a=Math.atan2(...[actor.vertices[0][1],actor.vertices[0][0]]);return actor.vertices.map((_,i)=>[Math.cos(a+i*Math.PI*2/actor.vertices.length)*radius,Math.sin(a+i*Math.PI*2/actor.vertices.length)*radius]);}
   function paintAt(t,n,start=83.2,end=94,actor=n===5?heroActor:ordinary[n-3]?.[0]){
@@ -57,7 +60,7 @@
   function routineEntry(id,actor,body,color,t,extra={}){return{id,actor,body,color,cavity:true,damage:0,blacken:0,windowOpen:1,compression:0,residual:0,core:0,label:undefined,result:undefined,restraint:undefined,routine:{time:t,...shellState(t,actor)},...extra};}
   function heroAt(t){
     if(t<64){const source=Base.frame(t).actors.find(e=>e.id==='hero');return source?routineEntry('hero',heroActor,{...source.body},P.blue,t):null;}
-    let b;if(t<70)b=pose(heroActor,900,130);else if(t<71.7)b=pose(heroActor,lerp(900,480,between(t,70,71.7)),130);else if(t<77)b=pose(heroActor,480,130);else if(t<78.5)b=pose(heroActor,lerp(480,-170,between(t,77,78.5)),130);else if(t<82)b=pose(heroActor,-170,130);else if(t<83.2)b=pose(heroActor,lerp(-170,-890,between(t,82,83.2)),130);else if(t<94)b=pose(heroActor,-890,130,paintAt(t,5).angle);else if(t<110){const p=routePoint(t);b=pose(heroActor,p.x,p.y);b.angle=p.heading+angle-heroActor.headAxis({...b,angle:0}).angle;}else if(t<119)b={...Base.frame(119).hero};
+    const transfer=transferAt(t);let b;if(transfer){const[a,end,from,to]=transfer;b=pose(heroActor,lerp(from,to,clamp((t-a)/(end-a))),130);}else if(t<71.7)b=pose(heroActor,900,130);else if(t<78.5)b=pose(heroActor,480,130);else if(t<83.2)b=pose(heroActor,-170,130);else if(t<94)b=pose(heroActor,-890,130,paintAt(t,5).angle);else if(t<110){const p=routePoint(t);b=pose(heroActor,p.x,p.y);b.angle=p.heading+angle-heroActor.headAxis({...b,angle:0}).angle;}else if(t<119)b={...Base.frame(119).hero};
     else{const source=Base.frame(t).actors.find(e=>e.id==='hero');if(!source)return null;b={...source.body,edgeBends:source.body.edgeBends?.map(()=>0)};}
     return routineEntry('hero',heroActor,b,P.blue,t,{routine:{time:t,...shellState(t,heroActor),seed:true,compacting:compactAt(t,78.5,81.6,heroActor,b),work:t>=96&&t<110,job:t>=98&&t<110?routePoint(t).job||0:0}});
   }
@@ -104,18 +107,23 @@
   function drawActorOverlay(ctx,entry){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;
     // Paint is a cumulative spatial mask. The unpainted parts still reveal the live inner window.
     ctx.save();poly(ctx,points);ctx.clip();if(s.paint.every(v=>v>=.999999))poly(ctx,points,P.black);else for(let i=0;i<n;i++){const coverage=s.paint[i];if(!coverage)continue;const a=points[i],b=points[(i+1)%n];ctx.save();ctx.globalAlpha=coverage;poly(ctx,[[0,0],a,b],P.black);ctx.restore();}ctx.restore();
-    if(s.fitted){for(let i=0;i<n;i++){const face=s.mold.faces[i];if(!face.locked)continue;const visible=1-s.release[i];if(visible<=0)continue;const a=s.time<76.7?face.from:points[i],b=s.time<76.7?face.to:points[(i+1)%n];ctx.save();ctx.globalAlpha=visible;line(ctx,[a,b],P.metal,12);line(ctx,[a,b],P.industrial,2.5);
-      if(face.lock>0){ctx.beginPath();ctx.arc(a[0],a[1],4.1,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();}
+    if(s.fitted){for(let i=0;i<n;i++){const face=s.mold.faces[i];if(!face.locked)continue;const visible=1-s.release[i];if(visible<=0)continue;const a=s.time<76.7?face.from:points[i],b=s.time<76.7?face.to:points[(i+1)%n],compacted=s.compacted>=1;ctx.save();ctx.globalAlpha=visible;line(ctx,[a,b],compacted?P.black:P.metal,12);line(ctx,[a,b],compacted?P.black:P.industrial,2.5);
+      if(face.lock>0){ctx.beginPath();ctx.arc(a[0],a[1],4.1,0,Math.PI*2);ctx.fillStyle=compacted?P.black:P.gold;ctx.fill();}
       if(face.impact>0){const [nx,ny]=face.normal,tx=-ny,ty=nx;ctx.globalAlpha=visible*face.impact;for(const side of[-1,1])line(ctx,[[face.point[0]+nx*5+tx*side*4,face.point[1]+ny*5+ty*side*4],[face.point[0]+nx*18+tx*side*12,face.point[1]+ny*18+ty*side*12]],P.gold,2.8);}
       ctx.restore();}}
     // Each strip leaves independently and stays behind, rather than reforming into a badge.
-    if(s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const age=s.time-(123.5+i*.58);if(age<=0||age>3.2)continue;const a=points[i],b=points[(i+1)%n],drift=210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.metal,12);line(ctx,[a,b],P.industrial,2.5);ctx.restore();}}
+    if(s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const age=s.time-(123.5+i*.58);if(age<=0||age>3.2)continue;const a=points[i],b=points[(i+1)%n],drift=210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.black,12);line(ctx,[a,b],P.black,2.5);ctx.restore();}}
     if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();if(awakening){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   const anchor=(x,y,zoom)=>Object.freeze({...world(x,y),zoom});
   const anchors=Object.freeze({...Base.anchors,overview:anchor(-30,560,.22),approach:anchor(900,130,1.5),mold:anchor(480,130,1.5),compact:anchor(-170,130,1.5),paint:anchor(-890,130,1.5),work:Office.anchors.work,officeEntry:Office.anchors.entry,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(480,130),m2:world(-170,130),m3:world(-890,130)}),exit:world(-1785,130),workCenter:world(workCenter.x,workCenter.y)});
   function sceneTransition(t){return{cover:t<95.65||t>=96.35?0:t<96?between(t,95.65,96):1-between(t,96,96.35),phase:t<96?'factory':'office'};}
-  function resistanceWindow(t){const segment=[[70,71.7,900,480],[77,78.5,480,-170],[82,83.2,-170,-890]].find(([a,b])=>t>=a&&t<b);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to]=segment,u=between(t,a,b),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(120,travel-170))*between(t,a+.12,a+.38)*(1-between(t,b-.35,b));return{active:maxOffset>0,maxOffset};}
-  function withResistance(data,offset,t){const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0));if(!data.hero||!appliedOffset)return{...data,appliedOffset};const dx=appliedOffset*cs,dy=appliedOffset*sn,actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;return{...data,actors,hero,appliedOffset};}
+  function resistanceWindow(t){const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(340,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
+  function withResistance(data,offset,t,effort={}){
+    const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0));
+    if(!data.hero||!appliedOffset)return{...data,appliedOffset};
+    const dx=appliedOffset*cs,dy=appliedOffset*sn,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*clearance,facing=clamp(effort.facing||0)*clearance,gait=Math.sin((effort.stride||0)*Math.PI*2),actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,angle:e.body.angle+Math.PI*facing+.055*gait*strength,bend:.045*gait*strength,strain:.12*strength,axialStretch:.07*strength},resistance:{strength,facing,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
+    return{...data,actors,hero,appliedOffset};
+  }
   return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,setWorkTime:Office.setWorkTime};
 });

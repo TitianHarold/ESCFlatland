@@ -18,20 +18,22 @@
   const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
   const initialTime=Number(params.get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
   const encounterAPI=window.FlatlandEncounterInteraction,encounter=new encounterAPI.EncounterController({sceneTime:timing.sceneAt(player.time)}),actions=new window.FlatlandActionInput.Actions();
+  const progressAPI=window.FlatlandInteractionProgress,workProgress=new progressAPI.WorkProgress({raw:timing.sceneAt(player.time)}),chaseProgress=new progressAPI.ChaseProgress({raw:timing.sceneAt(player.time)});
   const discovery=window.FlatlandInnerDiscovery,inner=new discovery.Session({autoDuration:timing.playbackAt(119)-timing.playbackAt(110)});
-  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,scenePointer:false,innerActive:false,reviewPaused:workbench,modalResume:false,inputAt:-Infinity};
+  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,scenePointer:false,innerActive:false,workActive:false,chaseActive:false,chaseOrigin:Math.max(119,timing.sceneAt(player.time)),reviewPaused:workbench,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
   function familyPhase(time=sceneTime()){return time<encounterAPI.familyEnd-1e-7;}
   function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factoryFrame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
   function workPhase(time=sceneTime()){return version.id==='routine'&&time>=98&&time<110;}
   function factoryPhase(time=sceneTime()){return time>=64&&time<(version.id==='routine'?94:98);}
+  function chasePhase(time=sceneTime()){return time>=119&&time<132;}
   function inputPhase(){const t=sceneTime();return inInner(t)?'inner':familyPhase(t)?'family':t<district.timing.firstMove?'authority':t<58?'escort':factoryPhase(t)?'factory':workPhase(t)?'work':t>=132?'ending':t>=119?'chase':'transfer';}
   function homeFrame(time=sceneTime()){return encounter.applyFrame(district.frame(time));}
   function factoryFrame(time,bounds){
     const base=factory.frame(time,bounds);
     if(!factoryPhase(time))return base;
-    const effort=actions.snapshot().factory,frame=factory.withResistance?.(base,effort.offset,time)||base;
+    const effort=actions.snapshot().factory,frame=factory.withResistance?.(base,effort.offset,time,effort)||base;
     frame.actors=frame.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse}:entry);
     return frame;
   }
@@ -97,12 +99,13 @@
   const heroMaterial=document.createElement('canvas');heroMaterial.width=heroMaterial.height=256;
   const heroMaterialContext=heroMaterial.getContext('2d');
   function journeyData(time){
-    const base=factoryFrame(Math.min(time,131.999999)),rate=player.playbackRate,boost=clamp((rate-1)/.8);
+    const interactive=player.mode==='interactive'&&chasePhase(time),drive=chaseProgress.snapshot();
+    const base=factoryFrame(Math.min(time,131.999999)),rate=interactive?drive.rate:player.playbackRate,boost=interactive?clamp((rate-.32)/3.88):clamp((rate-1)/.8);
     const original=base.actors.find(a=>a.id==='hero'),sprinting=time>=119&&time<132;
     const speed=(original?.body.speed||base.chase?.speed||0)*rate,shape=motion.speedShape(speed);
     const body=original&&sprinting?{...original.body,speed,axialStretch:shape.axialStretch,strain:shape.strain,effort:boost}:original?.body;
     const entry=original?{...original,body}:undefined;
-    const sample=sprinting?{...base,hero:body,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
+    const sample=sprinting?{...base,hero:body,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost,...(interactive?{travel:drive.travel+state.chaseOrigin-119,baseTravel:time-119,holdGate:true,charge:drive.charge}:{})},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
     const darkness=window.FlatlandInner.darkness(time);
     const ctx=heroTextureContext;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,256);
     if(entry){
@@ -168,7 +171,7 @@
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(version.id==='routine'){
       factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
-      const dark=workPhase(time)&&player.mode==='interactive'?Math.max(plant.outsideDarkness,actions.snapshot().work.darkness):plant.outsideDarkness;
+      const dark=workPhase(time)&&player.mode==='interactive'?clamp((workProgress.snapshot().progress-.18)/.82):plant.outsideDarkness;
       if(dark){screenOverlay();top.save();top.globalAlpha=dark;top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
@@ -190,14 +193,17 @@
   function actionNotes(time,base){
     if(player.mode!=='interactive'||inInner(time))return base;
     const e=encounter.snapshot(),a=actions.snapshot();
-    if(familyPhase(time))return{summary:'孩子在家观察走动。点击父亲、母亲，分别寻路靠近；接触后父母本能躲开，孩子转为疑惑。',action:e.familyWaiting?'孩子缓慢走动，转动头尖观察周围。':e.familyTarget==='father'?'孩子沿屋内空隙靠近父亲，尖角接触后父亲缩退。':'孩子转向母亲，沿可通行区域靠近，母亲接触后躲开。',camera:base.camera};
+    if(familyPhase(time))return{summary:'点击画面，孩子依次靠近父亲、母亲。点击时出现好奇符号，接触后变成叹号并保留；母亲退开后，孩子收紧边线，退回房间中心。',action:e.familyTarget==='return'?'孩子受挫后收紧边线，慢慢退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻走动，保留上次接触后的符号，等待下一次点击。':e.familyTarget==='father'?'孩子靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子转向母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'孩子向输送的反方向用力，尝试向后退；输送带与机器继续运行。'};
-    if(workPhase(time)&&a.work.rate>1.1)return{...base,action:'主角与周围所有工位的工作循环一起加快，密集重复的动作持续，画面更快变暗。'};
+    if(workPhase(time))return{...base,action:a.work.rate>1.1?'点击让所有工位的循环加快，镜头进一步拉远，画面加深；等待时继续当前的机械循环。':'工位持续重复操作；点击让工作加快、镜头拉远，逐步隐入黑暗。'};
+    if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸，圆环逐渐蓄满。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
     return base;
   }
   function interfaceState(v,time=sceneTime()){
+    const indicator=$('hold-indicator'),charge=chaseProgress.snapshot();
+    if(indicator){indicator.dataset.visible=String(player.mode==='interactive'&&chasePhase(time)&&(player.pressed||charge.charge>0));indicator.style.setProperty('--hold-progress',String(charge.charge));indicator.style.setProperty('--hold-color',palette.gold);}
     const shot=inInner(time)?cameraTrack.shots.find(s=>s.id==='inner'):cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot),displayTime=innerDisplayTime();
     stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
     if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
@@ -231,29 +237,38 @@
   function tickStory(dt){
     const time=sceneTime(),rawRate=(timing.sceneAt(Math.min(duration,player.time+.01))-time)/.01;
     if(player.mode==='interactive'&&(familyPhase(time)||time<=encounterAPI.familyEnd+1e-7&&!encounter.snapshot().familyDone)){
-      encounter.tick(dt,{automatic:false});const family=encounter.snapshot();
-      player.time=timing.playbackAt(family.sceneTime);player.playing=!family.familyWaiting;
+      encounter.tick(dt,{automatic:false,advance:!state.reviewPaused});const family=encounter.snapshot();
+      player.time=timing.playbackAt(family.sceneTime);player.playing=!family.familyWaiting&&!state.reviewPaused;
       if(family.familyDone)resumeFlow();
     }else if(inInner(time)){
       if(!state.innerActive)syncInner();
       inner.update(dt,{automatic:player.mode==='auto'&&player.playing,advance:player.playing});
       const done=innerState().done;
       if(done&&player.mode==='interactive'&&player.playing){
-        player.time=timing.playbackAt(119);player.target=timing.playbackAt(132);state.innerActive=false;
+        player.time=timing.playbackAt(119);player.target=timing.playbackAt(132);state.innerActive=false;state.reviewPaused=false;chaseProgress.seek(119);state.chaseActive=true;state.chaseOrigin=119;
       }else player.tick(dt,player.mode==='interactive'?player.time:done?Infinity:timing.playbackAt(119)-1e-7);
+    }else if(player.mode==='interactive'&&workPhase(time)){
+      if(!state.workActive){workProgress.seek(time);state.workActive=true;}
+      actions.update(dt,{phase:'work',time,rawRate,advance:true});factory.setWorkTime?.(actions.snapshot().work.time);
+      const progress=workProgress.update(dt,{advance:!state.reviewPaused});player.time=timing.playbackAt(progress.raw);player.target=player.time;player.playing=progress.advancing&&!state.reviewPaused;
+      if(progress.complete){player.time=player.target=timing.playbackAt(110);player.playing=false;state.workActive=false;factory.setWorkTime?.(null);syncInner();}
+    }else if(player.mode==='interactive'&&chasePhase(time)){
+      if(!state.chaseActive){chaseProgress.seek(time);state.chaseOrigin=time;state.chaseActive=true;}
+      const progress=chaseProgress.update(dt,{held:player.pressed,advance:!state.reviewPaused});player.time=timing.playbackAt(progress.raw);player.target=timing.playbackAt(132);player.playing=!state.reviewPaused&&!progress.complete;
+      if(progress.complete){player.pressed=false;player.pressChase=false;player.target=timing.playbackAt(138);player.playing=true;}
     }else{
       state.innerActive=false;
       if(player.mode==='interactive'&&!familyPhase(time)&&time<110&&!state.reviewPaused)resumeFlow();
       actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)?'factory':'',time,rawRate,advance:player.playing});
       factory.setWorkTime?.(workPhase(time)?actions.snapshot().work.time:null);
-      if(workPhase(time)&&player.mode==='interactive'&&actions.snapshot().work.darkness>.995){player.time=timing.playbackAt(110);syncInner();}
-      else player.tick(dt,time<110?timing.playbackAt(110):Infinity);
+      player.tick(dt,time<110?timing.playbackAt(player.mode==='interactive'&&version.id==='routine'&&time<98?98:110):Infinity);
       if(inInner()&&!state.innerActive)syncInner();
       encounter.tick(dt,{automatic:player.mode==='auto',sceneTime:sceneTime()});
     }
   }
   function seek(time){
     player.seek(time);encounter.seek(sceneTime());actions.seek(sceneTime());factory.setWorkTime?.(null);
+    workProgress.seek(sceneTime());chaseProgress.seek(sceneTime());state.workActive=false;state.chaseActive=false;state.chaseOrigin=Math.max(119,sceneTime());
     syncInner(true);state.pointer=null;state.innerPointer=false;state.scenePointer=false;state.reviewPaused=true;
   }
   function resumeInner(){player.target=Math.max(player.target,timing.playbackAt(119));player.playing=true;}
@@ -267,11 +282,11 @@
     const time=sceneTime();
     if(inInner(time)){touchInner(point.x,point.y);return;}
     if(familyPhase(time)){
-      const target=parentAt(point);if(target)encounter.activate(target);return;
+      state.reviewPaused=false;encounter.activate(encounter.snapshot().familyTarget);return;
     }
     if(time<58){encounter.activate(time<district.timing.firstMove?'authority':'escort');resumeFlow();return;}
     if(factoryPhase(time)){actions.resist();resumeFlow();return;}
-    if(workPhase(time)){actions.work();resumeFlow();return;}
+    if(workPhase(time)){if(!state.workActive){workProgress.seek(time);state.workActive=true;}actions.work();workProgress.click();state.reviewPaused=false;return;}
     if(time>=132){player.tap();return;}
     if(time<110)resumeFlow();
   }
@@ -281,26 +296,16 @@
     if(inInner()){
       const point=innerState().points.find(p=>p.visible&&!p.collected);
       if(point)touchInner(point.x,point.y);else resumeInner();
-    }else if(familyPhase())encounter.activate(encounter.snapshot().familyTarget);
+    }else if(familyPhase()){state.reviewPaused=false;encounter.activate(encounter.snapshot().familyTarget);}
+    else if(chasePhase()){state.reviewPaused=false;}
     else localTap({x:state.w/2,y:state.h/2});
   }
   function setMode(mode){
     if(inInner())player.time=innerDisplayTime();
     player.setMode(mode);state.reviewPaused=false;
+    workProgress.seek(sceneTime());chaseProgress.seek(sceneTime());state.workActive=false;state.chaseActive=false;state.chaseOrigin=Math.max(119,sceneTime());
     encounter.tick(0,{automatic:mode==='auto',sceneTime:sceneTime()});
     if(mode==='interactive'&&!familyPhase()&&sceneTime()<110)resumeFlow();
-  }
-  function parentAt(point){
-    const v=view(),s=scale(v),p={x:v.x+(point.x-state.w/2)/s,y:v.y+(point.y-state.h/2)/s},home=homeFrame();
-    const accepted=encounter.snapshot().familyTarget;
-    const parent=home.actors.find(entry=>entry.id===accepted);if(!parent)return null;
-    const polygon=parent.actor.outline(parent.body);let inside=false,distance=Infinity;
-    for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
-      const a=polygon[i],b=polygon[j],dx=b[0]-a[0],dy=b[1]-a[1],q=clamp(((p.x-a[0])*dx+(p.y-a[1])*dy)/(dx*dx+dy*dy));
-      distance=Math.min(distance,Math.hypot(p.x-a[0]-dx*q,p.y-a[1]-dy*q));
-      if((a[1]>p.y)!==(b[1]>p.y)&&p.x<(b[0]-a[0])*(p.y-a[1])/(b[1]-a[1])+a[0])inside=!inside;
-    }
-    return inside||distance<Math.max(12,22/s)?accepted:null;
   }
   if(workbench){
     $('progress').max=String(duration*100);
@@ -321,10 +326,11 @@
   on('play','click',togglePlay);on('restart','click',()=>seek(0));
   on('progress','input',e=>seek(Number(e.target.value)/100));
   on('layers','click',()=>{state.open=!state.open;$('layers').setAttribute('aria-pressed',String(state.open));});
-  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat)togglePlay();}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
+  stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat){if(player.mode==='interactive'&&chasePhase()){state.reviewPaused=false;player.press();}else togglePlay();}}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
+  stage.addEventListener('keyup',e=>{if([' ','Enter'].includes(e.key)&&player.pressChase){e.preventDefault();player.release(true);}});
   stage.addEventListener('pointerdown',e=>{
     if(e.button!==0||state.pointer!==null)return;
-    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer&&!state.scenePointer)player.press();
+    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer&&!state.scenePointer){if(chasePhase()){state.reviewPaused=false;const p=pointerPoint(e),indicator=$('hold-indicator');if(indicator){indicator.style.left=p.x+'px';indicator.style.top=p.y+'px';}}player.press();}
   });
   function pointerPoint(e){const box=stage.getBoundingClientRect();return{x:(e.clientX-box.left)*state.w/box.width,y:(e.clientY-box.top)*state.h/box.height};}
   function release(e,cancelled=false){
@@ -333,7 +339,7 @@
     if(state.scenePointer){const phase=state.scenePointer;state.scenePointer=false;if(!cancelled&&phase===inputPhase())localTap(pointerPoint(e));return;}
     player.release(cancelled);
   }
-  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()?parentAt(p):false);stage.style.cursor=target?'pointer':'default';});
+  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()&&encounter.snapshot().familyWaiting);stage.style.cursor=target?'pointer':'default';});
   stage.addEventListener('pointerup',e=>release(e));
   stage.addEventListener('pointercancel',e=>release(e,true));
   stage.addEventListener('contextmenu',e=>e.preventDefault());
