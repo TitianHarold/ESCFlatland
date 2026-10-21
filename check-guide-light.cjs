@@ -24,7 +24,7 @@ for(const viewport of[{w:1280,h:760},{w:760,h:1280}]){
     const point=Dimension.journeyLightPoint(time,camera,viewport,data);assert(point&&point.every(Number.isFinite));
     assert(point[0]>0&&point[0]<viewport.w&&point[1]>0&&point[1]<viewport.h,'the circling world guide remains visible');positions.push(point);
   }
-  assert(Math.max(...positions.map(p=>p[0]))-Math.min(...positions.map(p=>p[0]))>10,'the guide keeps drifting while the held story gate waits');
+  assert(Math.max(...positions.map(p=>p[0]))-Math.min(...positions.map(p=>p[0]))>10*Math.min(viewport.w/1280,viewport.h/760),'the guide keeps drifting while the held story gate waits at the viewport scale');
   const timeNear=131.99999,frame=Factory.frame(timeNear),near=Dimension.journeyLightPoint(timeNear,camera,viewport,frame),end=Dimension.endingLight(132,viewport);
   assert(Math.hypot(near[0]-end.x,near[1]-end.y)<.001,'the same guide joins the hand POV without a position jump');
 }

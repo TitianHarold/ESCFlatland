@@ -9,6 +9,7 @@
     constructor(){this.seek(0);}
     seek(time){this.offset=0;this.velocity=0;this.backwardStep=0;this.held=false;this.tap=0;this.fatigue=0;this.exhausted=0;this.pulse=0;this.effort=0;this.stride=0;this.windup=0;this.weakAge=1;this.collapse=0;this.heat=0;this.workRate=1;this.workTime=Math.max(98,time);this.workClicks=0;this.extraDark=0;this.darkness=0;this.wasWork=false;return this;}
     exhaust(){this.exhausted=2.2;this.fatigue=1;this.tap=0;this.windup=0;this.effort=0;this.collapse=1;this.velocity=0;}
+    stopResistance(){this.held=false;this.tap=0;this.windup=0;this.velocity=0;this.backwardStep=0;this.offset=0;this.effort=0;this.pulse=0;}
     holdResistance(held){
       held=!!held;if(held===this.held)return !this.exhausted;
       this.held=held;if(!held)return !this.exhausted;

@@ -1,11 +1,12 @@
-/* This ring measures spent strength at the gate and on the conveyor. */
-#effort-indicator{--effort-progress:0;position:absolute;width:60px;height:60px;pointer-events:none;z-index:8;opacity:0;transform:translate(-50%,-50%);transition:opacity .12s ease;color:var(--effort-color,#e7b95f);filter:drop-shadow(0 1px 3px #0007)}
+/* Gold is the current effort; red grows backwards from the limit the child cannot use. */
+#effort-indicator{--effort-progress:0;--effort-blocked:0;position:absolute;width:60px;height:60px;pointer-events:none;z-index:8;opacity:0;transform:translate(-50%,-50%);transition:opacity .12s ease;color:var(--effort-color,#e7b95f);filter:drop-shadow(0 1px 3px #0007)}
 #effort-indicator[data-visible="true"]{opacity:1}
 #effort-indicator svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
 #effort-indicator circle{fill:none;stroke-width:3}
 #effort-indicator .effort-track{stroke:#fff8}
 #effort-indicator .effort-fill{stroke:currentColor;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--effort-progress)*100)}
-#effort-indicator[data-state="exhausted"]{color:#e74b47;animation:strength-fails .22s ease-out}
+#effort-indicator .effort-blocked{stroke:#e74b47;stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--effort-blocked)*100);transform:scaleY(-1);transform-origin:30px 30px}
+#effort-indicator[data-state="exhausted"]{animation:strength-fails .22s ease-out}
 @keyframes strength-fails{0%{transform:translate(-50%,-50%) scale(1.22)}100%{transform:translate(-50%,-50%) scale(1)}}
 @media(prefers-reduced-motion:reduce){#effort-indicator{transition:none}#effort-indicator[data-state="exhausted"]{animation:none}}
 

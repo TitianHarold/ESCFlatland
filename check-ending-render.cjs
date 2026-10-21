@@ -18,7 +18,7 @@ const drawContents=(g,v)=>{g.fillStyle='#562e8c';g.fillRect(0,0,v.w,v.h);};
   session.click();session.update(.9);assert.equal(session.snapshot().phase,'world');assert.equal(Dimension.endingLight(session.snapshot().raw,viewport,session.snapshot()).opacity,0,'the seed has become tools and never returns in the inner world');draw();assert.equal(count([0,0,255]),0,'both hands vanish into white before the inner world appears');assert.equal(count([0,255,0]),0);assert.equal(count([255,0,0]),0);
   const frozen=canvas.toBuffer('image/png');session.update(50,{advance:false});draw();assert(frozen.equals(canvas.toBuffer('image/png')),'pause keeps all ending pixels unchanged');
   session.update(2+3.6);assert(session.snapshot().complete);
-  const texts=[],originalText=ctx.fillText.bind(ctx);ctx.fillText=(...args)=>{texts.push(args[0]);originalText(...args);};draw();assert.deepEqual(texts,[Ending.text,Ending.title]);
+  const texts=[],originalText=ctx.fillText.bind(ctx);ctx.fillText=(...args)=>{texts.push(args[0]);originalText(...args);};draw();assert.deepEqual(texts,[Ending.text]);
   const corner=Array.from(ctx.getImageData(0,0,1,1).data);assert.deepEqual(corner,[86,46,140,255],'the expanded inner world reaches every corner');
   Dimension.drawEnding(ctx,138,viewport);assert(count([255,255,255])<canvas.width*canvas.height*.01,'the default final code frame also expands to the actual inner world');
   console.log(JSON.stringify({pass:true,openHalfGripAtlases:true,pausedPixelsFrozen:true,handsVanishBeforeWorld:true,toolsFrameRequiresFourthClick:true,fullViewportExpansion:true,exactText:Ending.text}));

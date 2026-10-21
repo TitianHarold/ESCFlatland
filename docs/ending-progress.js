@@ -9,7 +9,7 @@
     ['stopped',.8,1],['raise',1.2],['open',.9,2],['flex',1],['half',.8,3],
     ['drop',1.8],['bloom',1.1],['reveal',.9],['tools',1,4],['white',.9],['world',2],['message',3.6]
   ].map(Object.freeze));
-  const duration=stages.reduce((sum,stage)=>sum+stage[1],0),text='Welcome to explore new dimensional',title='Alice escape flatland';
+  const duration=stages.reduce((sum,stage)=>sum+stage[1],0),text='Let’s explore a new dimension';
   const starts=stages.map((_,i)=>stages.slice(0,i).reduce((sum,stage)=>sum+stage[1],0));
   class Session{
     constructor(){this.reset();}
@@ -48,13 +48,12 @@
       const handsOpacity=index>9?0:index===9?1-smooth(age/.9):1;
       const expansion=index>10?1:index===10?smooth(age/2):0;
       const textOpacity=index>11?1:index===11?smooth(age/.9):0;
-      const titleOpacity=index>11?1:index===11?smooth((age-1.05)/.9):0;
       return{phase,clicks:this.clicks,age,clock:this.clock,stageProgress,progress,raw:132+6*progress,
         raise,flex,grasp:toolsReveal,lightDrop,lightBloom,lightOpacity,toolsReveal,handsOpacity,seedCenter:lightDrop,
-        expansion,textOpacity,titleOpacity,text,title,
+        expansion,textOpacity,text,
         awaiting:!!stage?.[2]&&this.clicks<stage[2],complete:index>=stages.length};
     }
   }
   function snapshotAt(raw){return new Session().seek(raw).snapshot();}
-  return Object.freeze({Session,duration,text,title,snapshotAt});
+  return Object.freeze({Session,duration,text,snapshotAt});
 });

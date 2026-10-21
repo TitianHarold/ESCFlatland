@@ -46,17 +46,18 @@
   function factoryPhase(time=sceneTime()){return time>=58&&time<(version.id==='routine'?94:98);}
   function chasePhase(time=sceneTime()){return time>=119&&time<132;}
   function inputPhase(){const t=sceneTime();return inInner(t)?'inner':familyPhase(t)?'family':t<district.timing.firstMove?'authority':t<58?'escort':factoryPhase(t)?'factory':workPhase(t)?'work':t>=132?'ending':t>=119?'chase':'transfer';}
-  function homeFrame(time=sceneTime()){const frame=encounter.applyFrame(district.frame(time));return time>=58&&time<(version.id==='routine'?67.4:70)?district.withGateEscort(frame,time,factoryFrame(time).hero,factory.entryEscortBody):frame;}
+  function homeFrame(time=sceneTime()){const frame=encounter.applyFrame(district.frame(time));return time>=58&&time<61?district.withGateEscort(frame,time,factoryFrame(time).hero,factory.entryEscortBody):frame;}
   let factoryCache={key:null,frames:new Map()};
   function factoryFrame(time,bounds){
     const effort={...actions.snapshot().factory,transportResolved:true},cacheable=time>=58&&time<96;
-    const key=cacheable?[time,state.factoryAmbient,effort.offset,effort.preload,effort.effort,effort.stride,effort.pulse,effort.exhausted,state.correction?.age,state.correction?.level].join(':'):null;
+    const key=cacheable?[time,state.factoryAmbient,effort.offset,effort.preload,effort.effort,effort.stride,effort.pulse,effort.exhausted,state.correction?.age,state.correction?.level,state.correction?.recoil].join(':'):null;
     const region=bounds?Object.values(bounds).join(':'):'all';
     if(cacheable){if(factoryCache.key!==key)factoryCache={key,frames:new Map()};if(factoryCache.frames.has(region))return factoryCache.frames.get(region);}
     const base=factory.frame(time,bounds);
     if(!factoryPhase(time))return base;
-    const result=factory.withResistance?.(base,effort.offset,time,effort)||base;
-    result.actors=result.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse,resistanceExhausted:effort.exhausted}:entry);
+    const atNode=correction&&factory.nodeProgress(time,base.hero).node;
+    const result=atNode?base:factory.withResistance?.(base,effort.offset,time,effort)||base;
+    if(!atNode)result.actors=result.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse,resistanceExhausted:effort.exhausted}:entry);
     if(cacheable)factoryCache.frames.set(region,result);return result;
   }
   function visibleBounds(v){const s=scale(v);return{minX:v.x-state.w/s/2,maxX:v.x+state.w/s/2,minY:v.y-state.h/s/2,maxY:v.y+state.h/s/2,scale:s};}
@@ -220,8 +221,6 @@
       screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);
       plant.actors.filter(actor=>actor.id==='hero').forEach(entry=>drawActor(plant.light?{...entry,core:0}:entry));if(time<110)drawLight(plant.light);factory.drawOverlay(top,time,bounds);
     }
-    const escortEnd=version.id==='routine'?67.4:70;
-    if(time>=61&&time<escortEnd){const fade=clamp((time-escortEnd+.6)/.6);top.save();top.globalAlpha=1-fade*fade*(3-2*fade);homeFrame(time).actors.filter(entry=>/^guard-/.test(entry.id)).forEach(drawActor);top.restore();}
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
@@ -236,7 +235,7 @@
     if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻摇晃、缓慢试探周围，父母保持沉稳的小幅动作；接触后的符号保留到下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
-    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子向点击的边慢慢逃去；对应边段突然扣合，将他挡回槽内。':state.correction.node==='compact'?'孩子围绕稳定中心收紧、左右挣扎，夹具进一步夹紧。':'孩子逆着机器转向扭动，喷漆前仍被强制转正，逐边涂黑。'};
+    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子依次朝五个方向尝试逃离；对应边段突然扣合，将他挡回槽内。':state.correction.node==='compact'?(state.correction.releaseAge<.31?'夹具突然压回，身体被挤紧并短促震动。':state.correction.expansion>.01?'孩子膨胀身体，缓慢撑开夹具；阻力逐渐增强。':'孩子围绕稳定中心左右扭动，尝试挣脱夹具。'):state.correction.paintStage==='spray'?'机器已强制归正，喷嘴只向对齐的一面喷黑。':'孩子逆着机器转向扭动，随后被强制归正，再向对齐的一面喷黑。'};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'长按让孩子收紧、左右向后挣扎，圆环随持续用力而消耗；输送带与机器继续运行。'};
     if(workPhase(time)){const progress=workProgress.snapshot();return{...base,action:progress.phase==='fade'?'画面持续、平滑地变黑；更密集的点击会加快变黑，工位继续循环。':progress.phase==='wide'?'镜头已到最远，密集工位保持循环，画面自动连续变黑。':'点击让所有工位的循环加快，镜头进一步拉远；等待时继续当前的机械循环。'};}
     if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸，圆环逐渐蓄满。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
@@ -261,12 +260,12 @@
   }
   function updateEffortIndicator(v,time){
     const node=$('effort-indicator');if(!node)return;
-    const effort=actions.snapshot().factory,progress=correction&&time>=71.7&&time<96?factory.nodeProgress(time):null;
-    const visible=player.mode==='interactive'&&(factoryPhase(time)||!!progress)&&(progress?(progress.node||progress.redFraction>0):(effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted));
-    const spent=progress?progress.redFraction:effort.fatigue,exhausted=progress?spent===1:effort.exhausted;
+    const effort=actions.snapshot().factory,progress=correction&&time>=64&&time<96?factory.nodeProgress(time):null;
+    const visible=player.mode==='interactive'&&(factoryPhase(time)||!!progress)&&(progress?.node||progress?.redFraction>0||effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted);
+    const blocked=progress?.redFraction||0,spent=progress?.node?state.correction?.effortProgress||0:effort.fatigue*(1-blocked),exhausted=blocked>=1||(progress?.node?state.correction?.exhausted:effort.exhausted);
     node.dataset.visible=String(!!visible);node.dataset.state=exhausted?'exhausted':'ready';
-    node.style.setProperty('--effort-progress',String(spent));node.style.setProperty('--effort-color',progress?'#e74b47':palette.gold);
-    stage.dataset.fatigue=spent.toFixed(3);stage.dataset.exhausted=String(exhausted);stage.dataset.correctionNode=progress?.node||'';
+    node.style.setProperty('--effort-progress',String(Math.min(1-blocked,spent)));node.style.setProperty('--effort-blocked',String(blocked));node.style.setProperty('--effort-color',palette.gold);
+    stage.dataset.fatigue=spent.toFixed(3);stage.dataset.blocked=blocked.toFixed(3);stage.dataset.exhausted=String(!!exhausted);stage.dataset.correctionNode=progress?.node||'';
     if(!visible)return;
     const hero=factoryFrame(time).hero;if(!hero)return;
     const s=scale(v),x=state.w/2+(hero.x-v.x)*s,y=state.h/2+(hero.y-v.y)*s;
@@ -301,9 +300,9 @@
   function updateCorrection(dt){
     if(!correction)return;
     const time=sceneTime(),held=state.factoryKeyHeld||state.scenePointer==='factory'&&state.pointer!==null;
-    const node=factory.nodeProgress(time).node;
-    if(held&&node&&node!==state.correction?.node)correction.press(time,state.factoryPressPoint);
-    state.correction=correction.update(dt,{time,held,advance:!state.reviewPaused});
+    const progress=factory.nodeProgress(time),initialProgress=actions.snapshot().factory.fatigue*progress.capacity;
+    if(progress.node&&progress.node!==state.correction?.node)actions.stopResistance();
+    state.correction=correction.update(dt,{time,held,initialProgress,advance:!state.reviewPaused});
     factory.setNodeResistance(player.mode==='interactive'?state.correction:null);
   }
   function tickStory(dt){
@@ -348,7 +347,9 @@
       actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)&&!atNode?'factory':'',time,rawRate,beltSpeed:conveyorSpeed(time,rawRate),advance:player.playing});
       factory.setWorkTime?.(workPhase(time)?actions.snapshot().work.time:null);
       player.tick(dt,time<110?timing.playbackAt(player.mode==='interactive'&&version.id==='routine'&&time<98?98:110):Infinity);
-      if(player.mode==='interactive'&&factoryPhase(time)&&time>=64&&!atNode){
+      const enteredNode=correction&&factory.nodeProgress(sceneTime()).node;
+      if(enteredNode&&!atNode)actions.stopResistance();
+      if(player.mode==='interactive'&&factoryPhase(time)&&time>=64&&!atNode&&!enteredNode){
         const adjusted=factory.resistTravel?.(time,sceneTime(),actions.snapshot().factory.backwardStep);
         if(Number.isFinite(adjusted))player.time=timing.playbackAt(adjusted);
       }
@@ -441,7 +442,9 @@
   on('layers','click',()=>{state.open=!state.open;$('layers').setAttribute('aria-pressed',String(state.open));});
   function beginFactory(point){
     state.factoryPressPoint=point?worldPoint(point):undefined;
-    if(!correction?.press(sceneTime(),state.factoryPressPoint))actions.holdResistance(true);
+    const progress=correction&&factory.nodeProgress(sceneTime());
+    if(correction?.press(sceneTime(),state.factoryPressPoint,undefined,actions.snapshot().factory.fatigue*(progress?.capacity??1)))actions.stopResistance();
+    else actions.holdResistance(true);
     resumeFlow();
   }
   function endFactory(){actions.holdResistance(false);correction?.release();state.factoryKeyHeld=false;}

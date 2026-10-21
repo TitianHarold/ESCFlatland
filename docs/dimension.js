@@ -625,8 +625,8 @@
     if(light.opacity>0)paintSeedGlow(ctx,light.x,light.y,light.r,light.opacity);
     if(state.textOpacity>0){
       ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=Palette.cream;ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=9;
-      ctx.globalAlpha=state.textOpacity;ctx.font='500 '+Math.max(14,Math.min(28,w*.025))+'px Georgia, serif';ctx.fillText(state.text,w/2,h*.47,w*.88);
-      ctx.globalAlpha=state.titleOpacity??0;ctx.font='500 '+Math.max(15,Math.min(34,w*.031))+'px Georgia, serif';ctx.fillText(state.title||Ending.title,w/2,h*.56,w*.88);ctx.restore();
+      ctx.globalAlpha=state.textOpacity;ctx.font='500 '+Math.max(14,Math.min(28,w*.025))+'px Georgia, serif';ctx.fillText(state.text,w/2,h*.5,w*.88);
+      ctx.restore();
     }
     ctx.restore();return{...pose,light,assetStatus:endingAssets.status};
   }
@@ -657,11 +657,14 @@
   function journeyView(time,camera,viewport,data,state=journeyPose(time,data)){
     const w=finite(viewport.w,1280),h=finite(viewport.h,760);
     const pathHeading=(Number.isFinite(data.chase?.heading)?data.chase.heading:pathPoint(Motion.chaseProgress(time).q).heading)+bridgeAngle;
-    const fast=data.chase?.holdGate?ease(finite(data.chase.inputRate,.32),.5,3.6):1;
-    const lower=ease(time,128,131.6),tilt=mix(.12*ease(time,122,125),mix(finite(camera.tilt,1.25*ease(time,122,138)),1.25,lower),fast),screenHeading=-Math.PI/5;
+    const fast=data.chase?.holdGate?(data.chase.finishing?1:ease(finite(data.chase.inputRate,.32),.5,3.6)):ease(time,123.5,131.6);
+    const launch=ease(time,121.2,123.5),tilt=launch*mix(.12,1.25,fast),screenHeading=-Math.PI/5;
     const groundHeading=Math.atan2(Math.sin(screenHeading)/Math.cos(tilt),Math.cos(screenHeading));
-    const focus=time<122?worldToCity([finite(camera.x,journeyStart.x),finite(camera.y,journeyStart.y),0]):state.center;
-    const view={...camera,x:focus[0],y:focus[1],yaw:time<122?finite(camera.yaw,-bridgeAngle):groundHeading-pathHeading,zoom:mix(.95,1.2,fast),tilt,focal:mix(1800,mix(1600,620,ease(time,123.5,130)),fast),screenY:.5};
+    const invitation=worldToCity([finite(camera.x,journeyStart.x),finite(camera.y,journeyStart.y),0]),follow=ease(time,121.2,122),lead=90*(1-fast)*launch;
+    // The same speed blend reverses focus, angle, distance and scale together before the hold locks.
+    const focus=state.center.map((value,i)=>mix(invitation[i],value+(i===0?Math.cos(pathHeading):i===1?Math.sin(pathHeading):0)*lead,follow));
+    const yaw=-bridgeAngle+Math.atan2(Math.sin(groundHeading-pathHeading+bridgeAngle),Math.cos(groundHeading-pathHeading+bridgeAngle))*launch;
+    const view={...camera,x:focus[0],y:focus[1],yaw,zoom:mix(finite(camera.zoom,1.2),mix(.82,1.2,fast),launch),tilt,focal:mix(1600,mix(1800,620,fast),launch),screenY:.5};
     return{state,view,w,h,pathHeading};
   }
   function projectJourneyLight(time,layout,data,project=projection(layout.view,layout)){

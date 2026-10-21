@@ -14,7 +14,7 @@ const paused=ending.snapshot();ending.update(20,{advance:false,automatic:true});
 const observed=[];for(let i=0;i<1200;i++){const s=ending.update(.01);if(!observed.includes(s.phase))observed.push(s.phase);}
 assert.deepEqual(observed,['drop','bloom','reveal','tools']);state=ending.snapshot();assert(state.awaiting&&!state.complete);assert.equal(state.lightOpacity,0);assert.equal(state.toolsReveal,1);assert.equal(state.handsOpacity,1);
 assert(ending.click());state=run(ending,.45);assert(state.handsOpacity>0&&state.handsOpacity<1);assert.equal(state.lightOpacity,0);
-run(ending,10);state=ending.snapshot();assert(state.complete);assert.equal(state.handsOpacity,0);assert.equal(state.expansion,1);assert.equal(state.textOpacity,1);assert.equal(state.titleOpacity,1);assert.equal(state.text,'Welcome to explore new dimensional');assert.equal(state.title,'Alice escape flatland');assert.equal(ending.click(),false);
+run(ending,10);state=ending.snapshot();assert(state.complete);assert.equal(state.handsOpacity,0);assert.equal(state.expansion,1);assert.equal(state.textOpacity,1);assert.equal(state.text,'Let’s explore a new dimension');assert.equal('title' in state,false);assert.equal(ending.click(),false);
 const queued=new Ending.Session();queued.click();queued.click();queued.click();queued.click();assert.equal(queued.snapshot().phase,'raise');assert.equal(queued.snapshot().raise,0);queued.update(.6);assert(queued.snapshot().raise<1&&queued.snapshot().flex===0,'rapid clicks queue later discoveries without skipping the first pose');
 const auto=new Ending.Session();assert.equal(run(auto,15.99,{automatic:true}).complete,false);assert(run(auto,.01,{automatic:true}).complete);assert.equal(auto.snapshot().clicks,4);
 const jump=new Ending.Session();jump.update(Ending.duration,{automatic:true});assert(jump.snapshot().complete);
@@ -24,4 +24,4 @@ for(let i=0;i<6;i++)inner.collect(i,viewport);
 inner.update(1.44);assert(inner.snapshot(viewport).fullLit);assert(inner.snapshot(viewport).awaitingCenter);assert.equal(inner.snapshot(viewport).shrinkProgress,0);
 inner.update(20);assert.equal(inner.snapshot(viewport).shrinkProgress,0);assert.equal(inner.snapshot(viewport).done,false);
 const center=inner.snapshot(viewport).center;assert(inner.tap(center.x,center.y,viewport));inner.update(.98);state=inner.snapshot(viewport);assert(state.shrinkProgress>.49&&state.shrinkProgress<.51);inner.update(.98);assert(inner.snapshot(viewport).done);assert.equal(inner.snapshot(viewport).seedFlight,1);
-console.log(JSON.stringify({pass:true,endingSeconds:Ending.duration,innerBreakSeconds:Inner.breakDuration,clicks:4,thirdClickWaitsForFourth:true,pausedClockFrozen:true,finalText:Ending.text,title:Ending.title}));
+console.log(JSON.stringify({pass:true,endingSeconds:Ending.duration,innerBreakSeconds:Inner.breakDuration,clicks:4,thirdClickWaitsForFourth:true,pausedClockFrozen:true,finalText:Ending.text}));
