@@ -29,25 +29,27 @@
         if(C.intersects(points,pad)||nodeResistance?.node===name){node=name;break;}
       }
     }
-    return{node,completedNodes,redFraction:completedNodes/3,capacity:1-completedNodes/3};
+    return{node,processStart:node==='mold'?71.7:node==='compact'?78.5:node==='paint'?83.2:null,completedNodes,redFraction:0,capacity:1};
   }
+  const escapeStart=.075,escapeEnd=.24,escapeHit=.285,escapeReturn=.35;
   // Each station owns its input as soon as the child's outline enters its platform.
   class NodeResistance{
     constructor(){this.reset();}
-    reset(){this.node=null;this.time=0;this.actualHero=null;this.age=Infinity;this.motionTime=0;this.level=0;this.held=false;this.edge=-1;this.closed=[];this.offset=[0,0];this.from=[0,0];this.holdAge=0;this.effortProgress=0;this.exhausted=false;this.expansion=0;this.releaseAge=Infinity;this.releaseFrom=0;return this;}
+    reset(){this.node=null;this.time=0;this.actualHero=null;this.age=Infinity;this.motionTime=0;this.level=0;this.held=false;this.edge=-1;this.closed=[];this.offset=[0,0];this.from=[0,0];this.holdAge=0;this.effortProgress=0;this.exhausted=false;this.expansion=0;this.releaseAge=Infinity;this.releaseFrom=0;this.paintCatchAngle=0;this.paintCatchIndex=-1;this.paintCatchPhase=0;return this;}
     enter(time,actualHero,initialProgress=0){
       const progress=nodeProgress(time,actualHero),next=progress.node;
-      if(next!==this.node){this.node=next;this.age=Infinity;this.motionTime=0;this.level=0;this.offset=[0,0];this.from=[0,0];this.holdAge=0;this.effortProgress=Math.min(progress.capacity,Math.max(0,initialProgress));this.exhausted=false;this.expansion=0;this.releaseAge=Infinity;this.releaseFrom=0;if(next==='mold'){this.edge=-1;this.closed=[];}}
+      if(next!==this.node){this.node=next;this.age=Infinity;this.motionTime=0;this.level=0;this.offset=[0,0];this.from=[0,0];this.holdAge=0;this.effortProgress=Math.min(progress.capacity,Math.max(0,initialProgress));this.exhausted=false;this.expansion=0;this.releaseAge=Infinity;this.releaseFrom=0;this.paintCatchAngle=0;this.paintCatchIndex=-1;this.paintCatchPhase=0;if(next==='mold'){this.edge=-1;this.closed=[];}}
       this.time=time;this.actualHero=actualHero||null;
     }
     press(time,point,actualHero,initialProgress=0){
       this.enter(time,actualHero,initialProgress);if(!this.node)return false;
       this.held=true;this.age=0;this.holdAge=0;this.from=[...this.offset];
       if(this.node==='mold')this.edge=(this.edge+1)%heroActor.vertices.length;
+      if(this.node==='paint'&&!this.exhausted){const paint=paintAt(time,5);this.paintCatchAngle=paint.angle;this.paintCatchIndex=paint.index;this.paintCatchPhase=paint.phase;this.releaseAge=Infinity;this.releaseFrom=0;}
       return true;
     }
-    snap(){if(this.node==='compact'&&this.expansion>0){this.releaseFrom=this.expansion;this.releaseAge=0;}this.held=false;}
-    release(){if(this.held&&this.holdAge>.2)this.snap();this.held=false;this.holdAge=0;}
+    snap(){if(this.node==='compact'&&this.expansion>0){this.releaseFrom=this.expansion;this.releaseAge=0;}if(this.node==='paint'){const paint=paintAt(this.time,5);this.releaseFrom=paint.angle-paint.machineAngle;this.releaseAge=0;}this.held=false;}
+    release(){if(this.held&&!this.exhausted&&(this.node==='paint'||this.holdAge>.2))this.snap();this.held=false;this.holdAge=0;}
     update(delta,{time=this.time,held=this.held,advance=true,actualHero,initialProgress=0}={}){
       if(!advance)return this.snapshot(time,actualHero);
       const dt=Math.max(0,Math.min(.1,Number(delta)||0)),previousNode=this.node,previousHeld=this.held;this.enter(time,actualHero,initialProgress);
@@ -61,23 +63,31 @@
       }
       const target=!this.exhausted&&(this.held||this.age<.55)?1:0;this.level+=(target-this.level)*(1-Math.exp(-dt*10));
       if(this.node==='mold'&&Number.isFinite(this.age)){
-        const points=vertices(heroActor),a=points[this.edge],b=points[(this.edge+1)%points.length],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],run=between(this.age,.03,.38),close=between(this.age,.38,.49),distance=(this.exhausted?2.6:26)*run*(1-close);
-        this.offset=this.from.map((v,i)=>v*(1-run)*(1-close)+normal[i]*distance);
-        if(this.age>=.49&&!this.closed.includes(this.edge))this.closed.push(this.edge);
+        const points=vertices(heroActor),a=points[this.edge],b=points[(this.edge+1)%points.length],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],age=this.age,weak=this.exhausted?.065:1;
+        let distance;
+        if(age<escapeStart)distance=-3*Math.sin(age/escapeStart*Math.PI);
+        else if(age<escapeEnd)distance=42*Math.pow((age-escapeStart)/(escapeEnd-escapeStart),3);
+        else if(age<escapeHit)distance=42+4*(age-escapeEnd)/(escapeHit-escapeEnd);
+        else if(age<escapeReturn){const u=(age-escapeHit)/(escapeReturn-escapeHit);distance=46-52*(1-(1-u)*(1-u));}
+        else distance=age<.65?-6*Math.cos((age-escapeReturn)*32)*Math.exp(-(age-escapeReturn)*18):0;
+        this.offset=this.from.map((v,i)=>v*(1-clamp(age/.12))+normal[i]*distance*weak);
+        if(age>=escapeHit&&!this.closed.includes(this.edge))this.closed.push(this.edge);
       }
       if(this.node==='compact'){
-        if(this.held&&!this.exhausted&&this.holdAge>.2){const target=.95*ease((this.holdAge-.2)/1.6);this.expansion+=(target-this.expansion)*(1-Math.exp(-dt*12));}
+        if(this.held&&!this.exhausted&&this.holdAge>.2){this.releaseAge=Infinity;this.releaseFrom=0;const target=.95*ease((this.holdAge-.2)/1.6);this.expansion+=(target-this.expansion)*(1-Math.exp(-dt*12));}
         if(Number.isFinite(this.releaseAge)){this.releaseAge+=dt;this.expansion=this.releaseFrom*(1-Math.pow(clamp(this.releaseAge/.11),3));}
       }
+      if(this.node==='paint'&&Number.isFinite(this.releaseAge))this.releaseAge+=dt;
+      if(this.node==='paint'&&this.held&&!this.exhausted){const paint=paintAt(time,5);if(paint.index!==this.paintCatchIndex){this.paintCatchAngle=paint.angle;this.paintCatchIndex=paint.index;this.paintCatchPhase=paint.phase;}}
       if(!this.held&&!this.exhausted)this.effortProgress=Math.max(0,this.effortProgress-dt*2.5);
       return this.snapshot(time,actualHero);
     }
     snapshot(time=this.time,actualHero=this.actualHero){
       const progress=nodeProgress(time,actualHero),active=progress.node===this.node&&!!this.node,age=active?this.age:Infinity,compact=active&&this.node==='compact';
-      const hit=compact&&this.releaseAge>=.11&&this.releaseAge<.31?(1-(this.releaseAge-.11)/.2)**2:active&&this.node==='mold'&&age>=.49&&age<.69?1-(age-.49)/.2:0;
+      const hit=compact&&this.releaseAge>=.11&&this.releaseAge<.31?(1-(this.releaseAge-.11)/.2)**2:active&&this.node==='mold'&&age>=escapeHit&&age<escapeHit+.20?Math.pow(1-(age-escapeHit)/.20,2):0;
       const twist=compact&&age<.52?Math.sin(age/.52*Math.PI*3)*(1-age/.52)*.13*(this.exhausted?.2:1):0;
-      const paint=active&&this.node==='paint'?paintAt(time,5):null;
-      return{...progress,enabled:true,held:active&&this.held,age,motionTime:this.motionTime,level:active?this.level:0,edge:this.edge,closed:active&&this.node==='mold'?[...this.closed]:[],offset:active&&this.node==='mold'?[...this.offset]:[0,0],closing:active&&this.node==='mold'&&Number.isFinite(age)?between(age,.38,.49):0,impact:hit,twist,expansion:compact?this.expansion:0,releaseAge:compact?this.releaseAge:Infinity,recoil:compact?Math.sin(Math.max(0,this.releaseAge-.11)*110)*hit*3:0,effortProgress:active?Math.min(progress.capacity,this.effortProgress):0,exhausted:active&&this.exhausted,paintStage:paint?.stage||null,paintOpposition:paint?.opposition||0};
+      const paint=active&&this.node==='paint'?paintAt(time,5):null,processPaused=active&&(this.node==='mold'?age<.65:compact?age<.52||this.held&&!this.exhausted||this.releaseAge<.31:this.held&&!this.exhausted||this.releaseAge<.36);
+      return{...progress,enabled:true,processPaused,held:active&&this.held,age,motionTime:this.motionTime,level:active?this.level:0,edge:this.edge,closed:active&&this.node==='mold'?[...this.closed]:[],offset:active&&this.node==='mold'?[...this.offset]:[0,0],closing:active&&this.node==='mold'&&Number.isFinite(age)?Math.pow(clamp((age-escapeEnd)/(escapeHit-escapeEnd)),3):0,anticipation:active&&this.node==='mold'&&age<escapeStart?Math.sin(age/escapeStart*Math.PI):0,impact:hit,twist,expansion:compact?this.expansion:0,releaseAge:active?this.releaseAge:Infinity,releaseFrom:active?this.releaseFrom:0,recoil:compact&&hit>0?Math.sin(Math.max(0,this.releaseAge-.11)*110)*hit*3:0,effortProgress:active?Math.min(progress.capacity,this.effortProgress):0,exhausted:active&&this.exhausted,holdAge:active?this.holdAge:0,paintCatchAngle:this.paintCatchAngle,paintCatchIndex:this.paintCatchIndex,paintCatchPhase:this.paintCatchPhase,paintStage:paint?.stage||null,paintOpposition:paint?.opposition||0};
     }
   }
   // Each open transfer has its own real travel distance and playback allocation.
@@ -91,11 +101,15 @@
   function paintAt(t,n,start=83.2,end=94,actor=n===5?heroActor:ordinary[n-3]?.[0]){
     actor=actor||C.create({sides:n,radius:42});const delta=Math.PI*2/n,a0=Math.atan2(actor.vertices[0][1],actor.vertices[0][0]),base=-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle,wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
     let first=0;for(let i=1;i<n;i++)if(Math.abs(wrap(-Math.PI/2-base-a0-(i+.5)*delta))<Math.abs(wrap(-Math.PI/2-base-a0-(first+.5)*delta)))first=i;
-    const align=wrap(-Math.PI/2-base-a0-(first+.5)*delta),span=(end-start)/n,q=clamp((t-start)/(end-start)),index=Math.min(n-1,Math.floor(q*n)),phase=q>=1?1:(t-start-index*span)/span,step=between(phase,0,.42),order=Array.from({length:n},(_,i)=>(first+i)%n),side=Array(n).fill(0);
+    const align=wrap(-Math.PI/2-base-a0-(first+.5)*delta),span=(end-start)/n,q=clamp((t-start)/(end-start)),index=Math.min(n-1,Math.floor(q*n)),phase=q>=1?1:(t-start-index*span)/span,step=between(phase,0,.42),order=Array.from({length:n},(_,i)=>(first-i+n)%n),side=Array(n).fill(0);
     order.forEach((which,i)=>{side[which]=t>=end?1:i<index?1:i===index?between(phase,.52,.78):0;});
-    const previous=index?align-(index-1)*delta:0,target=align-index*delta,rotation=t<start?0:lerp(previous,target,step);
-    const input=actor===heroActor&&start===83.2&&nodeResistance?.node==='paint'?nodeResistance:null,opposition=(input?.level||0)*between(phase,0,.1)*(1-between(phase,.28,.52)),direction=Math.sign(previous-target)||1,stage=t<start?'waiting':phase<.28?'resist-turn':phase<.52?'force-align':phase<.80?'spray':'indexed-hold';
-    return{side,angle:rotation+direction*.40*opposition,machineAngle:rotation,index,sideIndex:order[index],sideOrder:order,phase,opposition,stage,spraying:t>=start&&t<end&&phase>=.52&&phase<.80,complete:t>=end};
+    const previous=index?align+(index-1)*delta:0,target=align+index*delta,rotation=t<start?0:lerp(previous,target,step);
+    const input=actor===heroActor&&start===83.2&&nodeResistance?.node==='paint'?nodeResistance:null;
+    let opposed=rotation;
+    if(input?.releaseAge<.36){const u=clamp(input.releaseAge/.36),tap=Math.abs(input.releaseFrom)<.03;opposed+=input.releaseFrom*(1-ease(u))-(tap?.075*Math.sin(Math.PI*u):0);}
+    else if(input?.held&&!input.exhausted&&input.paintCatchIndex===index)opposed=input.paintCatchAngle-.38*between(input.holdAge,.16,.66);
+    const opposition=Math.min(1,Math.abs(opposed-rotation)/.4),stage=input?.processPaused?(input.held&&!input.exhausted?'resist-turn':'force-align'):t<start?'waiting':phase<.28?'resist-turn':phase<.52?'force-align':phase<.80?'spray':'indexed-hold',aligned=Math.abs(opposed-target)<1e-8;
+    return{side,angle:opposed,machineAngle:rotation,index,sideIndex:order[index],sideOrder:order,phase,opposition,stage,spraying:t>=start&&t<end&&phase>=.52&&phase<.80&&aligned&&!input?.processPaused,complete:t>=end};
   }
   function poly(ctx,points,fill){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}}
   function line(ctx,points,color,width){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
@@ -110,24 +124,25 @@
     if(input?.enabled)for(const face of faces){
       const current=face.index===input.edge&&Number.isFinite(input.age),forced=input.closed.includes(face.index),closing=current?input.closing:0;
       if(!forced&&!current)continue;
-      const gap=current&&input.age<.49?Math.max(28,face.gap)*(1-closing):0,a=points[face.index],b=points[(face.index+1)%points.length],locked=current?input.age>=.49:forced||face.locked;
+      const gap=current&&input.age<escapeHit?Math.max(48,face.gap)*(1-closing):0,a=points[face.index],b=points[(face.index+1)%points.length],locked=current?input.age>=escapeHit:forced||face.locked;
       Object.assign(face,{gap,from:[a[0]+face.normal[0]*gap,a[1]+face.normal[1]*gap],to:[b[0]+face.normal[0]*gap,b[1]+face.normal[1]*gap],locked,lock:locked?1:closing,impact:current?Math.max(face.impact,input.impact):face.impact,interactive:true});
     }
     return{faces,vertices:points,fitted:faces.reduce((sum,face)=>sum+face.lock,0)/points.length,complete:t>=end};
   }
   function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),mold=moldAt(t,71.7,76.7,actor),controlled=actor===heroActor&&peelState!==null&&t>=119,release=controlled?[...peelState]:Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted:mold.fitted,mold,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,peelControlled:controlled,vertices:shellPolygon(actor),radius:71};}
   function compactAt(t,start=78.5,end=81.6,actor=heroActor,body=pose(heroActor,stations[1],130)){
-    const relative=body.angle-angle,c=Math.cos(relative),s=Math.sin(relative),centerline=shellPolygon(actor).map(([x,y])=>[x*(body.sx??1)*c-y*(body.sy??1)*s,x*(body.sx??1)*s+y*(body.sy??1)*c]);
-    // The frame is drawn with a 12px stroke. Its outer support planes, not its
-    // centre lines, are the die's contact boundary. Every die face uses this shell.
-    const n=centerline.length,frameHalfWidth=6,outerScale=1+frameHalfWidth/(71*Math.cos(Math.PI/n)),shell=centerline.map(([x,y])=>[x*outerScale,y*outerScale]);
+    const input=actor===heroActor&&nodeResistance?.node==='compact'&&nodeProgress(t,body).node==='compact'?nodeResistance:null,loaded=!!input&&(input.expansion>0||input.releaseAge<.31),growth=loaded?Math.max(1,((body.sx??1)+(body.sy??1))/2):1;
+    const relative=body.angle-angle-(input?.twist||0),c=Math.cos(relative),s=Math.sin(relative),points=shellPolygon(actor),n=points.length,frameHalfWidth=6,apothem=71*Math.cos(Math.PI/n),shift=apothem*(growth-1),outerScale=1+frameHalfWidth/apothem,rotate=([x,y])=>[x*c-y*s,x*s+y*c];
+    // The five strips and die heads translate along their normals; corner joints open.
+    const bars=points.map((a,i)=>{const b=points[(i+1)%n],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],move=p=>[p[0]+normal[0]*shift,p[1]+normal[1]*shift];return{from:move(a),to:move(b),normal};});
+    const fixed=points.map(rotate),baseShell=fixed.map(([x,y])=>[x*outerScale,y*outerScale]),centerline=points.map(([x,y])=>rotate([x*growth,y*growth])),shell=growth===1?baseShell:centerline.map(([x,y])=>[x*(1+frameHalfWidth/(apothem*growth)),y*(1+frameHalfWidth/(apothem*growth))]);
     const contactTime=start+.75,slamStart=contactTime-.1,holdEnd=start+1.15,phase=t<start?'idle':t<slamStart?'windup':t<contactTime?'slam':t<holdEnd?'hold':t<end?'release':'open';
-    const strike=clamp((t-slamStart)/.1),nominalClearance=t<start?16:t<slamStart?16+8*between(t,start,slamStart):t<contactTime?24*(1-strike*strike*strike):t<holdEnd?0:24*between(t,holdEnd,end),input=actor===heroActor&&nodeResistance?.node==='compact'&&nodeProgress(t,body).node==='compact'?nodeResistance:null,loaded=!!input&&(input.expansion>0||input.releaseAge<.31),clearance=loaded?0:nominalClearance,thickness=20;
+    const strike=clamp((t-slamStart)/.1),nominalClearance=t<start?16:t<slamStart?16+8*between(t,start,slamStart):t<contactTime?24*(1-strike*strike*strike):t<holdEnd?0:24*between(t,holdEnd,end),clearance=loaded?0:nominalClearance,thickness=20;
     const age=t-contactTime,impact=Math.max(age>=0&&age<.16?(1-age/.16)**2:0,input?.impact||0),recoil=(age>=0&&t<holdEnd?3.5*Math.sin(age*110)*Math.exp(-age/.065)+1.8*Math.sin(age*70)*Math.sin(Math.PI*age/(holdEnd-contactTime)):0)+(input?.recoil||0);
-    const faces=shell.map((a,i)=>{const b=shell[(i+1)%n],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],move=(p,d)=>[p[0]+normal[0]*d,p[1]+normal[1]*d],from=move(a,clearance),to=move(b,clearance),support=a[0]*normal[0]+a[1]*normal[1];
+    const faces=points.map((_,i)=>{const normal=rotate(bars[i].normal),move=(p,d)=>[p[0]+normal[0]*d,p[1]+normal[1]*d],a=move(baseShell[i],shift),b=move(baseShell[(i+1)%n],shift),from=move(a,clearance),to=move(b,clearance),support=a[0]*normal[0]+a[1]*normal[1];
       return{index:i,normal,shellFrom:a,shellTo:b,from,to,point:[(from[0]+to[0])/2,(from[1]+to[1])/2],support,faceSupport:support+clearance,gap:clearance,thickness,polygon:[from,to,move(to,thickness),move(from,thickness)],pad:[from,to,move(to,3),move(from,3)]};});
     const contact=(t>=start+.75&&t<start+1.15||loaded)&&faces.every(face=>face.gap<1e-8),upperSupport=Math.min(...shell.map(p=>p[1])),lowerSupport=Math.max(...shell.map(p=>p[1])),upperFace=Math.min(...faces.flatMap(face=>[face.from[1],face.to[1]])),lowerFace=Math.max(...faces.flatMap(face=>[face.from[1],face.to[1]]));
-    return{faces,shell,centerline,clearance,thickness,gap:(lowerFace-upperFace)/2,upperFace,lowerFace,upperSupport,lowerSupport,contact,force:contact?1:0,phase,impact,recoil,contactTime,slamStart,holdEnd};
+    return{faces,bars,shell,centerline,clearance,thickness,gap:(lowerFace-upperFace)/2,upperFace,lowerFace,upperSupport,lowerSupport,contact,force:contact?1:0,phase,impact,recoil,contactTime,slamStart,holdEnd};
   }
   function bezier(points,u){const v=1-u,[a,b,c,d]=points;return{x:v*v*v*a[0]+3*v*v*u*b[0]+3*v*u*u*c[0]+u*u*u*d[0],y:v*v*v*a[1]+3*v*v*u*b[1]+3*v*u*u*c[1]+u*u*u*d[1],heading:Math.atan2(3*v*v*(b[1]-a[1])+6*v*u*(c[1]-b[1])+3*u*u*(d[1]-c[1]),3*v*v*(b[0]-a[0])+6*v*u*(c[0]-b[0])+3*u*u*(d[0]-c[0]))};}
   const workEntry=Office.entryCurves.entry;
@@ -154,9 +169,9 @@
     const entry=routineEntry('hero',heroActor,b,P.blue,t,{routine:{time:t,...shellState(t,heroActor),seed:true,compacting:compactAt(t,78.5,81.6,heroActor,b),work:t>=96&&t<110,job:t>=98&&t<110?routePoint(t).job||0:0}});
     const input=nodeResistance?.enabled&&nodeResistance.node===nodeProgress(t,b).node?nodeResistance:null;
     if(input?.node){const level=input.level||0,phase=Number.isFinite(input.age)?input.age:input.motionTime||0,sway=Math.sin(phase*10)*level;
-      if(input.node==='mold'){const [dx,dy]=input.offset,c=Math.cos(b.angle),s=Math.sin(b.angle);b={...b,x:b.x+dx*c-dy*s,y:b.y+dx*s+dy*c,bend:.15*level+.08*input.impact,strain:.17*level,axialStretch:-.09*level};}
+      if(input.node==='mold'){const [dx,dy]=input.offset,c=Math.cos(b.angle),s=Math.sin(b.angle);b={...b,x:b.x+dx*c-dy*s,y:b.y+dx*s+dy*c,sx:1-.10*(input.anticipation||0)-.09*input.impact,sy:1-.10*(input.anticipation||0)-.045*input.impact,bend:.15*level+.24*input.impact,strain:.17*level,axialStretch:-.09*level};}
       else if(input.node==='compact'){
-        const growth=1+.17*(input.expansion||0)-.035*(input.impact||0),twist=input.twist||0;
+        const growth=1+.25*(input.expansion||0)-.035*(input.impact||0),twist=input.twist||0;
         b={...b,sx:growth,sy:growth,angle:b.angle+twist,bend:.11*level+.09*(input.impact||0),strain:.15*level,edgeBends:heroActor.vertices.map((_,i)=>.05*level*(1+Math.sin(phase*10+i*Math.PI)))};
       }
       else if(input.node==='paint'){const p=paintAt(t,5),strain=p.opposition;b={...b,bend:.13*strain,strain:.16*strain,axialStretch:-.08*strain,edgeBends:heroActor.vertices.map((_,i)=>.03*strain*(1+Math.sin(phase*9+i)))};}
@@ -238,11 +253,14 @@
   function drawActorOverlay(ctx,entry,paintLight){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;
     // Paint is a cumulative spatial mask. The unpainted parts still reveal the live inner window.
     ctx.save();poly(ctx,points);ctx.clip();if(s.paint.every(v=>v>=.999999))poly(ctx,points,P.black);else for(let i=0;i<n;i++){const coverage=s.paint[i];if(!coverage)continue;const a=points[i],b=points[(i+1)%n];ctx.save();ctx.globalAlpha=coverage;poly(ctx,[[0,0],a,b],P.black);ctx.restore();}ctx.restore();
-    const joined=s.mold.complete&&s.release.every(v=>v===0);
+    const resistance=s.resistance,rigid=resistance&&(resistance.node==='compact'||resistance.node==='mold');
+    if(rigid){ctx.save();if(entry.body.sx!==1||entry.body.sy!==1)ctx.scale(1/(entry.body.sx??1),1/(entry.body.sy??1));if(resistance.node==='compact')ctx.rotate(-(resistance.twist||0));else ctx.translate(-resistance.offset[0],-resistance.offset[1]);}
+    const joined=s.mold.complete&&s.release.every(v=>v===0)&&resistance?.node!=='compact';
     if(joined){ctx.save();ctx.lineJoin='miter';ctx.lineCap='butt';const compacted=s.compacted>=1;for(const[color,width]of[[compacted?P.black:P.metal,12],[compacted?P.black:P.industrial,2.5]]){poly(ctx,points);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}ctx.restore();}
-    if(s.fitted&&!joined){for(let i=0;i<n;i++){const face=s.mold.faces[i];if(!face.locked)continue;const visible=1-s.release[i];if(visible<=0)continue;const a=s.time<76.7?face.from:points[i],b=s.time<76.7?face.to:points[(i+1)%n],compacted=s.compacted>=1;ctx.save();ctx.globalAlpha=visible;line(ctx,[a,b],compacted?P.black:P.metal,12);line(ctx,[a,b],compacted?P.black:P.industrial,2.5);
+    if(s.fitted&&!joined){for(let i=0;i<n;i++){const face=s.mold.faces[i];if(!face.locked)continue;const visible=1-s.release[i];if(visible<=0)continue;const bar=resistance?.node==='compact'?s.compacting.bars[i]:null,a=bar?bar.from:s.time<76.7?face.from:points[i],b=bar?bar.to:s.time<76.7?face.to:points[(i+1)%n],compacted=s.compacted>=1;ctx.save();ctx.globalAlpha=visible;ctx.lineCap='butt';line(ctx,[a,b],compacted?P.black:P.metal,12);line(ctx,[a,b],compacted?P.black:P.industrial,2.5);
       if(face.impact>0){const [nx,ny]=face.normal,tx=-ny,ty=nx;ctx.globalAlpha=visible*face.impact;for(const side of[-1,1])line(ctx,[[face.point[0]+nx*5+tx*side*4,face.point[1]+ny*5+ty*side*4],[face.point[0]+nx*18+tx*side*12,face.point[1]+ny*18+ty*side*12]],P.gold,2.8);}
       ctx.restore();}}
+    if(rigid)ctx.restore();
     // Each strip leaves independently and stays behind, rather than reforming into a badge.
     if(s.peelControlled||s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const progress=s.release[i],age=s.peelControlled?progress*.6:s.time-(123.5+i*.58);if(age<=0||age>3.2||s.peelControlled&&progress>=1)continue;const a=points[i],b=points[(i+1)%n],drift=s.peelControlled?360*progress+120*progress*progress:210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=s.peelControlled?1-progress:1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.black,12);line(ctx,[a,b],P.black,2.5);ctx.restore();}}
     if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();if(paintLight)paintLight(ctx,-7,7,painted>.2?3.7+awakening*2:6);else{ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();}if(awakening&&!paintLight){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}

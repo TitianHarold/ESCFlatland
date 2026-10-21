@@ -45,7 +45,7 @@
       const lightBloom=index===6?smooth(age/1.1):index===7?1-smooth(age/.9):0;
       const lightOpacity=index>6?0:index===6?1-smooth(age/1.1):1;
       const toolsReveal=index>7?1:index===7?smooth(age/.9):0;
-      const handsOpacity=index>9?0:index===9?1-smooth(age/.9):1;
+      const handsOpacity=index>9?0:index===9?1-smooth(age/.9):raise;
       const expansion=index>10?1:index===10?smooth(age/2):0;
       const textOpacity=index>11?1:index===11?smooth(age/.9):0;
       return{phase,clicks:this.clicks,age,clock:this.clock,stageProgress,progress,raw:132+6*progress,

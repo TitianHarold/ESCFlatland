@@ -345,7 +345,10 @@
     const speed=finite(data.chase?.speed,source.speed||0),shape=Motion.speedShape(speed),raw={...source,...shape,speed};
     // localSegments already applies the body response; only add the remaining perspective stretch.
     const sprintStretch=shape.perspectiveStretch/((1+.04*shape.strain)*(1+shape.axialStretch));
-    return{raw,center:worldToCity([raw.x,raw.y,0]),angle:(raw.angle||0)+bridgeAngle,size:1,sprintStretch,growth:ease(Math.min(t,132),125,134),coast:0,phase:t<132?'chase':'pov'};
+    const burst=data.chase?.holdGate?(data.chase.finishing?mix(.7,1,ease(data.chase.finishAge||0,0,.9)):.7*ease(data.chase.inputRate||0,3.2,4.2)):ease(t,129,131.65);
+    // The last acceleration pulls the same colored body into a trailing ribbon before white.
+    const smear=burst*((shape.perspectiveStretch-1)/2)**2;
+    return{raw,center:worldToCity([raw.x,raw.y,0]),angle:(raw.angle||0)+bridgeAngle,size:1,sprintStretch,smear,flowTime:finite(data.chase?.travel,t-119),growth:ease(Math.min(t,132),125,134),coast:0,phase:t<132?'chase':'pov'};
   }
   const journeyObjects=[],journeyObjectCount=120;
   function chasePassTime(q){let a=122,b=132;for(let i=0;i<20;i++){const m=(a+b)/2;if(Motion.chaseProgress(m).q<q)a=m;else b=m;}return(a+b)/2;}
@@ -367,12 +370,26 @@
     for(const segment of actor.localSegments(body))for(let i=0;i<8;i++){
       const q=i/8,s=1-q;points.push([s*s*segment.from[0]+2*s*q*segment.control[0]+q*q*segment.to[0],s*s*segment.from[1]+2*s*q*segment.control[1]+q*q*segment.to[1]]);
     }
-    const ca=Math.cos(state.angle),sa=Math.sin(state.angle),axis=actor.headAxis(body).angle,fx=Math.cos(axis),fy=Math.sin(axis),stretch=state.sprintStretch;
-    const vertex=(p,z)=>{const along=(p[0]*fx+p[1]*fy)*stretch,across=(-p[0]*fy+p[1]*fx)/stretch,x=(along*fx-across*fy)*(body.sx??1)*state.size,y=(along*fy+across*fx)*(body.sy??1)*state.size;return[state.center[0]+x*ca-y*sa,state.center[1]+x*sa+y*ca,z];};
+    const ca=Math.cos(state.angle),sa=Math.sin(state.angle),axis=actor.headAxis(body).angle,fx=Math.cos(axis),fy=Math.sin(axis),stretch=state.sprintStretch,smear=state.smear;
+    const alongExtent=Math.max(...points.map(p=>Math.abs(p[0]*fx+p[1]*fy))),acrossExtent=Math.max(...points.map(p=>Math.abs(-p[0]*fy+p[1]*fx)));
+    const vertex=(p,z,radialLevel=1)=>{
+      const forward=p[0]*fx+p[1]*fy,side=-p[0]*fy+p[1]*fx,radial=Math.hypot(forward/alongExtent,side/acrossExtent);
+      const round=radial?mix(1,radialLevel/radial,.85*smear):1,u=forward*round/alongExtent;
+      const along=forward*round*stretch*(1+smear*1.65*(1-.18*u));
+      const curl=smear*(90*Math.max(0,-u)**2+5*(Math.sin(u*2.4-state.flowTime*1.6)-Math.sin(-state.flowTime*1.6)));
+      const across=side*round/stretch*(1-.53*smear)*(1-.42*smear*u*u)+curl;
+      const x=(along*fx-across*fy)*(body.sx??1)*state.size,y=(along*fy+across*fx)*(body.sy??1)*state.size;
+      return[state.center[0]+x*ca-y*sa,state.center[1]+x*sa+y*ca,z*(1-.85*smear)];
+    };
     const texture=data.heroTexture||journeyTexture,extent=data.textureExtent||journeyTextureExtent,tex=p=>p.map(v=>(v/extent+.5)*(texture?.width||256));
     for(let i=0;i<points.length;i++){
       const a=points[i],b=points[(i+1)%points.length];
-      list.push({points:[vertex([0,0],4),vertex(a,4),vertex(b,4)],texUV:[tex([0,0]),tex(a),tex(b)],texture,material:true,alpha:1});
+      // Radial subdivisions let pigment follow the curved tail instead of bridging its bend.
+      for(let ring=0;ring<3;ring++){
+        const lo=ring/3,hi=(ring+1)/3,a0=a.map(v=>v*lo),b0=b.map(v=>v*lo),a1=a.map(v=>v*hi),b1=b.map(v=>v*hi);
+        list.push({points:[vertex(a0,4,lo),vertex(a1,4,hi),vertex(b1,4,hi)],texUV:[tex(a0),tex(a1),tex(b1)],texture,material:true,alpha:1});
+        if(ring)list.push({points:[vertex(a0,4,lo),vertex(b1,4,hi),vertex(b0,4,lo)],texUV:[tex(a0),tex(b1),tex(b0)],texture,material:true,alpha:1});
+      }
       surface(list,[vertex(a,0),vertex(b,0),vertex(b,4),vertex(a,4)],tint(Palette.blue,Palette.navy,.48),'stone');
     }
   }
@@ -559,7 +576,7 @@
   }
   function endingPose(time,state=Ending.snapshotAt(time)){
     return{...state,left:{raise:state.raise,turn:state.flex,flex:state.flex,grasp:state.grasp,toolsReveal:state.toolsReveal,opacity:state.handsOpacity,rotation:mix(-.10,.055,state.flex)},
-      right:{raise:ease(state.raise,.05,1),turn:state.flex,flex:state.flex,grasp:state.grasp,toolsReveal:state.toolsReveal,opacity:state.handsOpacity,rotation:mix(.085,-.045,state.flex)}};
+      right:{raise:state.raise,turn:state.flex,flex:state.flex,grasp:state.grasp,toolsReveal:state.toolsReveal,opacity:state.handsOpacity,rotation:mix(.085,-.045,state.flex)}};
   }
   function endingSprite(key,side){
     const image=endingAssets[key];if(!image)return null;
@@ -579,11 +596,11 @@
     const flexed=endingSprite('flexed',side),tools=endingSprite('tools',side)||endingSprite('brush',side);
     const roll=flexed?Math.sin(Math.PI*pose.flex):0,texture=flexed&&pose.flex>=.5?flexed:open;
     const wrist=endingAssets.layout[side==='left'?'wristLeft':'wristRight'],height=h*.78;
-    const angle=pose.rotation,anchor=[w*(side==='left'?.355:.655),h*mix(1.29,.71,pose.raise)];
+    const angle=pose.rotation,anchor=[w*(side==='left'?.355:.655),h*.71];
     function paint(image,opacity,turn=true){
       if(!image||opacity<=0)return;
       const width=height*image.width/image.height;
-      ctx.save();ctx.globalAlpha=ease(pose.raise,0,.15)*(pose.opacity??1)*opacity;ctx.imageSmoothingEnabled=true;
+      ctx.save();ctx.globalAlpha=(pose.opacity??1)*opacity;ctx.imageSmoothingEnabled=true;
       ctx.translate(...anchor);ctx.rotate(angle);
       if(turn)ctx.transform((1-.075*pose.turn)*(1-.78*roll),pose.turn*height*.027/width,0,1-.025*roll,0,0);
       const pivot=image.handWrist||wrist;

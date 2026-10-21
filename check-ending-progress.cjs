@@ -3,9 +3,9 @@ const assert=require('node:assert/strict'),Ending=require('./docs/ending-progres
 const run=(session,seconds,options={})=>{for(let i=0;i<Math.round(seconds*100);i++)session.update(.01,options);return session.snapshot();};
 assert.equal(Ending.duration,16);
 const ending=new Ending.Session();
-assert.equal(run(ending,30).phase,'stopped');assert.equal(ending.snapshot().raise,0);assert.equal(ending.snapshot().complete,false);
-assert(ending.click());assert.equal(ending.snapshot().raise,0,'a click begins the continuous raise');
-let state=run(ending,.6);assert(state.raise>0&&state.raise<1);
+assert.equal(run(ending,30).phase,'stopped');assert.equal(ending.snapshot().raise,0);assert.equal(ending.snapshot().handsOpacity,0);assert.equal(ending.snapshot().complete,false);
+assert(ending.click());assert.equal(ending.snapshot().handsOpacity,0,'a click begins the continuous hand fade');
+let state=run(ending,.6);assert(Math.abs(state.handsOpacity-.5)<1e-8,'the hands are half visible midway through the fade');
 state=run(ending,.6);assert.equal(state.phase,'open');assert.equal(state.raise,1);assert.equal(run(ending,10).phase,'open');
 assert(ending.click());state=run(ending,.5);assert(state.flex>0&&state.flex<1);assert.equal(state.lightDrop,0);
 state=run(ending,.5);assert.equal(state.phase,'half');assert.equal(state.flex,1);assert.equal(run(ending,10).phase,'half');

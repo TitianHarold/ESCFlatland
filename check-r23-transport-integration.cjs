@@ -39,7 +39,7 @@ for(let i=0;i<650;i++){
  previous=x;
 }
 T.draw();assert(red!==null);assert(retreat>10);assert(redSpeeds.every(v=>Math.abs(v-250)<1e-6),'exhausted app movement stays at belt speed');
-assert.equal(T.node('stage').dataset.blocked,'0.333','the visible ring records the completed correction node independently of held effort');
+assert.equal(T.node('stage').dataset.blocked,undefined,'there is no cumulative disabled capacity');
 const paused=T.snapshot();T.node('play').dispatch('click',{});for(let i=0;i<100;i++)T.step(.01);const afterPause=T.snapshot();assert.equal(afterPause.raw,paused.raw);assert.equal(afterPause.factoryAmbient,paused.factoryAmbient);assert.equal(afterPause.actions.factory.fatigue,paused.actions.factory.fatigue);
 T.node('play').dispatch('click',{});T.step(.01);assert(T.snapshot().raw>paused.raw);release();T.seekRaw(77.2);const reset=T.snapshot();assert.equal(reset.factoryAmbient,77.2);assert.equal(reset.actions.factory.fatigue,0);T.restart();assert.equal(T.snapshot().raw,0);assert.equal(T.snapshot().factoryAmbient,0);
 console.log(JSON.stringify({realApp:true,retreat,redAt:red,postRedSpeed:[Math.min(...redSpeeds),Math.max(...redSpeeds)],redFrames:redSpeeds.length,pauseFreezesMotionAndFatigue:true,seekAndRestartClearDelay:true,ambientLag:[Math.min(...lag),Math.max(...lag)]}));

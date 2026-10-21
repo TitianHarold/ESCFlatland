@@ -29,13 +29,49 @@ for(const t of[122.1,122.8,125,130]){
     const actual=data.hero.speed*rate,shape=Motion.speedShape(actual),pose=Dimension.journeyPose(t,{...data,chase:{...data.chase,speed:actual,effort:1}});
     assert.equal(pose.raw.axialStretch,shape.axialStretch);assert.equal(pose.raw.strain,shape.strain);
     const total=pose.sprintStretch*(1+.04*shape.strain)*(1+shape.axialStretch);
-    assert(Math.abs(total-shape.perspectiveStretch)<1e-12,'actual velocity is the only stretch input, not effort or phase');
+    assert(Math.abs(total-shape.perspectiveStretch)<1e-12,'the base body stretch follows actual velocity without a second preset multiplier');
   }
 }
 // Inspect the rendered sheet geometry, rather than a second copy of its response formula.
 const file=path.resolve('docs/dimension.js'),box={module:{exports:{}},require:createRequire(file)};
-vm.runInNewContext(fs.readFileSync(file,'utf8').replace('return Object.freeze({draw,drawJourney,','return Object.freeze({__arrival:chaseArrivalTime,__deform:deformReference,__reference:referenceDeformation,__flow:referenceFlow,__objects:journeyObjects,__alpha:distanceAlpha,__sheet:apparition,draw,drawJourney,'),box,{filename:file});
+vm.runInNewContext(fs.readFileSync(file,'utf8').replace('return Object.freeze({draw,drawJourney,','return Object.freeze({__hero:addJourneyHero,__project:projection,__arrival:chaseArrivalTime,__deform:deformReference,__reference:referenceDeformation,__flow:referenceFlow,__objects:journeyObjects,__alpha:distanceAlpha,__sheet:apparition,draw,drawJourney,'),box,{filename:file});
 const actual=box.module.exports,heading=-.61,c=Math.cos(heading),s=Math.sin(heading),sample=[c*80-s*20,s*80+c*20,9];
+const burstTime=131.7,burstBase=Factory.frame(burstTime),texture={width:256};
+const burstMesh=({speed=burstBase.chase.speed*4.2,charge=0,rate=1.8+2.4*charge*charge*(3-2*charge),finishing=false,finishAge=0}={})=>{
+  const data={...burstBase,heroTexture:texture,chase:{...burstBase.chase,speed,inputRate:rate,holdGate:true,charge,finishing,finishAge}},state=actual.journeyPose(burstTime,data),list=[];
+  actual.__hero(list,state,data);
+  const angle=state.angle+require('./docs/character-geometry.js').actors.child.headAxis(state.raw).angle,c=Math.cos(angle),s=Math.sin(angle);
+  const lengths=list.flatMap(face=>face.points.map(p=>(p[0]-state.center[0])*c+(p[1]-state.center[1])*s)),widths=list.flatMap(face=>face.points.map(p=>-(p[0]-state.center[0])*s+(p[1]-state.center[1])*c));
+  const area=list.filter(face=>face.material).reduce((sum,face)=>{const[a,b,c]=face.points;return sum+Math.abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))/2;},0);
+  const length=Math.max(...lengths)-Math.min(...lengths);
+  return{data,state,list,length,width:Math.max(...widths)-Math.min(...widths),thickness:area/length};
+};
+const uncharged=burstMesh(),extreme=burstMesh({charge:1,finishing:true,finishAge:.9});
+assert.equal(uncharged.state.smear,0,'the normal held run keeps its approved shape before the late acceleration');
+assert(extreme.length>uncharged.length*2.5&&extreme.thickness<uncharged.thickness*.8,'the actual final body becomes a thin elongated form, not a larger polygon');
+assert.deepEqual(extreme.list.map(p=>p.texUV),uncharged.list.map(p=>p.texUV),'the elongated mesh keeps every original pigment coordinate');
+assert(extreme.list.filter(p=>p.material).every(p=>p.texture===texture),'the final streak samples the actual peeled body texture');
+assert(burstMesh({speed:0,charge:1,finishing:true,finishAge:1}).state.smear===0,'no actual speed means no extreme deformation');
+let prior=burstMesh({charge:.6});
+for(let charge=.601;charge<=1;charge+=.001){
+  const next=burstMesh({charge});assert(next.length>=prior.length,'the late hold continuously lengthens the same mesh');
+  assert(Math.abs(next.length-prior.length)<2,'no individual hold frame swaps silhouettes');prior=next;
+}
+const atLock=burstMesh({charge:1}),afterLock=burstMesh({charge:1,finishing:true,finishAge:0});
+assert.deepEqual(afterLock.list,atLock.list,'crossing the hold threshold cannot reset the shape');
+const drive=new(require('./docs/interaction-progress.js').ChaseProgress)({raw:burstTime});
+for(let i=0;i<380;i++)drive.update(.01,{held:true});
+let release=burstMesh({speed:burstBase.chase.speed*drive.snapshot().rate,rate:drive.snapshot().rate,charge:drive.snapshot().charge});
+for(let i=0;i<100;i++){
+  const state=drive.update(.01,{held:false}),next=burstMesh({speed:burstBase.chase.speed*state.rate,rate:state.rate,charge:state.charge});
+  assert(next.state.smear<=release.state.smear&&Math.abs(next.state.smear-release.state.smear)<.12,'actual deceleration unwinds the late stretch across consecutive frames without a state reset');release=next;
+}
+assert.equal(release.state.smear,0,'an uncommitted burst returns to its regular body shape');
+for(const viewport of[{w:1280,h:760},{w:760,h:1280},{w:1719,h:1512}]){
+  const layout=actual.journeyView(burstTime,{},viewport,extreme.data),project=actual.__project(layout.view,viewport);
+  assert(extreme.list.every(face=>face.points.every(point=>project(point)?.every(Number.isFinite))),'the longest tail never crosses the perspective clipping plane');
+}
+for(const t of[119,123,128])assert.equal(actual.journeyPose(t,Factory.frame(t)).smear,0,'automatic normal and slow sections stay unchanged');
 const atRest=actual.__deform(sample,heading,actual.__reference(0,60,-1));
 assert(atRest.every((n,i)=>Math.abs(n-sample[i])<1e-12),'references have no preset speed distortion at rest');
 let stretch=1;
@@ -99,4 +135,4 @@ for(let t=122.05;t<131.95;t+=.1){
   assert(dx*Math.cos(heading)+dy*Math.sin(heading)>0,'the chase keeps facing its forward travel');
   assert.deepEqual(Factory.withResistance(source,340,t).hero,source.hero,'factory resistance cannot rotate or displace the chase');
 }
-console.log('One smooth actual-speed response, continuous launch, no double stretch and heading-preserving reverse conveyor travel passed.');
+console.log(JSON.stringify({pass:true,continuousSpeedResponse:true,burstMeshLengthRatio:extreme.length/uncharged.length,burstAverageThicknessRatio:extreme.thickness/uncharged.thickness,originalTextureUVsPreserved:true,reversibleBeforeLock:true,tailClearOfCamera:true}));

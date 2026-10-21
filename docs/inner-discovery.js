@@ -69,7 +69,7 @@
       this.breakAge=p>=collectProgress?(p-collectProgress)/(1-collectProgress)*breakDuration:0;this.confirmed=this.breakAge>=2.04;return this;
     }
     snapshot(viewport){
-      const {w,h,s}=size(viewport),count=this.found.length,b=clamp(this.breakAge/breakDuration),available=this.availableIds();
+      const {w,h,s}=size(viewport),count=this.found.length,b=clamp(this.breakAge/breakDuration),available=this.availableIds(),breath=(1-Math.cos(this.clock*TAU/2.4))/2;
       const points=sites.map((_,id)=>{
         const found=this.found.find(item=>item.id===id),p=found?{x:found.u*w,y:found.v*h}:point(id,this.clock,viewport);
         const visible=!!found||available.includes(id),pulse=.55+.45*Math.sin(this.clock*1.55+id*2.1)**2;
@@ -81,7 +81,7 @@
       return{points,reveals,collected:count,progress:count<total?collectProgress*count/total:collectProgress+(1-collectProgress)*b,
         phase:count===total?(b>=1?'done':this.breakAge>=1.44&&!this.confirmed?'ready':'break'):count||this.clock>.6?'discover':'dark',breakProgress:b,
         awaitingCenter:count===total&&this.breakAge>=1.44&&!this.confirmed,
-        center:{x:w/2,y:h/2,r:(5.5+.35*Math.sin(this.clock*.9))*s,hitRadius:Math.max(34,42*s),alpha:count===total?smooth((this.breakAge-1.1)/.34)*(1-smooth((this.breakAge-2.04)/.4)):0},
+        center:{x:w/2,y:h/2,r:(6.8+1.5*breath)*s,hitRadius:Math.max(34,42*s),alpha:count===total?smooth((this.breakAge-1.1)/.34)*(1-smooth((this.breakAge-2.04)/.4))*(.91+.09*breath):0},
         revealProgress:clamp(this.breakAge/1.44),fullLit:this.breakAge>=1.44,
         shrinkProgress:smooth((this.breakAge-2.04)/1.96),seedFlight:smooth((this.breakAge-2.04)/1.96),done:b>=1,clock:this.clock};
     }
@@ -140,12 +140,12 @@
       if(dot.trail?.length){ctx.strokeStyle=p.gold;ctx.lineCap='round';for(let i=1;i<dot.trail.length;i++){const a=dot.trail[i-1],b=dot.trail[i];ctx.globalAlpha=dot.alpha*.28*i/dot.trail.length;ctx.lineWidth=Math.max(1,1.7*s)*i/dot.trail.length;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
       ctx.globalAlpha=dot.alpha;softGlow(ctx,dot.x,dot.y,dot.r,p);
     }
-    if(state.center?.alpha>0){ctx.globalAlpha=state.center.alpha;softGlow(ctx,state.center.x,state.center.y,state.center.r,p);}
+    if(state.center?.alpha>0){ctx.globalAlpha=state.center.alpha;softGlow(ctx,state.center.x,state.center.y,state.center.r,p,true);}
     ctx.restore();
   }
-  function softGlow(ctx,x,y,r,p){
-    const radius=r*6.5,glow=ctx.createRadialGradient(x,y,0,x,y,radius);
-    glow.addColorStop(0,p.cream+'f2');glow.addColorStop(.07,p.cream+'d2');glow.addColorStop(.2,p.gold+'8c');glow.addColorStop(.48,p.gold+'28');glow.addColorStop(1,p.gold+'00');
+  function softGlow(ctx,x,y,r,p,invitation=false){
+    const radius=r*(invitation?8:6.5),glow=ctx.createRadialGradient(x,y,0,x,y,radius);
+    glow.addColorStop(0,p.cream+(invitation?'ff':'f2'));glow.addColorStop(.07,p.cream+(invitation?'e4':'d2'));glow.addColorStop(.2,p.gold+(invitation?'b0':'8c'));glow.addColorStop(.48,p.gold+(invitation?'38':'28'));glow.addColorStop(1,p.gold+'00');
     ctx.fillStyle=glow;ctx.fillRect(x-radius,y-radius,radius*2,radius*2);
   }
   return{Session,draw,total,breakDuration,get background(){return background();}};

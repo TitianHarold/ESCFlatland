@@ -51,13 +51,20 @@ for(const version of ['routine','rhythm']){
  if(version==='routine'){
   T.seekRaw(70.68);press();step(.05);assert.equal(snap().correction.node,'mold','touching the platform takes over even during a continuous hold');assert(snap().correction.held);assert.equal(snap().actions.factory.velocity,0,'old conveyor resistance stops at node entry');assert(snap().correction.effortProgress>0,'partly filled effort survives the behavior switch');release();
  }
- if(version==='routine'){T.seekRaw(72);const base=pos(T.plant().hero),point=T.point(base.x+100,base.y);press(point.x,point.y);step(.4);assert(distance(base,T.plant().hero)>3,'a mold click moves the actual child toward the selected edge');release();step(.5);T.draw();assert.equal(T.node('stage').dataset.correctionNode,'mold');assert.equal(T.node('stage').dataset.fatigue,'0.000');}
+ if(version==='routine'){T.seekRaw(72);const base=pos(T.plant().hero),point=T.point(base.x+100,base.y);press(point.x,point.y);step(.25);const dash=distance(base,T.plant().hero);assert(dash>35,'a mold click accelerates the actual child out toward the edge');step(.15);assert(distance(base,T.plant().hero)<dash*.2,'the sudden edge collision has already knocked the child back');release();step(.5);T.draw();assert.equal(T.node('stage').dataset.correctionNode,'mold');assert.equal(T.node('stage').dataset.fatigue,'0.000');}
+ if(version==='routine'){
+  for(const [raw,seconds]of [[72,.25],[79.5,.8],[83.5,.8]]){
+   T.seekRaw(raw);const ambient=snap().background;press();assert(snap().correction.processPaused,'the press owns the process immediately');step(seconds);assert.equal(snap().raw,raw,'the active station does not advance during its reaction');assert(snap().background>ambient,'background production keeps its own clock');
+   release();const releasedRaw=snap().raw;step(.15);assert.equal(snap().raw,releasedRaw,'return and settling finish before process time resumes');step(.65);assert(snap().raw>releasedRaw,'the same station resumes without another click');
+   T.seekRaw(raw);T.node('play').dispatch('click',{});step(.5);assert(snap().raw>raw,'station interaction is optional');
+  }
+ }
  T.seekRaw(60);press();step(.35);T.draw();assert.equal(T.node('effort-indicator').dataset.visible,'true');assert(snap().actions.factory.offset>0);
  assert(distance(T.view(),{x:T.plant().hero.x,y:T.plant().hero.y-160})<400,'gate tracking keeps the actual child inside its soft region');release();
  T.seekRaw(version==='routine'?77.05:77.15);press();step(.7);
  const first={hero:pos(T.plant().hero),camera:pos(T.view())};step(.3);T.draw();
  const second={hero:pos(T.plant().hero),camera:pos(T.view())};assert(distance(first.hero,second.hero)>1);assert(distance({x:second.camera.x-first.camera.x,y:second.camera.y-first.camera.y},{x:second.hero.x-first.hero.x,y:second.hero.y-first.hero.y})>1,'resistance moves the child within the image rather than locking it to the camera');
- step(2.3);T.draw();assert(snap().actions.factory.exhausted);assert.equal(T.node('effort-indicator').dataset.state,'exhausted');if(version==='routine')assert.equal(T.node('stage').dataset.blocked,'0.333');assert.equal(T.node('hold-indicator').dataset.visible,'false');
+ step(2.3);T.draw();assert(snap().actions.factory.exhausted);assert.equal(T.node('effort-indicator').dataset.state,'exhausted');if(version==='routine')assert.equal(T.node('stage').dataset.blocked,undefined);assert.equal(T.node('hold-indicator').dataset.visible,'false');
  T.node('stage').dispatch('blur',{});assert(!snap().actions.factory.held,'focus loss releases resistance');press();step(.6);assert(snap().actions.factory.exhausted);assert.equal(snap().actions.factory.effort,0);release();press();step(.08);assert(snap().actions.factory.weak>.7);release();T.seekRaw(77.2);T.node('stage').dispatch('keydown',{key:' ',repeat:false,preventDefault(){}});assert(snap().actions.factory.held);Q.sandbox.document.dispatch('keyup',{key:' ',preventDefault(){}});assert(!snap().actions.factory.held,'keyup outside stage still releases resistance');T.restart();assert.equal(snap().raw,0);assert.equal(snap().encounter.familyVisited.length,0);assert.equal(snap().actions.factory.fatigue,0);assert.equal(snap().inner.collected,0);assert.equal(snap().chaseGate.charge,0);assert.equal(snap().workGate.target,0);
  T.seekRaw(135);T.draw();assert.equal(T.ending().entityId,'hero-seed');assert(T.ending().r>3);Q.save('hands-seed');
  T.seekRaw(65);Q.save('overview');T.seekRaw(77.2);press();step(.7);T.draw();Q.save('resist');release();

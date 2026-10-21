@@ -235,10 +235,10 @@
     if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻摇晃、缓慢试探周围，父母保持沉稳的小幅动作；接触后的符号保留到下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
-    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子依次朝五个方向尝试逃离；对应边段突然扣合，将他挡回槽内。':state.correction.node==='compact'?(state.correction.releaseAge<.31?'夹具突然压回，身体被挤紧并短促震动。':state.correction.expansion>.01?'孩子膨胀身体，缓慢撑开夹具；阻力逐渐增强。':'孩子围绕稳定中心左右扭动，尝试挣脱夹具。'):state.correction.paintStage==='spray'?'机器已强制归正，喷嘴只向对齐的一面喷黑。':'孩子逆着机器转向扭动，随后被强制归正，再向对齐的一面喷黑。'};
+    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子短暂收紧后加速冲向边缘；对应边突然扣下，撞击把他顶回并挤压震动。':state.correction.node==='compact'?(state.correction.releaseAge<.31?'五段边条猛合回锁定位置，身体被挤紧并短促震动。':state.correction.expansion>.01?'身体膨胀，五段固定长度的边条各自外移，角部接缝被撑开。':'孩子围绕稳定中心左右扭动，尝试挣脱夹具。'):state.correction.paintStage==='spray'?'机器已强制归正，喷嘴只向对齐的一面喷黑。':'点击拖住当前转位，长按逆时针扭回一点；机器随后夺回控制，归正后再喷黑。'};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'长按让孩子收紧、左右向后挣扎，圆环随持续用力而消耗；输送带与机器继续运行。'};
     if(workPhase(time)){const progress=workProgress.snapshot();return{...base,action:progress.phase==='fade'?'画面持续、平滑地变黑；更密集的点击会加快变黑，工位继续循环。':progress.phase==='wide'?'镜头已到最远，密集工位保持循环，画面自动连续变黑。':'点击让所有工位的循环加快，镜头进一步拉远；等待时继续当前的机械循环。'};}
-    if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸，圆环逐渐蓄满。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
+    if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸；蓄力末段身体逐渐拉散为沿右上方向流动的细长彩色形体。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
     return base;
   }
   function interfaceState(v,time=sceneTime()){
@@ -249,7 +249,7 @@
     stage.dataset.endingPhase=time>=132?ending.snapshot().phase:'';stage.dataset.peeled=String(peel.snapshot().filter(value=>value>=1).length);stage.dataset.paused=String(state.reviewPaused);stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
     if(!workbench){$('replay').hidden=time<132||!ending.snapshot().complete;return;}
     const snapshot=inInner(time)?innerState():null;
-    const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.awaitingCenter?'内心已经全部点亮，中央柔光等待点击；点亮它后，画面才缓慢收回光中。':snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；全亮后等待点击中央光点，再缩回身体，从体内飞出并引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
+    const notes=snapshot?{summary:'黑暗中亮点游动。点击捕捉后，所在位置留下流动色带；亮区沿各自轮廓扩散、连通，照亮整个内心。',action:snapshot.awaitingCenter?'内心已经全部点亮，中央柔光缓慢呼吸、明暗起伏，等待点击；点亮它后才缓慢收回光中。':snapshot.phase==='break'||snapshot.done?'已点亮的区域从实际捕捉的位置向外生长、连成一片；全景亮透后收回身体内的同一颗光种子。':snapshot.collected?'已经点亮的局部持续翻卷，其余亮点仍在暗处游动，等待捕捉。':'暗层缓慢运动，亮点闪烁游动，短光迹指示它的方向。',camera:'保持内心全景；全亮后等待点击中央光点，再缩回身体，从体内飞出并引导右上方追逐。'}:actionNotes(time,version.notes.at(time));
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(displayTime*100);$('progress').style.setProperty('--p',`${displayTime/duration*100}%`);
@@ -261,11 +261,11 @@
   function updateEffortIndicator(v,time){
     const node=$('effort-indicator');if(!node)return;
     const effort=actions.snapshot().factory,progress=correction&&time>=64&&time<96?factory.nodeProgress(time):null;
-    const visible=player.mode==='interactive'&&(factoryPhase(time)||!!progress)&&(progress?.node||progress?.redFraction>0||effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted);
-    const blocked=progress?.redFraction||0,spent=progress?.node?state.correction?.effortProgress||0:effort.fatigue*(1-blocked),exhausted=blocked>=1||(progress?.node?state.correction?.exhausted:effort.exhausted);
+    const spent=progress?.node?state.correction?.effortProgress||0:effort.fatigue,exhausted=progress?.node?state.correction?.exhausted:effort.exhausted;
+    const visible=player.mode==='interactive'&&factoryPhase(time)&&(progress?.node?(state.correction?.held||state.correction?.level>.03||spent>.015):effort.held||effort.fatigue>.015||effort.pulse>.03||effort.exhausted);
     node.dataset.visible=String(!!visible);node.dataset.state=exhausted?'exhausted':'ready';
-    node.style.setProperty('--effort-progress',String(Math.min(1-blocked,spent)));node.style.setProperty('--effort-blocked',String(blocked));node.style.setProperty('--effort-color',palette.gold);
-    stage.dataset.fatigue=spent.toFixed(3);stage.dataset.blocked=blocked.toFixed(3);stage.dataset.exhausted=String(!!exhausted);stage.dataset.correctionNode=progress?.node||'';
+    node.style.setProperty('--effort-progress',String(spent));node.style.setProperty('--effort-color',palette.gold);
+    stage.dataset.fatigue=spent.toFixed(3);stage.dataset.exhausted=String(!!exhausted);stage.dataset.correctionNode=progress?.node||'';stage.dataset.processPaused=String(player.mode==='interactive'&&!!state.correction?.processPaused);
     if(!visible)return;
     const hero=factoryFrame(time).hero;if(!hero)return;
     const s=scale(v),x=state.w/2+(hero.x-v.x)*s,y=state.h/2+(hero.y-v.y)*s;
@@ -313,6 +313,9 @@
       state.factoryAmbient=timing.sceneAt(timing.playbackAt(Math.max(state.factoryAmbient,time))+dt);
       factory.setAmbientTime?.(state.factoryAmbient);
     }else factory.setAmbientTime?.(null);
+    const reactionWasActive=!!state.correction?.processPaused;
+    updateCorrection(dt);
+    const pauseProcess=player.mode==='interactive'&&(reactionWasActive||state.correction?.processPaused);
     if(player.mode==='interactive'&&chasePhase(time)){if(chaseProgress.snapshot().finishing)peel.finish();peel.update(dt);factory.setPeelState?.(peel.snapshot());}
     else factory.setPeelState?.(null);
     if(player.mode==='interactive'&&(familyPhase(time)||time<=encounterAPI.familyEnd+1e-7&&!encounter.snapshot().familyDone)){
@@ -346,7 +349,8 @@
       if(factoryPhase(time)&&time>=64&&!atNode&&(state.factoryKeyHeld||state.scenePointer==='factory'&&state.pointer!==null))actions.holdResistance(true);
       actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)&&!atNode?'factory':'',time,rawRate,beltSpeed:conveyorSpeed(time,rawRate),advance:player.playing});
       factory.setWorkTime?.(workPhase(time)?actions.snapshot().work.time:null);
-      player.tick(dt,time<110?timing.playbackAt(player.mode==='interactive'&&version.id==='routine'&&time<98?98:110):Infinity);
+      const ceiling=pauseProcess?Math.max(player.time,timing.playbackAt(state.correction.processStart??time)):time<110?timing.playbackAt(player.mode==='interactive'&&version.id==='routine'&&time<98?98:110):Infinity;
+      player.tick(dt,ceiling);
       const enteredNode=correction&&factory.nodeProgress(sceneTime()).node;
       if(enteredNode&&!atNode)actions.stopResistance();
       if(player.mode==='interactive'&&factoryPhase(time)&&time>=64&&!atNode&&!enteredNode){
@@ -359,7 +363,8 @@
       encounter.tick(dt,{automatic:player.mode==='auto',sceneTime:sceneTime(),transportResolved:true});
       if(player.mode==='interactive'&&time<58)player.time=timing.playbackAt(encounter.snapshot().sceneTime);
     }
-    updateCorrection(dt);updateLook(dt);updateCamera(dt);
+    if(sceneTime()!==time)updateCorrection(0);
+    updateLook(dt);updateCamera(dt);
   }
   function updateLook(dt){
     const time=sceneTime();
@@ -443,7 +448,7 @@
   function beginFactory(point){
     state.factoryPressPoint=point?worldPoint(point):undefined;
     const progress=correction&&factory.nodeProgress(sceneTime());
-    if(correction?.press(sceneTime(),state.factoryPressPoint,undefined,actions.snapshot().factory.fatigue*(progress?.capacity??1)))actions.stopResistance();
+    if(correction?.press(sceneTime(),state.factoryPressPoint,undefined,actions.snapshot().factory.fatigue*(progress?.capacity??1))){actions.stopResistance();updateCorrection(0);}
     else actions.holdResistance(true);
     resumeFlow();
   }
