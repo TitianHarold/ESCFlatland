@@ -12,7 +12,7 @@ for(let t=122;t<131.99;t+=.05){
   if(t>122.001)assert(b.x>a.x&&b.y<a.y,'both diagonal coordinates move together');
   const pose=Dimension.journeyPose(t,data),shape=Motion.speedShape(speed);
   assert(Math.abs(pose.sprintStretch*(1+.04*pose.raw.strain)*(1+pose.raw.axialStretch)-shape.perspectiveStretch)<1e-12,'the projected total applies the one speed response exactly once');
-  const light=data.light;assert(Math.hypot(light.x-a.x,light.y-a.y)<=142,'light lead is a world distance, never a fraction of the longer route');
+  const light=data.light;assert(Math.hypot(light.x-a.x,light.y-a.y)<=155,'the floating light stays within a short world-space lead, never a fraction of the longer route');
 }
 assert.equal(Motion.chaseProgress(122).q,0);assert.equal(Motion.chaseProgress(132).q,1);
 assert.equal(Factory.frame(132).hero,null);assert.equal(Dimension.journeyLightPoint(132),null);

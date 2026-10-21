@@ -1,8 +1,8 @@
 /* Two story edits share the family, input model and final chase. */
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'),require('./camera.js'),require('./story-notes.js'),require('./factory.js'),require('./factory-routine.js'),require('./office-world.js'));
-  else root.FlatlandStoryVersions=factory(root.FlatlandTiming,root.FlatlandCamera,root.FlatlandStoryNotes,root.FlatlandFactory,root.FlatlandRoutineFactory,root.FlatlandOfficeWorld);
-})(typeof globalThis!=='undefined'?globalThis:this,function(Timing,Camera,StoryNotes,Factory,RoutineFactory,Office){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./story-timing.js'),require('./camera.js'),require('./story-notes.js'),require('./factory.js'),require('./factory-routine.js'),require('./office-world.js'),require('./district.js'));
+  else root.FlatlandStoryVersions=factory(root.FlatlandTiming,root.FlatlandCamera,root.FlatlandStoryNotes,root.FlatlandFactory,root.FlatlandRoutineFactory,root.FlatlandOfficeWorld,root.FlatlandDistrict);
+})(typeof globalThis!=='undefined'?globalThis:this,function(Timing,Camera,StoryNotes,Factory,RoutineFactory,Office,District){
   'use strict';
   if(!Timing||!Camera||!StoryNotes||!Factory||!RoutineFactory||!Office)throw new Error('Load timing, camera, notes, both factories and office-world before story-versions.js.');
   const clamp=(value,a,b)=>Math.max(a,Math.min(b,value)),ease=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
@@ -14,9 +14,9 @@
     }
     return Object.freeze({duration:cuts.at(-1)[1],sceneAt:t=>map(t,1,0),playbackAt:t=>map(t,0,1)});
   }
-  const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,18],[58,23.2],[64,26.2]];
-  const rhythmTiming=edit([...opening,[70,30.5],[72,31.5],[77,36.5],[87,41],[90,42],[98,46],[104,49],[110,54],[119,62],[122,65],[132,75],[138,79]]);
-  const routineTiming=edit([...opening,[67.4,29.2],[71.7,31.9],[76.7,34.6],[78.5,37.6],[81.6,39.6],[83.2,42.6],[94,47],[98,51.57142857142857],[104,60.31818181818182],[110,64.81818181818181],[119,73],[122,76],[132,86],[138,90]]);
+  const opening=[[0,0],[6.8,3],[15,7],[24,11],[42,20],[58,29.2],[64,32.2]];
+  const rhythmTiming=edit([...opening,[70,36.5],[72,40.5],[77,45.5],[80,49.5],[87,52.65],[90,56.65],[98,60.65],[104,63.65],[110,68.65],[119,76.65],[122,79.65],[132,89.65],[138,93.65]]);
+  const routineTiming=edit([...opening,[67.4,35.2],[71.7,40.6],[76.7,43.3],[78.5,49.3],[81.6,51.3],[83.2,57.3],[94,61.7],[98,66.27142857142857],[104,75.01818181818182],[110,79.51818181818181],[119,87.7],[122,90.7],[132,100.7],[138,104.7]]);
   const point=(value,fallback)=>Array.isArray(value)?{x:value[0],y:value[1]}:value||fallback;
   function fixed(points,zoom=.6){
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
@@ -24,7 +24,7 @@
   }
   function move(time,start,end,from,to,zoom,endZoom=zoom){const u=ease((time-start)/(end-start));return{...fixed([from],zoom),x:from.x+(to.x-from.x)*u,y:from.y+(to.y-from.y)*u,zoom:zoom+(endZoom-zoom)*u};}
   function shot(id,label,start,end,extra={}){return{id,label,start,end,...extra};}
-  const firstShots=Camera.shots.filter(s=>s.start<64);
+  const firstShots=Camera.shots.filter(s=>s.start<64).map(s=>s.id==='district'?{...s,end:District.timing.firstMove}:s.id==='inspection'?{...s,start:District.timing.firstMove}:s);
   const endingShots=[shot('chase','追光 · 图形长出体积',119,132,{space:'journey',follow:'hero'}),shot('dimension','白场 · 看见双手',132,138,{space:'pov'})];
   const rhythmShots=[...firstShots,
     shot('factory','006 · 全厂概览',64,70),shot('press','007 · 四组夹具',70,77),
@@ -39,7 +39,7 @@
     const shotAt=time=>shots.find(s=>time<s.end)||shots.at(-1);
     function pose(value){
       const time=clamp(Number(value)||0,0,138),current=shotAt(time);
-      if(time<64)return Camera.pose(time);
+      if(time<64)return{...Camera.pose(time),shotId:current.id};
       const a=Factory.anchors,stage=a.heroStages,discard=point(a.discard),overview=point(a.overview,a.factoryCenter);
       if(time>=119){
         const v={...Camera.pose(time),shotId:current.id};
@@ -88,18 +88,15 @@
       const factory=id==='routine'?RoutineFactory:Factory,a=factory.anchors;
       const wideEnd=id==='routine'?67.4:68.3;
       if(time<wideEnd)return v;
-      const firstEnd=id==='routine'?71.7:72;
-      if(time<firstEnd){
-        const from=point(a.approach||Factory.frame(70).hero),to=point(a.mold,a.heroStages.m1);
-        const dx=to.x-from.x,dy=to.y-from.y,length2=dx*dx+dy*dy;
-        const progress=length2?((hero.x-from.x)*dx+(hero.y-from.y)*dy)/length2:1;
-        // The overview dolly advances with actual belt travel, including a retreat.
-        const u=ease(progress/(id==='routine'?.49:1)),overview=a.overview;
+      const closeAt=id==='routine'?69.5:70.8;
+      if(time<closeAt){
+        const overview=a.overview,from=a.approach,u=ease((time-wideEnd)/(closeAt-wideEnd));
         const zoom=id==='routine'?(a.mold?.zoom||.95):.65;
-        return{...v,x:overview.x+(hero.x-overview.x)*u,y:overview.y+(hero.y-overview.y)*u,zoom:overview.zoom+(zoom-overview.zoom)*u};
+        // One uninterrupted editorial dolly; actual backward steps remain a 1:1 camera displacement.
+        return{...v,x:hero.x+(overview.x-from.x)*(1-u),y:hero.y+(overview.y-from.y)*(1-u),zoom:overview.zoom+(zoom-overview.zoom)*u};
       }
       if(id==='routine'&&time>=96){
-        const entryEnd=RoutineFactory.frame(98).hero,work=Office.anchors.work;
+        const entryEnd=RoutineFactory.anchors.officeArrival,work=Office.anchors.work;
         return{...v,x:hero.x+work.x-entryEnd.x,y:hero.y+work.y-entryEnd.y};
       }
       return{...v,x:hero.x,y:hero.y};
@@ -108,7 +105,7 @@
   }
   function rhythmNotes(time){
     if(time<64)return StoryNotes.at(time);
-    if(time<70)return{summary:'19排身份专线持续运转，四组夹具沿主角所在的加长传送带排列。',action:'居民沿带前进，四组夹具依次开合。',camera:'工厂全景，显示传送带与夹具的排列。'};
+    if(time<70)return{summary:'较近全景展示几条完整流水线，更多轨道铺满四边；实际19排专线持续运行，四组夹具沿主角专线排列。',action:'居民沿带前进，四组夹具依次开合。',camera:'较近工厂全景，完整生产线清晰，更多轨道铺满四边；随后一次连续平滑推近，不卡住再跳变。'};
     if(time<77){
       const groups={closing:[],rising:[],waiting:[],ready:[]},names=['第一','第二','第三','第四'];
       Factory.pressProgram.programs.forEach((program,index)=>{
@@ -131,11 +128,11 @@
   }
   function routineNotes(time){
     if(time<64)return StoryNotes.at(time);
-    if(time<67.4)return{summary:'12排并行轨道上，居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'完整保持3秒工厂全景，显示12排并行轨道与三道工序的排列。'};
-    if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿加长传送带接近张开的五边套模工位；点击会收紧并向左后、右后摆动，保持朝向逆行，体力消耗满格变红后失力。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'相机按主角实际输送位置从全景推近，停步时不再前推，后退时同步后退；套模时保持俯视中景。'};
-    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长传送带移向成型压块；点击收紧并交替向左后、右后摆动，逆行受向前输送的阻尼，体力消耗圆环满格变红后卸力，被继续带走。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'镜头跟随主角真实位置移向压实工位，主角倒退时同步退回；机构在压紧接触后短促左右震动。'};
-    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长输送段上向喷涂工位移动；点击可保持朝向收紧并逆向挣扎，体力消耗累积满后突然变红、失力，再被传送带带走。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿主角实际位置跟至喷涂工位，停步和逆行同步跟随，喷涂时五边轮廓完整可见。'};
-    if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'跟随主角实际位置从喷涂工位移到工厂出口。':time<98?'经过门口遮挡切入办公室，跟随主角实际位置移向工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
+    if(time<67.4)return{summary:'较近全景看清几条完整流水线，更多轨道伸出四边；实际12排居民专线依次经过套模、压实和喷涂。',action:'传送带、工位和已经成形的居民同时运动。',camera:'完整保持3秒较近全景，几条完整线与三道工序清晰，轨道铺满四边；随后直接平滑推进。'};
+    if(time<76.7)return{summary:'主角经过加长的输送段进入五边套模工位。五段标准边框逐段靠近，按五边形的准确角度拼合成完整外框。',action:time<71.7?'主角沿加长传送带接近张开的五边套模工位；长按持续收紧并向左后、右后摆动，保持朝向逆行，按用力时长填满消耗圆环，变红后失力，松手休息才能恢复。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'相机一次平滑景别过渡推近真实主角，逆行位移1:1影响焦点；进入中景后直接随主角停步与后退。'};
+    if(time<81.6)return{summary:'主角经过加长的输送段进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿加长传送带移向成型压块；长按收紧并交替向左后、右后摆动，逆行受放慢的传送带牵制；用力时长填满消耗圆环，变红后卸力，点击仅无力抽搐，松手休息后恢复。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'镜头跟随主角真实位置移向压实工位，主角倒退时同步退回；机构在压紧接触后短促左右震动。'};
+    if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角在加长输送段上向喷涂工位移动；长按可保持朝向收紧并逆向挣扎，按持续用力累积消耗，满格变红后失力，再被传送带带走。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿主角实际位置跟至喷涂工位，停步和逆行同步跟随，喷涂时五边轮廓完整可见。'};
+    if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'拉到最远即自动连续变黑，所有工位继续循环；密集点击可进一步加速，无须额外点击才启动。',camera:time<96?'跟随主角实际位置从喷涂工位移到工厂出口。':time<98?'经过门口遮挡切入办公室，跟随主角实际位置移向工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
     if(time<119)return StoryNotes.at(time);
     if(time<132)return{summary:'身体内的同一颗光种子飞出，在近处引导，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<119.6?'光种子暂留主角身体内。':time<122?'同一颗光种子从体内飞出，再近身绕行；主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；两侧图形沿速度函数拉伸，从小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方；冲刺两侧持续保留参照物。'};
     return StoryNotes.at(time);

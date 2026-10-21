@@ -54,6 +54,7 @@ for(let i=1;i<600;i++){
   const raw=escortStart+i/30*2.2;if(raw>=58)break;
   if(i===30||i===35||i===40)assert(controller.activate('escort'));
   controller.tick(1/30,{sceneTime:raw});frame=controller.applyFrame(District.frame(raw));noOverlap(frame);
+  if(raw>escortStart+8.5)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))assert(!guard.collision.blocked,'click resistance must not strand a guard in a doorway');
   const child=actor(frame,'hero'),canonical=District.frame(raw).hero;if(controller.snapshot().effects.resistance>.05&&controller.snapshot().effects.lag>.35)assert(Math.abs(Math.atan2(Math.sin(child.body.angle-controller.resistanceFacing),Math.cos(child.body.angle-controller.resistanceFacing)))<.1,'click resistance keeps its original facing');maxLag=Math.max(maxLag,Math.hypot(child.body.x-canonical.x,child.body.y-canonical.y));
   if(raw>escortStart+2.5&&raw<escortStart+10)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))closestGuard=Math.min(closestGuard,C.distance(child.actor.outline(child.body),guard.actor.outline(guard.body)));
 }

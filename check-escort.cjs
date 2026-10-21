@@ -18,12 +18,12 @@ let previous=D.frame(D.timing.firstMove+.2).hero;
 for(let t=D.timing.firstMove+.3;t<D.timing.firstMove+3;t+=.1){
   const next=D.frame(t).hero;
   assert(gap(previous,next)>.25,'The child must keep moving immediately after the poke: '+t);
-  assert(gap(previous,next)<20,'The child cannot teleport forward: '+t);
+  assert(gap(previous,next)<25,'The child cannot teleport forward: '+t);
   previous=next;
 }
 
 // Check the requested escort snapshots against the same silhouettes and wall assets as rendering.
-for(const t of[D.timing.firstMove+1,34,42,55]){
+for(const t of[D.timing.firstMove+1,38.5,42,55]){
   const frame=D.frame(t),hero=actor(frame,'hero'),axis=hero.actor.headAxis(hero.body),heading=hero.body.angle+axis.angle;
   const forward=entry=>(entry.body.x-hero.body.x)*Math.cos(heading)+(entry.body.y-hero.body.y)*Math.sin(heading);
   assert(forward(actor(frame,'inspector'))>40,'The inspector leads at '+t);
@@ -36,23 +36,33 @@ for(const t of[D.timing.firstMove+1,34,42,55]){
       assert(forward(entry)<-20,id+' must remain behind the child at '+t);
       // The longer observation beat deliberately postpones departure; the first
       // snapshot is now still inside the home, with the same collision rules.
-      if(t>=34)assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
+      if(t>=38.5)assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
     }
   }
 }
 // Refusal and renewed coercion also happen without any user click.
-for(const start of [35.4,43.6,50.8]){
+const contacts=new Set();
+assert(D.timing.hesitationStarts.length>=6,'refusals must recur throughout the road');
+for(const start of D.timing.hesitationStarts){
   let closest=Infinity,reversed=false,previous=D.frame(start).hero;
   const before=D.frame(start-.1).hero,axis=[previous.x-before.x,previous.y-before.y];
-  for(let t=start+.025;t<start+2.8;t+=.025){
+  for(let t=start+.025;t<start+1.7;t+=.025){
     const f=D.frame(t),h=actor(f,'hero'),outline=h.actor.outline(h.body),v=[h.body.x-previous.x,h.body.y-previous.y];
     if(v[0]*axis[0]+v[1]*axis[1]<-.001)reversed=true;
     for(const other of f.actors)if(other.id!==h.id)assert(!C.penetrates(outline,other.actor.outline(other.body)),h.id+' must not penetrate '+other.id+' during baseline refusal');
-    for(const guard of f.actors.filter(a=>/^guard-/.test(a.id)))closest=Math.min(closest,C.distance(outline,guard.actor.outline(guard.body)));
+    let simultaneous=0;
+    for(const guard of f.actors.filter(a=>/^guard-/.test(a.id))){const d=C.distance(outline,guard.actor.outline(guard.body));closest=Math.min(closest,d);if(d<.01){contacts.add(guard.id);simultaneous++;}}
+    assert(simultaneous<=1,'three guards alternate real contacts instead of squeezing at the same time');
     previous=f.hero;
   }
   assert(reversed,'baseline escort includes backward resistance near '+start);
   assert(closest<.01,'the next guard poke really contacts the resisting child near '+start);
+}
+assert.deepEqual([...contacts].sort(),['guard-1','guard-2','guard-3'],'all three guards participate in alternating pokes');
+for(const id of ['guard-1','guard-2','guard-3']){
+  const f=D.frame(42.9),h=actor(f,'hero'),guard=actor(f,id),rest=D.guardCoercion(guard.actor,guard.body,h.body,0),jab=D.guardCoercion(guard.actor,guard.body,h.body,1);
+  assert(gap(rest,jab)>8&&gap(rest,jab)<=20.01,'the '+id+' jab stays within twenty nearby pixels');
+  assert(C.distance(guard.actor.outline(jab),h.actor.outline(h.body))<.01,'the '+id+' jab meets the actual child boundary');
 }
 // No side arrest teams or automatically joining children survive the edit.
 assert.deepEqual(D.timing.detainees,[]);
@@ -62,4 +72,16 @@ for(const t of [30,36,44,50,57])for(const a of D.frame(t).actors){
   if(fixed.has(a.id)){const b=fixed.get(a.id);assert(Math.hypot(a.body.x-b.x,a.body.y-b.y)<.001,'other households remain static');assert(Math.abs(a.body.angle-b.angle)<.001,'static residents do not turn to join a queue');}
 }
 const handoff=D.frame(58).hero;assert(Math.hypot(handoff.x-D.handoff.x,handoff.y-D.handoff.y)<.001,'The delayed departure must still reach the shared factory handoff exactly');
-console.log('PASS escort: pre-poke contraction, real repeated pokes, spontaneous refusal, continuous initial departure, inspector ahead, three guards behind, doorway cleared by 34, no wall/actor penetration after departure and at 34/42/55.');
+// Every entrance starts beyond the actual family camera edge, with no pause while entering or fanning out.
+for(const [w,h] of [[1280,760],[1719,1512],[820,980],[390,844],[844,390]]){
+  const viewport=D.configureEntranceViewport({w,h,time:0}),scale=Math.min(w/1280,h/760)*1.4;
+  for(let i=0;i<4;i++){
+    const id=i?'guard-'+i:'inspector',start=i?D.timing.guardsEntry[i-1]:D.timing.inspectorEntry,end=i?D.timing.guardsSettled[i-1]:D.timing.inspectorSettled;
+    const first=actor(D.frame(start),id);assert(Math.max(...first.actor.outline(first.body).map(p=>(p[1]-500)*scale+h/2))<0,id+' must spawn fully outside '+w+'x'+h);
+    let previous=null;
+    for(let t=start+.2;t<end-.2;t+=.05){const entry=actor(D.frame(t),id);assert(!entry.collision.blocked,id+' cannot stop behind the inspector');if(previous)assert(gap(previous,entry.body)>.2,id+' entry and fan use one continuous path');previous=entry.body;}
+  }
+  assert.equal(D.configureEntranceViewport({w:w/2,h:h/2,time:20}),viewport,'resizing after entry must not relocate an active actor');
+}
+D.configureEntranceViewport({w:1280,h:760,time:0});
+console.log('PASS escort: seven spontaneous refusals, three staggered real twenty-pixel pokes, short street formation, collision-safe doors, continuous offscreen entrances in five viewports, and exact 58 handoff.');

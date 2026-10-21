@@ -317,17 +317,14 @@
     }
     ctx.restore();return p;
   }
+  function paintSeedGlow(ctx,x,y,r,opacity=1){
+    const extent=Math.max(.1,r)*4.5,glow=ctx.createRadialGradient(x,y,0,x,y,extent);
+    glow.addColorStop(0,'rgba(255,255,248,1)');glow.addColorStop(.08,'rgba(255,246,211,.97)');
+    glow.addColorStop(.22,'rgba(250,215,139,.73)');glow.addColorStop(.50,'rgba(236,181,78,.22)');glow.addColorStop(1,'rgba(236,181,78,0)');
+    ctx.save();ctx.globalAlpha*=opacity;ctx.fillStyle=glow;ctx.fillRect(x-extent,y-extent,extent*2,extent*2);ctx.restore();
+  }
   function paintLight(ctx,p,position,radius=7){
-    const light=p(position);
-    if(light){
-      ctx.save();
-      const r=Math.max(2,radius*light[3]);ctx.globalAlpha=1;
-      const glow=ctx.createRadialGradient(light[0],light[1],0,light[0],light[1],r*3.5);
-      glow.addColorStop(0,'rgba(252,226,161,.76)');glow.addColorStop(1,'rgba(252,226,161,0)');
-      ctx.fillStyle=glow;ctx.beginPath();ctx.arc(light[0],light[1],r*3.5,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=street.lightCore;ctx.beginPath();ctx.arc(light[0],light[1],r*.62,0,Math.PI*2);ctx.fill();
-      ctx.restore();
-    }
+    const light=p(position);if(light)paintSeedGlow(ctx,light[0],light[1],Math.max(2,radius*light[3]));
   }
   // The fixed world-to-city bridge keeps paused scrubs independent of prior frames.
   const journeyStart=Factory.anchors.discard,journeyEnd=Factory.anchors.chaseEnd;
@@ -602,9 +599,7 @@
     ctx.save();ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
     // An unloaded asset leaves the deliberate white stop; no schematic hands are substituted.
     if(endingAssets.open){drawEndingHand(ctx,'left',pose.left,w,h);drawEndingHand(ctx,'right',pose.right,w,h);}
-    const light=endingLight(time,{w,h}),halo=ctx.createRadialGradient(light.x,light.y,light.r*.25,light.x,light.y,light.r*4.5);
-    halo.addColorStop(0,'rgba(229,181,82,.45)');halo.addColorStop(1,'rgba(229,181,82,0)');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(light.x,light.y,light.r*4.5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#e5b552';ctx.beginPath();ctx.arc(light.x,light.y,light.r,0,Math.PI*2);ctx.fill();
+    const light=endingLight(time,{w,h});paintSeedGlow(ctx,light.x,light.y,light.r);
     ctx.restore();return{...pose,light,assetStatus:endingAssets.status};
   }
   function seedLight(time,entry,guide){
@@ -616,12 +611,13 @@
       r:mix(6,guide.r||10,flight),inside:flight===0,phase:flight===0?'enclosed':flight<1?'emerge':guide.phase,entityId:'hero-seed'};
   }
   function paintArrivalLight(ctx,point,time,radius,w,h,enclosed=false){
-    if(!point)return;const arrival=ease(time,131,132),r=Math.max(3.3,radius*point[3]),spread=r*4+Math.hypot(w,h)*Math.pow(arrival,2.2)*1.3;
-    ctx.save();
-    const warm=ctx.createRadialGradient(point[0],point[1],r*.35,point[0],point[1],r*4);warm.addColorStop(0,'rgba(244,215,148,'+(.62*(1-arrival))+')');warm.addColorStop(1,'rgba(244,215,148,0)');ctx.fillStyle=warm;ctx.fillRect(point[0]-r*4,point[1]-r*4,r*8,r*8);
-    const halo=ctx.createRadialGradient(point[0],point[1],0,point[0],point[1],Math.max(1,spread));
-    halo.addColorStop(0,enclosed?Palette.gold:'rgba(255,255,255,1)');halo.addColorStop(arrival?Math.min(.72,.12+arrival*.6):.12,enclosed?Palette.gold+'65':'rgba(255,255,255,'+(.28+.72*arrival)+')');halo.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);ctx.fillStyle=enclosed?Palette.gold:'#ffffff';ctx.beginPath();ctx.arc(point[0],point[1],r*(.65+2.8*arrival),0,Math.PI*2);ctx.fill();
+    if(!point)return;const arrival=ease(time,131,132),r=mix(Math.max(3.3,radius*point[3]),endingLight(132,{w,h}).r,arrival),spread=r*4+Math.hypot(w,h)*Math.pow(arrival,2.2)*1.3;
+    ctx.save();paintSeedGlow(ctx,point[0],point[1],r);
+    if(arrival>0){
+      const halo=ctx.createRadialGradient(point[0],point[1],0,point[0],point[1],Math.max(1,spread));
+      halo.addColorStop(0,'rgba(255,255,255,1)');halo.addColorStop(Math.min(.72,.12+arrival*.6),'rgba(255,255,255,'+(.28+.72*arrival)+')');halo.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);
+    }
     const complete=ease(time,131.72,132);if(complete>0){ctx.globalAlpha=complete;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
     ctx.restore();
   }
@@ -635,13 +631,13 @@
     return{state,view,w,h,pathHeading};
   }
   function projectJourneyLight(time,layout,data,project=projection(layout.view,layout)){
-    const {state,pathHeading,w,h}=layout;
-    const near=data.light?[data.light.x,data.light.y]:[state.raw.x+Math.cos(pathHeading-bridgeAngle)*100,state.raw.y+Math.sin(pathHeading-bridgeAngle)*100];
-    const target=ease(time,122.5,125),end=[journeyEnd.x+Math.cos(endHeading)*20,journeyEnd.y+Math.sin(endHeading)*20];
-    const light=worldToCity([mix(near[0],end[0],target),mix(near[1],end[1],target),data.light?.z||0]);
-    const lightPoint=project(light);
-    // Keep the one destination point inside the upper-right field while the early, nearly flat view still has its vanishing point beyond the frame.
-    if(time>=122&&lightPoint){lightPoint[0]=clamp(lightPoint[0],w*.55,w*.80);lightPoint[1]=clamp(lightPoint[1],h*.18,h*.45);}
+    const {state,pathHeading,w,h}=layout,guide=data.light;
+    const near=guide?[guide.x,guide.y]:[state.raw.x+Math.cos(pathHeading-bridgeAngle)*100,state.raw.y+Math.sin(pathHeading-bridgeAngle)*100];
+    // At the held story gate the world current keeps moving, including its one guiding seed.
+    const extra=Math.max(0,finite(data.chase?.travel,time-119)-finite(data.chase?.baseTravel,time-119));
+    if(time>=122&&guide?.guideOffset&&extra){const offset=Factory.guideOffset(time+extra,guide.guideHeading);near[0]+=offset[0]-guide.guideOffset[0];near[1]+=offset[1]-guide.guideOffset[1];}
+    const lightPoint=project(worldToCity([near[0],near[1],guide?.z||0]));
+    if(lightPoint){const settle=ease(chaseArrivalTime(time,data),131,132),end=endingLight(132,{w,h});lightPoint[0]=mix(lightPoint[0],end.x,settle);lightPoint[1]=mix(lightPoint[1],end.y,settle);}
     return lightPoint;
   }
   function journeyLightPoint(time,camera={},viewport={},data={}){
@@ -664,5 +660,5 @@
   function draw(ctx,time,camera={},viewport={},ambient=time,data={}){
     drawJourney(ctx,Math.min(time,138),camera,viewport,ambient,data);
   }
-  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,endingLight,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,seedLight});
+  return Object.freeze({draw,drawJourney,drawEnding,setEndingAssets,endingPose,endingLight,anchor,defaultProjection,journeyPose,journeyLightPoint,paintArrivalLight,paintSeedGlow,seedLight});
 });

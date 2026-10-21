@@ -14,7 +14,7 @@
       this.epoch=(this.epoch||0)+1;this.appliedEpoch=-1;
       this.stage=this.sceneTime>=familyEnd?'done':this.sceneTime>=contactEnd?'return':this.sceneTime>=6.8?'mother':'father';
       this.mark=this.markAt(this.sceneTime);this.markAtAmbient=0;
-      this.reactions={};this.resistanceFacing=null;this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
+      this.reactions={};this.resistanceFacing=null;this.clickPoker=0;this.shiver=0;this.resistance=0;this.lag=0;this.fatigue=0;this.poke=0;this.lastPoke=-Infinity;
       return this.snapshot();
     }
     ensureFamily(){
@@ -34,7 +34,7 @@
       }
       if(target==='authority'&&this.sceneTime>=familyEnd&&this.sceneTime<District.timing.firstMove){this.shiver=.58;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;}
       if(target==='escort'&&this.sceneTime>=District.timing.firstMove&&this.sceneTime<54&&this.fatigue<4.2){
-        if(this.lag<.03||this.resistanceFacing===null)this.resistanceFacing=this.previous?.hero?.body?.angle??District.frame(this.sceneTime).hero.body.angle;
+        if(this.lag<.03||this.resistanceFacing===null){this.resistanceFacing=this.previous?.hero?.body?.angle??District.frame(this.sceneTime).hero.body.angle;this.clickPoker=this.clickPoker%3+1;}
         this.resistance=Math.min(.9,this.resistance+.26);this.fatigue+=.27;this.mark='exclamation';this.markAtAmbient=this.ambient;this.epoch++;return true;
       }
       return false;
@@ -59,10 +59,9 @@
         if(Number.isFinite(options.sceneTime))this.sceneTime=Math.max(familyEnd,options.sceneTime);
         const resisting=this.resistance>0&&this.sceneTime<54&&this.fatigue<4.2;
         this.resistance=Math.max(0,this.resistance-dt);
-        const before=this.lag;
         this.lag=resisting?Math.min(1.15,this.lag+dt*3.8):Math.max(0,this.lag-dt*.95);
         if(resisting)this.fatigue+=dt*.4;
-        if(before>this.lag&&before>.12&&this.poke===0)this.poke=.22;
+        if(resisting&&this.resistance===0&&this.lag>.12)this.poke=.22;
         if(this.sceneTime>=54){this.lag=Math.min(this.lag,Math.max(0,58-this.sceneTime)*.18);this.resistance=0;}
       }
       return this.snapshot();
@@ -86,20 +85,17 @@
       }else if(this.sceneTime<58){
         if(this.shiver>0){const age=.58-this.shiver;hero.body.x+=5*Math.sin(age*78)*Math.sin(Math.PI*age/.58);hero.body.edgeBends=C.actors.child.vertices.map((_,i)=>.25+.12*Math.sin(age*54+i));hero.body.fear=.35;}
         if(this.sceneTime>=District.timing.firstMove&&this.lag>0){
-          const delayed=District.frame(Math.max(District.timing.firstMove,this.sceneTime-this.lag)).hero.body;
+          const delayedTime=Math.max(District.timing.firstMove,this.sceneTime-this.lag),delayedFrame=District.frame(delayedTime),delayed=delayedFrame.hero.body;
           const facing=hero.body.angle,locked=this.resistanceFacing??facing;
           hero.body={...delayed,angle:facing+shortest(facing,locked)*clamp(this.lag/.35),bend:Math.max(delayed.bend||0,this.resistance>0?.28:0),fear:this.resistance>0?.4:delayed.fear};
           if(this.resistance>0){hero.body.strain=.28;hero.body.axialStretch=-.07*clamp(this.resistance/.9);}
           const inspector=frame.actors.find(entry=>entry.id==='inspector');
           if(inspector){const head=inspector.actor.headAxis(inspector.body);inspector.body.angle+=shortest(inspector.body.angle,Math.atan2(hero.body.y-inspector.body.y,hero.body.x-inspector.body.x)-head.angle)*clamp(this.lag/.2);}
-          const guard=frame.actors.find(entry=>entry.id==='guard-2');
-          if(guard&&this.resistance<=0&&this.lag>.12){
-            const direction=Math.atan2(hero.body.y-guard.body.y,hero.body.x-guard.body.x),axis=guard.actor.headAxis(guard.body);
-            guard.body.angle=direction-axis.angle;
-            // Advance the guard tip only as far as actual contact, without crossing the child silhouette.
-            const start={...guard.body},distance=Math.hypot(hero.body.x-start.x,hero.body.y-start.y),shape=hero.actor.outline(hero.body);let low=0,high=distance;
-            for(let i=0;i<20;i++){const mid=(low+high)/2,body={...start,x:start.x+Math.cos(direction)*mid,y:start.y+Math.sin(direction)*mid};if(C.penetrates(guard.actor.outline(body),shape))high=mid;else low=mid;}
-            const amount=Math.min(low,28);guard.body.x+=Math.cos(direction)*amount;guard.body.y+=Math.sin(direction)*amount;
+          const age=.22-this.poke,poker=District.escortProximity(delayedTime,this.clickPoker)>.98?this.clickPoker:2;
+          const poke=this.resistance<=0&&this.lag>.12&&this.poke>0?ease(age/.06)*(1-ease((age-.12)/.1)):0;
+          for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id))){
+            const source=delayedFrame.actors.find(entry=>entry.id===guard.id)?.body||guard.body;
+            const index=Number(guard.id.slice(-1));guard.body=District.guardCoercion(guard.actor,source,hero.body,index===poker?poke:0,District.escortProximity(delayedTime,index));
           }
         }
       }

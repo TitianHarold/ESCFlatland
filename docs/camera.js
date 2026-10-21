@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory(require('./motion.js'));
-  else root.FlatlandCamera=factory(root.FlatlandMotion);
-})(typeof globalThis!=='undefined'?globalThis:this,function(Motion){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./motion.js'),()=>require('./district.js').timing);
+  else root.FlatlandCamera=factory(root.FlatlandMotion,()=>root.FlatlandDistrict?.timing);
+})(typeof globalThis!=='undefined'?globalThis:this,function(Motion,encounterTiming){
   'use strict';
   const duration=138, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const frame=(time,x,y,zoom,tilt=0,yaw=0)=>({time,x,y,zoom,tilt,yaw});
@@ -10,7 +10,12 @@
   const medium=factoryPoint(-120,130),exitView=factoryPoint(-1200,260),discard=factoryPoint(-2200,390);
   const factoryMedium=time=>frame(time,medium.x,medium.y,.6);
   const chaseScreenHeading=-Math.PI/5,bridgeYaw=1.0664437894592371;
-  const departureFrames=[frame(15,800,500,1.4),frame(25.9,800,500,1.4),frame(34.6,100,-50,.9),frame(42,-800,-550,.34)];
+  let departureStart,departureFrames;
+  function departurePlan(){
+    const start=encounterTiming?.()?.firstMove??25.9;
+    if(start!==departureStart){departureStart=start;departureFrames=[frame(15,800,500,1.4),frame(start,800,500,1.4),frame(start+(42-start)/2,100,-50,.9),frame(42,-800,-550,.34)];}
+    return departureFrames;
+  }
   const shots=[
     {id:'family',label:'001 · 家庭',start:0,end:17.3,frames:[frame(0,800,500,1.4),frame(17.3,800,500,1.4)]},
     {id:'district',label:'002 · 包围后带走 · 拉远',start:17.3,end:27.6,frames:[frame(17.3,800,500,1.4),frame(27.6,100,-50,.9)]},
@@ -38,7 +43,7 @@
     for(const key of ['x','y','zoom','tilt','yaw'])view[key]=a[key]+(b[key]-a[key])*q;
     // This editorial framing also remains available for deterministic shot previews.
     if(time>=15&&time<42){
-      let from=departureFrames[0],to=from;
+      const departureFrames=departurePlan();let from=departureFrames[0],to=from;
       for(const next of departureFrames){if(next.time<=time)from=next;else{to=next;break;}to=from;}
       let u=to.time===from.time?0:clamp((time-from.time)/(to.time-from.time),0,1);u=u*u*(3-2*u);
       for(const key of ['x','y','zoom'])view[key]=from[key]+(to[key]-from[key])*u;

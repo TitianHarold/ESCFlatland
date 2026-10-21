@@ -5,7 +5,6 @@
 #effort-indicator circle{fill:none;stroke-width:3}
 #effort-indicator .effort-track{stroke:#fff8}
 #effort-indicator .effort-fill{stroke:currentColor;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--effort-progress)*100)}
-#effort-indicator span{position:absolute;inset:0;display:grid;place-items:center;font:10px/1 sans-serif;color:currentColor}
 #effort-indicator[data-state="exhausted"]{color:#e74b47;animation:strength-fails .22s ease-out}
 @keyframes strength-fails{0%{transform:translate(-50%,-50%) scale(1.22)}100%{transform:translate(-50%,-50%) scale(1)}}
 @media(prefers-reduced-motion:reduce){#effort-indicator{transition:none}#effort-indicator[data-state="exhausted"]{animation:none}}

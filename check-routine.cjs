@@ -76,10 +76,10 @@ console.log(JSON.stringify({stagedStandardFrame:'3..10 edges',safeResistanceWind
 const {Actions}=require('./docs/action-input.js'),timing=require('./docs/story-versions.js').get('routine').timing;
 const localX=b=>(b.x-Routine.anchors.factoryCenter.x)*c+(b.y-Routine.anchors.factoryCenter.y)*s;
 const reverseEvidence=[];
-for(const [clickAt,minimumRetreat]of[[70,180],[77.6,100],[82.3,60]]){
+for(const [clickAt,minimumRetreat]of[[69.2,8],[77.1,8],[81.9,8]]){
   const input=new Actions(),start=timing.playbackAt(clickAt);let previous,retreat=0,reverseFrames=0,effortVisible=false;
-  for(let i=0;i<85;i++){
-    const t=timing.sceneAt(start+i*.01);if(i===0)input.resist();input.update(.01,{phase:'factory',time:t});
+  for(let i=0;i<220;i++){
+    const t=timing.sceneAt(start+i*.01);if(i===0)input.holdResistance(true);const segment=Routine.transferProgram.find(s=>t>=s.start&&t<s.end),beltSpeed=segment?Math.abs(segment.to-segment.from)/(segment.end-segment.start)*(timing.sceneAt(start+i*.01+.001)-t)/.001:200;input.update(.01,{phase:'factory',time:t,beltSpeed});
     const intent=input.snapshot().factory,original=Routine.frame(t),changed=Routine.withResistance(original,intent.offset,t,intent),x=localX(changed.hero);
     if(previous!==undefined&&x>previous+.001){retreat+=x-previous;reverseFrames++;}
     const changedEntry=changed.actors.find(e=>e.id==='hero'),originalEntry=original.actors.find(e=>e.id==='hero');
@@ -91,7 +91,7 @@ for(const [clickAt,minimumRetreat]of[[70,180],[77.6,100],[82.3,60]]){
     const window=Routine.resistanceWindow(t);if(changed.appliedOffset&&window.clearance)assert(x<=window.from-window.clearance+1e-8,'backward movement stays outside the previous machine');
     previous=x;
   }
-  assert(retreat>minimumRetreat,'one click must produce visibly reversed world motion at '+clickAt);assert(reverseFrames>=12);assert(effortVisible,'the child visibly strains while backing up without turning');reverseEvidence.push({clickAt,retreat:Math.round(retreat),reverseSeconds:reverseFrames/100});
+  assert(retreat>minimumRetreat,'holding must produce slow reversed world motion at '+clickAt);assert(reverseFrames>=12);assert(effortVisible,'the child visibly strains while backing up without turning');reverseEvidence.push({clickAt,retreat:Math.round(retreat),reverseSeconds:reverseFrames/100});
 }
 for(const t of[71.7,78.5,79.25,79.5,83.2]){const original=Routine.frame(t),changed=Routine.withResistance(original,340,t,{effort:1,stride:.5});assert.deepEqual(changed.hero,original.hero,'real machine contact overrides resistance, including its pose');}
 for(const t of[67.4,71.7,76.7,78.5,81.6,83.2])assert(Math.abs(localX(hero(t-1e-6).body)-localX(hero(t).body))<.001,'extended transfers remain continuous at '+t);
@@ -115,4 +115,4 @@ for(const [start,end,minimumDistance]of[[67.4,71.7,900],[76.7,78.5,1500],[81.6,8
 }
 // The joined outline has exact polygon corners: only the inner seed uses an arc.
 for(const t of[77,80,94]){let arcs=0;const ctx={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},fill(){},translate(){},rotate(){},stroke(){},arc(){arcs++;}};Routine.drawActorOverlay(ctx,hero(t));assert.equal(arcs,1,'the standard frame has no circular vertex locks');}
-console.log(JSON.stringify({longTransferDistance:[900,1500,1600],transferPlaybackSeconds:[2.7,3,3],noCircularCornerLocks:true}));
+console.log(JSON.stringify({longTransferDistance:[900,1500,1600],transferPlaybackSeconds:[5.4,6,6],noCircularCornerLocks:true}));

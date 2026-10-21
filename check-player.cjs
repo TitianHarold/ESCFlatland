@@ -94,16 +94,16 @@ for(const offset of[6.51,11.51,13]){
   assert.equal(entry.damage,departedDamage,'Empty fixture cycles cannot keep damaging the departed hero');
   assert.equal(entry.machine.contact,false,'A later empty closure cannot contact the departed hero');
 }
-assert.equal(A.timing.duration,79);assert.equal(B.timing.duration,90);
-assert.equal(A.duration,79);assert.equal(B.duration,90);
-assert.equal(A.timing.playbackAt(98)-A.timing.playbackAt(77),9.5,'The post-fixture factory actions retain their previous speed');
-assert.equal(A.timing.playbackAt(119)-A.timing.playbackAt(104),13,'The struggle and inner sequence are not stretched');
-assert.equal(A.timing.playbackAt(138)-A.timing.playbackAt(119),17,'Chase and POV retain their previous speed');
+assert.equal(A.timing.duration,93.65);assert.equal(B.timing.duration,104.7);
+assert.equal(A.duration,93.65);assert.equal(B.duration,104.7);
+assert(Math.abs(A.timing.playbackAt(98)-A.timing.playbackAt(77)-15.15)<1e-8,'Longer transfers leave time for sustained resistance');
+assert(Math.abs(A.timing.playbackAt(119)-A.timing.playbackAt(104)-13)<1e-8,'The struggle and inner sequence are not stretched');
+assert(Math.abs(A.timing.playbackAt(138)-A.timing.playbackAt(119)-17)<1e-8,'Chase and POV retain their previous speed');
 assert(A.notes.at(74.1).action.includes('第一、第二、第三、第四组夹具同时回升'),'Notes show concurrent fixture motion, not a single current group');
 assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
 assert(Math.abs(B.timing.playbackAt(67.4)-B.timing.playbackAt(64)-3)<1e-8,'B holds its opening factory overview for three seconds');
 assert(Math.abs(B.timing.playbackAt(110)-B.timing.playbackAt(104)-4.5)<1e-8,'B automatic fade matches the faster continuous input fade');
-for(const [start,end]of[[76.7,78.5],[81.6,83.2]])assert(Math.abs(B.timing.playbackAt(end)-B.timing.playbackAt(start)-3)<1e-8,'Each inter-station transfer leaves three real seconds for resistance');
+for(const [start,end]of[[76.7,78.5],[81.6,83.2]])assert(Math.abs(B.timing.playbackAt(end)-B.timing.playbackAt(start)-6)<1e-8,'Each inter-station transfer leaves six real seconds for resistance');
 assert(Math.abs(B.timing.playbackAt(119)-B.timing.playbackAt(110)-90/11)<1e-8,'The inner discovery preview keeps its original duration');
 const overview=B.camera.pose(64);
 for(const raw of[64.5,65.5,66.5,67.3999])for(const key of['x','y','zoom'])assert.equal(B.camera.pose(raw)[key],overview[key],'The full overview stays still before its later dolly');
@@ -155,6 +155,6 @@ const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.pl
 injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
 assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
 assert.equal(injected.target,alternateTiming.playbackAt(132));
-console.log('Version A/B: real-time offset fixtures, unchanged 79s/90s edits, continuous office pullback/inner episode, containment and chase hold passed.');
+console.log('Version A/B: real-time offset fixtures, slower 93.65s/104.7s edits, continuous office pullback/inner episode, containment and chase hold passed.');
 
 } finally {Factory.setPlaybackClock(time=>time);}

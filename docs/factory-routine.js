@@ -18,7 +18,8 @@
   const transferProgram=Object.freeze(transfers.map(([start,end,from,to,clearance])=>Object.freeze({start,end,from,to,clearance})));
   function transferAt(t){return transfers.find(([a,b])=>t>=a&&t<b);}
   function pose(actor,x,y,rotation=0){const p=world(x,y),b={x:p.x,y:p.y,angle:0,sx:1,sy:1,bend:0,strain:0,bounce:0,edgeBends:actor.vertices.map(()=>0),edgeStretch:actor.vertices.map(()=>1)};b.angle=angle-Math.PI+rotation-actor.headAxis(b).angle;return b;}
-  function vertices(actor,radius=71){const a=Math.atan2(...[actor.vertices[0][1],actor.vertices[0][0]]);return actor.vertices.map((_,i)=>[Math.cos(a+i*Math.PI*2/actor.vertices.length)*radius,Math.sin(a+i*Math.PI*2/actor.vertices.length)*radius]);}
+  const standardShapes=new WeakMap();
+  function vertices(actor,radius=71){if(radius===71&&standardShapes.has(actor))return standardShapes.get(actor);const a=Math.atan2(...[actor.vertices[0][1],actor.vertices[0][0]]),points=actor.vertices.map((_,i)=>[Math.cos(a+i*Math.PI*2/actor.vertices.length)*radius,Math.sin(a+i*Math.PI*2/actor.vertices.length)*radius]);if(radius===71)standardShapes.set(actor,points);return points;}
   function paintAt(t,n,start=83.2,end=94,actor=n===5?heroActor:ordinary[n-3]?.[0]){
     actor=actor||C.create({sides:n,radius:42});const delta=Math.PI*2/n,a0=Math.atan2(actor.vertices[0][1],actor.vertices[0][0]),base=-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle,wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
     let first=0;for(let i=1;i<n;i++)if(Math.abs(wrap(-Math.PI/2-base-a0-(i+.5)*delta))<Math.abs(wrap(-Math.PI/2-base-a0-(first+.5)*delta)))first=i;
@@ -75,47 +76,78 @@
     else{const source=Base.frame(t).actors.find(e=>e.id==='hero');if(!source)return null;b={...source.body,edgeBends:source.body.edgeBends?.map(()=>0)};}
     return routineEntry('hero',heroActor,b,P.blue,t,{routine:{time:t,...shellState(t,heroActor),seed:true,compacting:compactAt(t,78.5,81.6,heroActor,b),work:t>=96&&t<110,job:t>=98&&t<110?routePoint(t).job||0:0}});
   }
+  let workerTime=NaN,workerCache=[];
   function worker(t,row,slot){
+    if(t!==workerTime){workerTime=t;workerCache=[];}const key=row*2+slot;if(workerCache[key])return workerCache[key];
     const age=((t-64+row*.7+slot*18)%36+36)%36,actor=ordinary[row][slot],mapped=67.4+age/36*(96-67.4);
-    return routineEntry('routine-worker-'+row+'-'+slot,actor,productionPose(mapped,actor,lanes[row]),P.factory.workers[row%4],mapped,{row,slot,age});
+    return workerCache[key]=routineEntry('routine-worker-'+row+'-'+slot,actor,productionPose(mapped,actor,lanes[row]),P.factory.workers[row%4],mapped,{row,slot,age});
   }
   function lightAt(t){
     if(t<110)return undefined;if(t>=119)return Base.frame(t).light;
     const guide=Base.frame(119).light,reveal=.04+.14*between(t,110,113.2)+.82*between(t,113.2,116);
     return{...guide,reveal,inside:t<116,glow:.1+.45*reveal,entityId:'hero-seed',phase:t<113.2?'enclosed':t<116?'slit':'emerge'};
   }
-  function frame(t,bounds){
+  let productionTime=NaN,productionFrame;
+  function fullFrame(t,bounds){
     if(t<58||t>=132)return{actors:[],hero:null};const e=heroAt(t),actors=t>=96&&t<110?Office.actors(t,bounds):[];
     if(t<96)for(let r=0;r<lanes.length;r++)if(r!==2)for(let slot=0;slot<2;slot++)actors.push(worker(t,r,slot));if(e)actors.push(e);
-    const base=t>=119?Base.frame(t):null,result={actors,hero:e?.body||null,light:e?lightAt(t):undefined,burst:base?.burst||0,chase:base?.chase,routine:true,office:t>=96&&t<110,inner:t>=110&&t<119,outsideDarkness:between(t,104,110)};
-    if(bounds){const l=bounds.minX??bounds.left,r=bounds.maxX??bounds.right,top=bounds.minY??bounds.top,bottom=bounds.maxY??bounds.bottom;result.actors=actors.filter(a=>a.id==='hero'||a.body.x>l-90&&a.body.x<r+90&&a.body.y>top-90&&a.body.y<bottom+90);}return result;
+    const base=t>=119?Base.frame(t):null;
+    return{actors,hero:e?.body||null,light:e?lightAt(t):undefined,burst:base?.burst||0,chase:base?.chase,routine:true,office:t>=96&&t<110,inner:t>=110&&t<119,outsideDarkness:between(t,104,110)};
   }
-  function belt(ctx,y,t){rounded(ctx,beltEnd,y-78,beltStart-beltEnd,156,10,P.conveyor);const shift=t*48%72;for(let x=beltEnd-shift;x<beltStart;x+=72)line(ctx,[[x,y-65],[x,y+65]],P.factory.roller,1.6);}
+  function frame(t,bounds){
+    let result;if(t>=58&&t<96){if(t!==productionTime){productionTime=t;productionFrame=fullFrame(t);}result=productionFrame;}else result=fullFrame(t,bounds);
+    if(bounds){const l=bounds.minX??bounds.left,r=bounds.maxX??bounds.right,top=bounds.minY??bounds.top,bottom=bounds.maxY??bounds.bottom;return{...result,actors:result.actors.filter(a=>a.id==='hero'||a.body.x>l-90&&a.body.x<r+90&&a.body.y>top-90&&a.body.y<bottom+90)};}return result;
+  }
+  function belt(ctx,y,t,left=beltEnd,right=beltStart){rounded(ctx,left,y-78,right-left,156,10,P.conveyor);const start=beltEnd-(t*48%72);for(let x=start+Math.ceil((left-start)/72)*72;x<right;x+=72)line(ctx,[[x,y-65],[x,y+65]],P.factory.roller,1.6);}
   function machine(ctx,x,y,kind){rounded(ctx,x-154,y-124,308,248,18,P.metal);rounded(ctx,x-142,y-114,284,228,13,P.blue);rounded(ctx,x-120,y-91,240,182,10,P.paper);
     if(kind===2){ctx.beginPath();ctx.arc(x,y,100,0,Math.PI*2);ctx.strokeStyle=P.ink;ctx.lineWidth=7;ctx.stroke();rounded(ctx,x-13,y-124,26,31,5,P.industrial);}
   }
-  function drawFactory(ctx,t){setup(ctx);rounded(ctx,leftWall,-650,beltStart-leftWall,lanes.at(-1)+930,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j);}line(ctx,[[leftWall,-650],[leftWall,43]],P.outside.wall,22);line(ctx,[[leftWall,217],[leftWall,lanes.at(-1)+280]],P.outside.wall,22);ctx.restore();}
-  function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=96)Office.draw(ctx,t,bounds);else drawFactory(ctx,t);}
+  function drawFactory(ctx,t,bounds){
+    const layout=Base.backgroundLayout(bounds,lanes,leftWall,beltStart),{view,lines,columns,period}=layout;setup(ctx);
+    if(view)rounded(ctx,layout.left,view.top-4,layout.right-layout.left,view.bottom-view.top+8,0,P.factory.floor);else rounded(ctx,leftWall,-650,beltStart-leftWall,lanes.at(-1)+930,28,P.factory.floor);
+    for(const {y} of lines){belt(ctx,y,t,layout.left,layout.right);for(const column of columns)for(let j=0;j<3;j++){const x=stations[j]+column*period;if(layout.visible(x,y))machine(ctx,x,y,j);}}
+    if(t>=94){line(ctx,[[leftWall,-650],[leftWall,43]],P.outside.wall,22);line(ctx,[[leftWall,217],[leftWall,lanes.at(-1)+280]],P.outside.wall,22);}
+    ctx.restore();return layout;
+  }
+  function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=96)Office.draw(ctx,t,bounds);else drawFactory(ctx,t,bounds);}
   function drawEntry(ctx,t,bounds){if(t<64)Base.drawEntry(ctx,t,bounds);else drawBase(ctx,t,bounds);}
-  function drawOverlay(ctx,t,bounds){if(t>=96||t<64)return;setup(ctx);for(let r=0;r<lanes.length;r++){
-    const molding=r===2?(t>=71.7&&t<77?heroAt(t):null):[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x-stations[0])<1),moldActor=molding?.actor||(r===2?heroActor:ordinary[r][0]),moldBody=molding?.body||pose(moldActor,stations[0],lanes[r]),mold=moldAt(molding?.routine.time??71.7,71.7,76.7,moldActor);
-    ctx.save();ctx.translate(stations[0],lanes[r]);ctx.rotate(moldBody.angle-angle);
-    for(const face of mold.faces)if(!face.locked){line(ctx,[face.from,face.to],P.metal,12);line(ctx,[face.from,face.to],P.industrial,2.5);}
-    ctx.restore();
-    const y=lanes[r],entry=r===2&&t>=78.5&&t<82?heroAt(t):r===2?null:[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x-stations[1])<1),actor=entry?.actor||(r===2?heroActor:ordinary[r][0]),press=compactAt(entry?.routine.time??0,78.5,81.6,actor,entry?.body||pose(actor,stations[1],y));const x=stations[1];
-    ctx.save();ctx.translate(x,y);for(const face of press.faces){
-      poly(ctx,face.polygon,P.industrial);poly(ctx,face.pad,P.coral);
-      const [nx,ny]=face.normal,tx=-ny,ty=nx,bracket=14;
-      // Only the outer brace rattles; the loaded pad stays locked to its real support plane.
-      line(ctx,[.22,.78].map(q=>[lerp(face.from[0],face.to[0],q)+nx*bracket+press.recoil,lerp(face.from[1],face.to[1],q)+ny*bracket]),P.metal,2.5);
-      if(press.impact&&press.contact){ctx.save();ctx.globalAlpha=press.impact;
-        for(const side of [-1,1])line(ctx,[[face.point[0]+nx*3+tx*side*4,face.point[1]+ny*3+ty*side*4],[face.point[0]+nx*13+tx*side*9,face.point[1]+ny*13+ty*side*9]],P.gold,2.4);
-        poly(ctx,[[face.point[0]+nx*7,face.point[1]+ny*7],[face.point[0]+nx*12+tx*2,face.point[1]+ny*12+ty*2],[face.point[0]+nx*14-tx*2,face.point[1]+ny*14-ty*2]],P.metal);ctx.restore();
+  const previewDies=new WeakMap();
+  function previewDie(actor){
+    if(previewDies.has(actor))return previewDies.get(actor);const rotation=-Math.PI-actor.headAxis({sx:1,sy:1,bend:0,strain:0}).angle,c=Math.cos(rotation),s=Math.sin(rotation),points=vertices(actor).map(([x,y])=>[x*c-y*s,x*s+y*c]);
+    const faces=points.map((a,i)=>{const b=points[(i+1)%points.length],length=Math.hypot(b[0]-a[0],b[1]-a[1]);return{a,b,nx:(b[1]-a[1])/length,ny:-(b[0]-a[0])/length};});previewDies.set(actor,faces);return faces;
+  }
+  function drawRepeat(ctx,t,row,y,offset,layout){
+    const actor=row===2?heroActor:ordinary[row][0],faces=previewDie(actor),gap=12+9*Math.sin(t*1.6+row)*Math.sin(t*1.6+row);
+    for(let station=0;station<2;station++){const x=stations[station]+offset;if(!layout.visible(x,y))continue;
+      ctx.save();ctx.translate(x,y);for(const face of faces){const a=[face.a[0]+face.nx*gap,face.a[1]+face.ny*gap],b=[face.b[0]+face.nx*gap,face.b[1]+face.ny*gap];line(ctx,[a,b],station?P.industrial:P.metal,station?16:12);line(ctx,[a,b],station?P.coral:P.industrial,2.5);}ctx.restore();
+    }
+    const x=stations[2]+offset;if(layout.visible(x,y)){ctx.save();ctx.translate(x,y);ctx.rotate(t*.9+row);line(ctx,[[0,-96],[0,-77]],P.industrial,7);ctx.restore();}
+  }
+  function drawOverlay(ctx,t,bounds){
+    if(t>=96||t<64)return;const layout=Base.backgroundLayout(bounds,lanes,leftWall,beltStart),{lines,columns,period}=layout;
+    const child=productionTime===t?productionFrame.actors.find(e=>e.id==='hero'):null;setup(ctx);
+    for(const {row:r,y,virtual} of lines)for(const column of columns){const offset=column*period;
+      if(virtual||column!==0){drawRepeat(ctx,t,r,y,offset,layout);continue;}
+      let occupants;const residents=()=>occupants||(occupants=[worker(t,r,0),worker(t,r,1)]);
+      if(layout.visible(stations[0],y)){
+        const molding=r===2?(t>=71.7&&t<77?child||heroAt(t):null):residents().find(e=>Math.abs(local(e.body).x-stations[0])<1),moldActor=molding?.actor||(r===2?heroActor:ordinary[r][0]),moldBody=molding?.body||pose(moldActor,stations[0],y),mold=moldAt(molding?.routine.time??71.7,71.7,76.7,moldActor);
+        ctx.save();ctx.translate(stations[0],y);ctx.rotate(moldBody.angle-angle);for(const face of mold.faces)if(!face.locked){line(ctx,[face.from,face.to],P.metal,12);line(ctx,[face.from,face.to],P.industrial,2.5);}ctx.restore();
+      }
+      if(layout.visible(stations[1],y)){
+        const entry=r===2&&t>=78.5&&t<82?child||heroAt(t):r===2?null:residents().find(e=>Math.abs(local(e.body).x-stations[1])<1),actor=entry?.actor||(r===2?heroActor:ordinary[r][0]),press=compactAt(entry?.routine.time??0,78.5,81.6,actor,entry?.body||pose(actor,stations[1],y));
+        ctx.save();ctx.translate(stations[1],y);for(const face of press.faces){
+          poly(ctx,face.polygon,P.industrial);poly(ctx,face.pad,P.coral);const [nx,ny]=face.normal,tx=-ny,ty=nx,bracket=14;
+          line(ctx,[.22,.78].map(q=>[lerp(face.from[0],face.to[0],q)+nx*bracket+press.recoil,lerp(face.from[1],face.to[1],q)+ny*bracket]),P.metal,2.5);
+          if(press.impact&&press.contact){ctx.save();ctx.globalAlpha=press.impact;for(const side of [-1,1])line(ctx,[[face.point[0]+nx*3+tx*side*4,face.point[1]+ny*3+ty*side*4],[face.point[0]+nx*13+tx*side*9,face.point[1]+ny*13+ty*side*9]],P.gold,2.4);poly(ctx,[[face.point[0]+nx*7,face.point[1]+ny*7],[face.point[0]+nx*12+tx*2,face.point[1]+ny*12+ty*2],[face.point[0]+nx*14-tx*2,face.point[1]+ny*14-ty*2]],P.metal);ctx.restore();}
+        }ctx.restore();
+      }
+      if(layout.visible(stations[2],y)){
+        const painting=r===2?child||heroAt(t):residents().find(e=>e.routine.time>=83.2&&e.routine.time<94&&Math.abs(local(e.body).x-stations[2])<1),paint=painting?paintAt(painting.routine.time,painting.actor.vertices.length,83.2,94,painting.actor):{spraying:false};
+        if(paint.spraying){ctx.save();ctx.globalAlpha=.32;poly(ctx,[[stations[2]-25,y-113],[stations[2]+25,y-113],[stations[2]+49,y-30],[stations[2]-49,y-30]],P.ink);ctx.restore();}
       }
     }ctx.restore();
-    const painting=r===2?heroAt(t):[worker(t,r,0),worker(t,r,1)].find(e=>e.routine.time>=83.2&&e.routine.time<94&&Math.abs(local(e.body).x-stations[2])<1),paint=painting?paintAt(painting.routine.time,painting.actor.vertices.length,83.2,94,painting.actor):{spraying:false};if(paint.spraying){ctx.save();ctx.globalAlpha=.32;poly(ctx,[[stations[2]-25,y-113],[stations[2]+25,y-113],[stations[2]+49,y-30],[stations[2]-49,y-30]],P.ink);ctx.restore();}
-  }ctx.restore();}
-  function drawActorOverlay(ctx,entry){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;
+  }
+  function drawActorOverlay(ctx,entry,paintLight){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;
     // Paint is a cumulative spatial mask. The unpainted parts still reveal the live inner window.
     ctx.save();poly(ctx,points);ctx.clip();if(s.paint.every(v=>v>=.999999))poly(ctx,points,P.black);else for(let i=0;i<n;i++){const coverage=s.paint[i];if(!coverage)continue;const a=points[i],b=points[(i+1)%n];ctx.save();ctx.globalAlpha=coverage;poly(ctx,[[0,0],a,b],P.black);ctx.restore();}ctx.restore();
     const joined=s.mold.complete&&s.release.every(v=>v===0);
@@ -125,19 +157,19 @@
       ctx.restore();}}
     // Each strip leaves independently and stays behind, rather than reforming into a badge.
     if(s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const age=s.time-(123.5+i*.58);if(age<=0||age>3.2)continue;const a=points[i],b=points[(i+1)%n],drift=210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.black,12);line(ctx,[a,b],P.black,2.5);ctx.restore();}}
-    if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();if(awakening){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
+    if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();if(paintLight)paintLight(ctx,-7,7,painted>.2?3.7+awakening*2:6);else{ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();}if(awakening&&!paintLight){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   const anchor=(x,y,zoom)=>Object.freeze({...world(x,y),zoom});
-  const anchors=Object.freeze({...Base.anchors,overview:anchor(-1490,1050,.11),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),lanes:Object.freeze([...lanes]),floorBounds:Object.freeze({left:leftWall,right:beltStart,top:-650,bottom:lanes.at(-1)+280}),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
+  const anchors=Object.freeze({...Base.anchors,overview:anchor(-1490,650,.22),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,officeArrival:Object.freeze({...world(routePoint(98).x,routePoint(98).y)}),awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),lanes:Object.freeze([...lanes]),floorBounds:Object.freeze({left:leftWall,right:beltStart,top:-650,bottom:lanes.at(-1)+280}),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
   function sceneTransition(t){return{cover:t<95.65||t>=96.35?0:t<96?between(t,95.65,96):1-between(t,96,96.35),phase:t<96?'factory':'office'};}
-  function resistanceWindow(t){if(t>=58&&t<64)return Base.resistanceWindow(t);const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(340,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
+  function resistanceWindow(t){if(t>=58&&t<64)return Base.resistanceWindow(t);const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(620,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
   function withResistance(data,offset,t,effort={}){
     if(t>=58&&t<64)return Base.withResistance(data,offset,t,effort);
     const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0)),preload=clamp(effort.preload||0);
     if(!data.hero||(!appliedOffset&&(!preload||!window.active)))return{...data,appliedOffset};
     const dx=-window.tangent.x*appliedOffset,dy=-window.tangent.y*appliedOffset,clearance=clamp(appliedOffset/28),strength=clamp(effort.effort||0)*Math.max(clearance,preload),gait=Math.sin((effort.stride||0)*Math.PI*2);
     // Backward effort changes travel and outline, never the body's authored heading.
-    const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy,bend:.1*preload+.045*gait*strength,strain:.12*strength,axialStretch:-.09*preload+.07*strength*(1-preload)},resistance:{strength,preload,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
+    const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx-window.tangent.y*gait*9*strength,y:e.body.y+dy+window.tangent.x*gait*9*strength,bend:.1*preload+.045*gait*strength,strain:.12*strength,axialStretch:-.09*preload+.07*strength*(1-preload)},resistance:{strength,preload,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
     return{...data,actors,hero,appliedOffset};
   }
   return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,transferProgram,setWorkTime:Office.setWorkTime};

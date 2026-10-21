@@ -145,22 +145,47 @@
     line(ctx, [[1650,1118],[1655,1081],[1692,1078]], ox, oy, t, cream, 5);
     line(ctx, [[1753,1124],[1750,1162],[1715,1168]], ox, oy, t, cream, 5);
   }
-  function draw(ctx, time) {
+  function draw(ctx, time, regions) {
     const t = Number.isFinite(time) ? Math.max(0, time) : 0;
     ctx.save();
+    // Callers using windows can restrict work to their world-space union. The
+    // unbounded call retains the original cell range and rendering order.
+    const m = ctx.getTransform(), canvas = ctx.canvas;
+    const x0 = -m.e / m.a, x1 = (canvas.width - m.e) / m.a;
+    const y0 = -m.f / m.d, y1 = (canvas.height - m.f) / m.d;
+    let windows=null;
+    if(Array.isArray(regions)){
+      windows=regions.filter(r=>r&&[r.minX,r.maxX,r.minY,r.maxY].every(Number.isFinite)).map(r=>({
+        minX:Math.max(Math.min(x0,x1),r.minX),maxX:Math.min(Math.max(x0,x1),r.maxX),
+        minY:Math.max(Math.min(y0,y1),r.minY),maxY:Math.min(Math.max(y0,y1),r.maxY)
+      })).filter(r=>r.maxX>r.minX&&r.maxY>r.minY);
+      if(!windows.length){ctx.restore();return;}
+      ctx.beginPath();for(const r of windows)ctx.rect(r.minX,r.minY,r.maxX-r.minX,r.maxY-r.minY);ctx.clip();
+    }
     setTexture(ctx, t);
     ctx.fillStyle = ink; ctx.fillRect(-12000, -9000, 24000, 18000);
     if (texture) { ctx.fillStyle = texture; ctx.fillRect(-12000, -9000, 24000, 18000); }
     // The caller supplies the shared, axis-aligned world camera. Cull material cells outside it.
-    const m = ctx.getTransform(), canvas = ctx.canvas;
-    const x0 = -m.e / m.a, x1 = (canvas.width - m.e) / m.a;
-    const y0 = -m.f / m.d, y1 = (canvas.height - m.f) / m.d;
     const firstX = Math.floor((Math.min(x0, x1) + speed * t - 450) / periodX);
     const lastX = Math.floor((Math.max(x0, x1) + speed * t + 450) / periodX);
     const firstY = Math.floor((Math.min(y0, y1) - 450) / periodY);
     const lastY = Math.floor((Math.max(y0, y1) + 450) / periodY);
+    let cells=null;
+    if(windows){
+      cells=new Set();
+      // Source contours plus their bounded flow can cross a cell edge. This
+      // exceeds the original viewport's 450px allowance, while its range stays
+      // the upper bound so selecting windows cannot introduce a new overpaint.
+      const padding=900;
+      for(const r of windows){
+        const left=Math.max(firstX,Math.floor((r.minX+speed*t-padding)/periodX)),right=Math.min(lastX,Math.floor((r.maxX+speed*t+padding)/periodX));
+        const top=Math.max(firstY,Math.floor((r.minY-padding)/periodY)),bottom=Math.min(lastY,Math.floor((r.maxY+padding)/periodY));
+        for(let iy=top;iy<=bottom;iy++)for(let ix=left;ix<=right;ix++)cells.add(ix+','+iy);
+      }
+    }
     for (let iy = firstY; iy <= lastY; iy++) {
       for (let ix = firstX; ix <= lastX; ix++) {
+        if(cells&&!cells.has(ix+','+iy))continue;
         const ox = ix * periodX, oy = iy * periodY;
         routes.forEach((route, index) => ribbon(ctx, route, index, ox, oy, t));
         gifts(ctx, ox, oy, t);
