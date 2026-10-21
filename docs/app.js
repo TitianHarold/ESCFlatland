@@ -69,7 +69,7 @@
   }
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
-  function placeWorld(ctx,v){const t=sceneTime(),jolt=version.id==='routine'&&t>=79.25&&t<79.65?factory.compactAt(t).recoil*1.6:0;ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2+jolt,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
+  function placeWorld(ctx,v){const t=sceneTime(),press=version.id==='routine'&&t>=76.7&&t<81.6?factory.compactAt(t):null,motionScale=reduced.matches ? .2 : 1;ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2+(press?.cameraX||0)*motionScale,state.h/2+(press?.cameraY||0)*motionScale);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
   function world(ctx,v){screen(ctx);placeWorld(ctx,v);}
   function transform(ctx,b){ctx.translate(b.x,b.y);ctx.rotate(b.angle||0);ctx.scale(b.sx??1,b.sy??1);}
   function cavityTransform(ctx,actor,body){
