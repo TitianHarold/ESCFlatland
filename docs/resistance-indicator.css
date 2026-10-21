@@ -8,3 +8,5 @@
 #effort-indicator[data-state="exhausted"]{color:#e74b47;animation:strength-fails .22s ease-out}
 @keyframes strength-fails{0%{transform:translate(-50%,-50%) scale(1.22)}100%{transform:translate(-50%,-50%) scale(1)}}
 @media(prefers-reduced-motion:reduce){#effort-indicator{transition:none}#effort-indicator[data-state="exhausted"]{animation:none}}
+
+.stage[data-paused="true"] #effort-indicator{animation-play-state:paused}

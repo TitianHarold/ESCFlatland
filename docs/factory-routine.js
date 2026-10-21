@@ -12,6 +12,10 @@
   const discard=Base.anchors.discard,workCenter=Office.cellAt(0,0);
   const heroActor=C.create('child'),lanes=Array.from({length:12},(_,i)=>-390+i*260),stations=[0,-1500,-3100],beltStart=900,beltEnd=-3850,leftWall=-3880;
   const ordinary=lanes.map((_,i)=>[C.create({sides:i+3,radius:42,regular:false}),C.create({sides:i+3,radius:42,regular:false})]);
+  let ambientTime=null,peelState=null;
+  const ambientAt=time=>ambientTime===null?time:ambientTime;
+  function setAmbientTime(time){const next=Number.isFinite(time)?time:null;if(next!==ambientTime){ambientTime=next;productionTime=NaN;}Base.setAmbientTime(next);}
+  function setPeelState(value){peelState=Array.isArray(value)?heroActor.vertices.map((_,i)=>clamp(Number(value[i])||0)):null;productionTime=NaN;}
   // Each open transfer has its own real travel distance and playback allocation.
   // The tool clocks stay fixed; input only adds bounded motion on these clear spans.
   const transfers=[[67.4,71.7,beltStart,stations[0],0],[76.7,78.5,stations[0],stations[1],170],[81.6,83.2,stations[1],stations[2],170]];
@@ -39,7 +43,7 @@
       return{index:i,normal,age,approach,locked,lock,gap,from:[a[0]+normal[0]*(gap+kick),a[1]+normal[1]*(gap+kick)],to:[b[0]+normal[0]*(gap+kick),b[1]+normal[1]*(gap+kick)],point:[(a[0]+b[0])/2,(a[1]+b[1])/2],impact:locked&&age<.82?1-(age-.64)/.18:0};});
     return{faces,vertices:points,fitted:faces.reduce((sum,face)=>sum+face.lock,0)/points.length,complete:t>=end};
   }
-  function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),mold=moldAt(t,71.7,76.7,actor),release=Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted:mold.fitted,mold,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,vertices:shellPolygon(actor),radius:71};}
+  function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),mold=moldAt(t,71.7,76.7,actor),controlled=actor===heroActor&&peelState!==null&&t>=119,release=controlled?[...peelState]:Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted:mold.fitted,mold,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,peelControlled:controlled,vertices:shellPolygon(actor),radius:71};}
   function compactAt(t,start=78.5,end=81.6,actor=heroActor,body=pose(heroActor,stations[1],130)){
     const relative=body.angle-angle,c=Math.cos(relative),s=Math.sin(relative),centerline=shellPolygon(actor).map(([x,y])=>[x*c-y*s,x*s+y*c]);
     // The frame is drawn with a 12px stroke. Its outer support planes, not its
@@ -62,6 +66,7 @@
   }
   function routineEntry(id,actor,body,color,t,extra={}){return{id,actor,body,color,cavity:true,damage:0,blacken:0,windowOpen:1,compression:0,residual:0,core:0,label:undefined,result:undefined,restraint:undefined,routine:{time:t,...shellState(t,actor)},...extra};}
   function productionPose(t,actor,y){
+    if(t>=64&&t<67.4)return pose(actor,lerp(1100,beltStart,clamp((t-64)/3.4)),y);
     const transfer=transferAt(t);
     if(transfer){const[start,end,from,to]=transfer;return pose(actor,lerp(from,to,clamp((t-start)/(end-start))),y);}
     if(t<71.7)return pose(actor,beltStart,y);
@@ -90,7 +95,7 @@
   let productionTime=NaN,productionFrame;
   function fullFrame(t,bounds){
     if(t<58||t>=132)return{actors:[],hero:null};const e=heroAt(t),actors=t>=96&&t<110?Office.actors(t,bounds):[];
-    if(t<96)for(let r=0;r<lanes.length;r++)if(r!==2)for(let slot=0;slot<2;slot++)actors.push(worker(t,r,slot));if(e)actors.push(e);
+    if(t<96)for(let r=0;r<lanes.length;r++)if(r!==2)for(let slot=0;slot<2;slot++)actors.push(worker(ambientAt(t),r,slot));if(e)actors.push(e);
     const base=t>=119?Base.frame(t):null;
     return{actors,hero:e?.body||null,light:e?lightAt(t):undefined,burst:base?.burst||0,chase:base?.chase,routine:true,office:t>=96&&t<110,inner:t>=110&&t<119,outsideDarkness:between(t,104,110)};
   }
@@ -103,9 +108,9 @@
     if(kind===2){ctx.beginPath();ctx.arc(x,y,100,0,Math.PI*2);ctx.strokeStyle=P.ink;ctx.lineWidth=7;ctx.stroke();rounded(ctx,x-13,y-124,26,31,5,P.industrial);}
   }
   function drawFactory(ctx,t,bounds){
-    const layout=Base.backgroundLayout(bounds,lanes,leftWall,beltStart),{view,lines,columns,period}=layout;setup(ctx);
-    if(view)rounded(ctx,layout.left,view.top-4,layout.right-layout.left,view.bottom-view.top+8,0,P.factory.floor);else rounded(ctx,leftWall,-650,beltStart-leftWall,lanes.at(-1)+930,28,P.factory.floor);
-    for(const {y} of lines){belt(ctx,y,t,layout.left,layout.right);for(const column of columns)for(let j=0;j<3;j++){const x=stations[j]+column*period;if(layout.visible(x,y))machine(ctx,x,y,j);}}
+    const layout=Base.backgroundLayout(bounds,lanes,leftWall,1100),{view,lines,columns,period}=layout;setup(ctx);
+    if(view)rounded(ctx,layout.left,view.top-4,layout.right-layout.left,view.bottom-view.top+8,0,P.factory.floor);else rounded(ctx,leftWall,-650,1100-leftWall,lanes.at(-1)+930,28,P.factory.floor);
+    for(const {y} of lines){belt(ctx,y,ambientAt(t),layout.left,layout.right);for(const column of columns)for(let j=0;j<3;j++){const x=stations[j]+column*period;if(layout.visible(x,y))machine(ctx,x,y,j);}}
     if(t>=94){line(ctx,[[leftWall,-650],[leftWall,43]],P.outside.wall,22);line(ctx,[[leftWall,217],[leftWall,lanes.at(-1)+280]],P.outside.wall,22);}
     ctx.restore();return layout;
   }
@@ -124,11 +129,11 @@
     const x=stations[2]+offset;if(layout.visible(x,y)){ctx.save();ctx.translate(x,y);ctx.rotate(t*.9+row);line(ctx,[[0,-96],[0,-77]],P.industrial,7);ctx.restore();}
   }
   function drawOverlay(ctx,t,bounds){
-    if(t>=96||t<64)return;const layout=Base.backgroundLayout(bounds,lanes,leftWall,beltStart),{lines,columns,period}=layout;
+    if(t>=96||t<64)return;const layout=Base.backgroundLayout(bounds,lanes,leftWall,1100),{lines,columns,period}=layout;
     const child=productionTime===t?productionFrame.actors.find(e=>e.id==='hero'):null;setup(ctx);
     for(const {row:r,y,virtual} of lines)for(const column of columns){const offset=column*period;
-      if(virtual||column!==0){drawRepeat(ctx,t,r,y,offset,layout);continue;}
-      let occupants;const residents=()=>occupants||(occupants=[worker(t,r,0),worker(t,r,1)]);
+      if(virtual||column!==0){drawRepeat(ctx,ambientAt(t),r,y,offset,layout);continue;}
+      let occupants;const residents=()=>occupants||(occupants=[worker(ambientAt(t),r,0),worker(ambientAt(t),r,1)]);
       if(layout.visible(stations[0],y)){
         const molding=r===2?(t>=71.7&&t<77?child||heroAt(t):null):residents().find(e=>Math.abs(local(e.body).x-stations[0])<1),moldActor=molding?.actor||(r===2?heroActor:ordinary[r][0]),moldBody=molding?.body||pose(moldActor,stations[0],y),mold=moldAt(molding?.routine.time??71.7,71.7,76.7,moldActor);
         ctx.save();ctx.translate(stations[0],y);ctx.rotate(moldBody.angle-angle);for(const face of mold.faces)if(!face.locked){line(ctx,[face.from,face.to],P.metal,12);line(ctx,[face.from,face.to],P.industrial,2.5);}ctx.restore();
@@ -156,14 +161,29 @@
       if(face.impact>0){const [nx,ny]=face.normal,tx=-ny,ty=nx;ctx.globalAlpha=visible*face.impact;for(const side of[-1,1])line(ctx,[[face.point[0]+nx*5+tx*side*4,face.point[1]+ny*5+ty*side*4],[face.point[0]+nx*18+tx*side*12,face.point[1]+ny*18+ty*side*12]],P.gold,2.8);}
       ctx.restore();}}
     // Each strip leaves independently and stays behind, rather than reforming into a badge.
-    if(s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const age=s.time-(123.5+i*.58);if(age<=0||age>3.2)continue;const a=points[i],b=points[(i+1)%n],drift=210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.black,12);line(ctx,[a,b],P.black,2.5);ctx.restore();}}
+    if(s.peelControlled||s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const progress=s.release[i],age=s.peelControlled?progress*.6:s.time-(123.5+i*.58);if(age<=0||age>3.2||s.peelControlled&&progress>=1)continue;const a=points[i],b=points[(i+1)%n],drift=s.peelControlled?360*progress+120*progress*progress:210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=s.peelControlled?1-progress:1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.black,12);line(ctx,[a,b],P.black,2.5);ctx.restore();}}
     if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();if(paintLight)paintLight(ctx,-7,7,painted>.2?3.7+awakening*2:6);else{ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();}if(awakening&&!paintLight){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   const anchor=(x,y,zoom)=>Object.freeze({...world(x,y),zoom});
-  const anchors=Object.freeze({...Base.anchors,overview:anchor(-1490,650,.22),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,officeArrival:Object.freeze({...world(routePoint(98).x,routePoint(98).y)}),awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),lanes:Object.freeze([...lanes]),floorBounds:Object.freeze({left:leftWall,right:beltStart,top:-650,bottom:lanes.at(-1)+280}),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
+  const anchors=Object.freeze({...Base.anchors,overview:anchor(-1490,650,.22),approach:anchor(beltStart,130,.95),mold:anchor(stations[0],130,.95),compact:anchor(stations[1],130,.95),paint:anchor(stations[2],130,.95),work:Office.anchors.work,officeEntry:Office.anchors.entry,officeArrival:Object.freeze({...world(routePoint(98).x,routePoint(98).y)}),awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(stations[0],130),m2:world(stations[1],130),m3:world(stations[2],130)}),stationX:Object.freeze([...stations]),lanes:Object.freeze([...lanes]),floorBounds:Object.freeze({left:leftWall,right:1100,top:-650,bottom:lanes.at(-1)+280}),exit:world(leftWall,130),workCenter:world(workCenter.x,workCenter.y)});
   function sceneTransition(t){return{cover:t<95.65||t>=96.35?0:t<96?between(t,95.65,96):1-between(t,96,96.35),phase:t<96?'factory':'office'};}
   function resistanceWindow(t){if(t>=58&&t<64)return Base.resistanceWindow(t);const segment=transferAt(t);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to,clearance]=segment,u=clamp((t-a)/(b-a)),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(620,travel-clearance))*(1-between(t,b-.42,b));return{active:maxOffset>0,maxOffset,tangent:{x:-cs,y:-sn},from,to,clearance};}
+  function resistTravel(from,to,distance){
+    if(from<64)return Base.resistTravel(from,to,distance);if(!(distance>0)||to<=from)return to;
+    const segment=from<67.4?[64,67.4,1100,beltStart,0]:transferAt(from);if(!segment)return to;
+    const[start,end,entry,exit,clearance]=segment,length=entry-exit,before=(from-start)/(end-start)*length;
+    if(before<clearance)return to;
+    const desired=Math.max(clearance,(Math.min(to,end)-start)/(end-start)*length-distance);
+    return start+desired/length*(end-start);
+  }
   function withResistance(data,offset,t,effort={}){
+    if(effort.transportResolved){
+      if(t<64)return Base.withResistance(data,0,t,effort);
+      if(!data.hero||!(t>=64&&t<67.4||transferAt(t)))return{...data,appliedOffset:0};
+      const preload=clamp(effort.preload||0),strength=clamp(effort.effort||0),weak=clamp(effort.weak||0),gait=Math.sin((effort.stride||0)*Math.PI*2),sway=gait*9*strength;
+      const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x-sn*sway+cs*weak*7,y:e.body.y+cs*sway+sn*weak*7,bend:.1*preload+.045*gait*strength+.035*weak,strain:.12*strength,axialStretch:-.09*preload-.05*strength},resistance:{strength,preload,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e);
+      return{...data,actors,hero:actors.find(e=>e.id==='hero')?.body||data.hero,appliedOffset:0};
+    }
     if(t>=58&&t<64)return Base.withResistance(data,offset,t,effort);
     const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0)),preload=clamp(effort.preload||0);
     if(!data.hero||(!appliedOffset&&(!preload||!window.active)))return{...data,appliedOffset};
@@ -172,5 +192,5 @@
     const actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx-window.tangent.y*gait*9*strength,y:e.body.y+dy+window.tangent.x*gait*9*strength,bend:.1*preload+.045*gait*strength,strain:.12*strength,axialStretch:-.09*preload+.07*strength*(1-preload)},resistance:{strength,preload,stride:effort.stride||0,exhausted:!!effort.exhausted}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;
     return{...data,actors,hero,appliedOffset};
   }
-  return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,transferProgram,setWorkTime:Office.setWorkTime};
+  return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,transferProgram,resistTravel,setAmbientTime,setPeelState,setWorkTime:Office.setWorkTime};
 });

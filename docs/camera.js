@@ -68,5 +68,33 @@
     if(shot.space==='journey'||shot.space==='depth')view.screenY=.5;
     return view;
   }
-  return {duration,shots,shotAt,pose};
+  class Follow {
+    reset(view){this.current=view?{...view}:null;return this.current;}
+    update(goal,hero,viewport,dt){
+      if(!this.current||this.current.space!==goal.space||goal.space!=='flat')return this.reset(goal);
+      const previous=this.current,desired={...goal},body=hero?.body||hero;
+      const scale=Math.max(.001,Math.min(viewport.w/1280,viewport.h/760)*goal.zoom);
+      const deadX=viewport.w*.075/scale,deadY=viewport.h*.065/scale;
+      const outside=(distance,limit)=>Math.sign(distance)*Math.max(0,Math.abs(distance)-limit);
+      if(goal.followBody&&body){
+        if(goal.followReference){
+          desired.x+=outside(body.x-goal.x,deadX);
+          desired.y+=outside(body.y-(goal.y+(goal.focalOffsetY||0)),deadY);
+        }else{
+          desired.x=previous.x+outside(goal.x-previous.x,deadX);
+          desired.y=previous.y+outside(goal.y-previous.y,deadY);
+        }
+      }
+      const blend=1-Math.exp(-Math.max(0,dt)/.18),next={...goal};
+      for(const key of ['x','y','zoom'])next[key]=previous[key]+(desired[key]-previous[key])*blend;
+      if(goal.followBody&&body){
+        // Only the outer soft boundary can demand an immediate correction.
+        const softX=viewport.w*.23/scale,softY=viewport.h*.20/scale,offset=goal.focalOffsetY||0;
+        next.x=clamp(next.x,body.x-softX,body.x+softX);
+        next.y=clamp(next.y,body.y-offset-softY,body.y-offset+softY);
+      }
+      this.current=next;return next;
+    }
+  }
+  return {duration,shots,shotAt,pose,Follow};
 });

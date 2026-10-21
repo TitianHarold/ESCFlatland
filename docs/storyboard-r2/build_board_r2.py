@@ -207,7 +207,7 @@ def build():
         records.append('来源文件：首尾帧美术生成提示词.json\n以下原样保留该文件文本；是否为计划词或最终实际调用词，以原记录status及字段为准。\n\n' + original_file.read_text())
     if (BASE / 'art-pairs.json').exists():
         records.append('来源文件：art-pairs.json\n图对视频fullPrompt与图像生成词不混称。以下原样保留完整记录用于溯源。\n\n' + (BASE / 'art-pairs.json').read_text())
-    (BASE / '首尾帧图像生成原词.txt').write_text(('\n\n' + '=' * 64 + '\n\n').join(records) + '\n')
+    (BASE / '首尾帧图像生成原词.txt').write_text(('\n\n' + '=' * 64 + '\n\n').join(records).rstrip() + '\n')
     encoded = json.dumps(payload, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c')
     timing_note = '自动预览时长：' + '／'.join(('A' if v['id'] == 'rhythm' else 'B') + ' ' + format(v['duration'], 'g') + '秒' for v in versions) + '；互动时长随点击、等待与长按变化。'
     output = TEMPLATE.replace('__DATA__', encoded).replace('__TIMING_NOTE__', timing_note)

@@ -4,7 +4,7 @@
   else root.FlatlandInnerDiscovery=factory(root.FlatlandPalette);
 })(typeof globalThis!=='undefined'?globalThis:this,function(P){
   'use strict';
-  const TAU=Math.PI*2,total=6,breakDuration=2,collectProgress=.72;
+  const TAU=Math.PI*2,total=6,breakDuration=4,collectProgress=.72;
   const clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
   const mix=(a,b,q)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-q)+parseInt(b.slice(i,i+2),16)*q).toString(16).padStart(2,'0')).join('');
   const background=()=>mix(P.night,'#000000',.89);
@@ -12,7 +12,7 @@
   function size(viewport){return{w:Math.max(1,viewport?.w||1),h:Math.max(1,viewport?.h||1),s:Math.max(.55,Math.min(viewport?.w/1280||1,viewport?.h/760||1))};}
   function point(id,clock,viewport){const {w,h,s}=size(viewport),p=sites[id],phase=id*1.73,rx=Math.min(w*.065,58*s),ry=Math.min(h*.06,48*s);return{x:w*p[0]+rx*(.74*Math.sin(clock*.95+phase)+.26*Math.sin(clock*1.71+phase*.7)),y:h*p[1]+ry*(.72*Math.cos(clock*.81+phase*1.25)+.28*Math.sin(clock*1.47+phase))};}
   class Session{
-    constructor({autoDuration=8}={}){this.autoDuration=Math.max(3,Number.isFinite(autoDuration)?autoDuration:8);this.reset();}
+    constructor({autoDuration=10}={}){this.autoDuration=Math.max(breakDuration+1,Number.isFinite(autoDuration)?autoDuration:10);this.reset();}
     reset(){this.clock=0;this.actionClock=0;this.autoElapsed=0;this.found=[];this.breakAge=0;return this;}
     collect(id,viewport){
       if(this.found.some(item=>item.id===id)||this.found.length===total)return false;
@@ -31,8 +31,7 @@
       return hit?this.collect(hit.id,viewport):false;
     }
     update(dt,{automatic=false,advance=true}={}){
-      dt=Math.max(0,Number.isFinite(dt)?dt:0);this.clock+=dt;
-      if(!advance)return this;
+      dt=Math.max(0,Number.isFinite(dt)?dt:0);if(!advance)return this;this.clock+=dt;
       const step=(this.autoDuration-breakDuration)/total,start=this.autoElapsed,end=start+dt;
       let advanced=0;
       if(automatic&&this.found.length<total){
@@ -46,7 +45,7 @@
       }
       this.advance(dt-advanced);if(automatic)this.autoElapsed=end;return this;
     }
-    advance(dt){this.actionClock+=dt;if(this.found.length===total)this.breakAge=Math.min(breakDuration,this.breakAge+dt);}
+    advance(dt){this.actionClock+=dt;if(this.found.length===total){this.breakAge=Math.min(breakDuration,this.breakAge+dt);if(this.breakAge>breakDuration-1e-9)this.breakAge=breakDuration;}}
     seek(progress){
       const p=clamp(Number.isFinite(progress)?progress:0);this.reset();this.clock=this.autoElapsed=p*this.autoDuration;this.actionClock=this.clock;
       const count=p>=collectProgress?total:Math.floor(p/collectProgress*total+1e-8);
@@ -64,7 +63,9 @@
       });
       const reveals=this.found.map(found=>{const age=Math.max(0,this.actionClock-found.at),strength=smooth(age/.6);return{id:found.id,x:found.u*w,y:found.v*h,age,strength,radius:(138+found.id%3*17)*s};});
       return{points,reveals,collected:count,progress:count<total?collectProgress*count/total:collectProgress+(1-collectProgress)*b,
-        phase:count===total?(b>=1?'done':'break'):count||this.clock>.6?'discover':'dark',breakProgress:b,done:b>=1,clock:this.clock};
+        phase:count===total?(b>=1?'done':'break'):count||this.clock>.6?'discover':'dark',breakProgress:b,
+        revealProgress:clamp(this.breakAge/1.44),fullLit:this.breakAge>=1.44,
+        shrinkProgress:smooth((this.breakAge-2.04)/1.96),seedFlight:smooth((this.breakAge-1.4)/2.6),done:b>=1,clock:this.clock};
     }
   }
   let contentCanvas,maskCanvas,grainCanvas;
@@ -85,7 +86,7 @@
     for(let i=0;i<9;i++){ctx.save();ctx.translate(w*(.16+(i%3)*.34),h*(.14+Math.floor(i/3)*.34));ctx.rotate(clock*.045*(i%2?1:-1)+i);ctx.fillStyle=colors[i%4];ctx.beginPath();ctx.moveTo(-230*s,20*s);ctx.bezierCurveTo(-70*s,-180*s,200*s,-90*s,210*s,40*s);ctx.bezierCurveTo(130*s,-20*s,0,130*s,-230*s,20*s);ctx.fill();ctx.restore();}
   }
   function revealMask(ctx,reveals,viewport,b){
-    const {w,h}=size(viewport),growth=Math.pow(smooth(b/.72),1.5),solid=smooth(b/.42);
+    const {w,h}=size(viewport),growth=Math.pow(smooth(b),1.5),solid=smooth(b/.6);
     for(const r of reveals){
       // Every opening stays rooted at the position the viewer actually caught.
       // Its own soft contour expands into neighbouring openings, never a preset slit.
@@ -100,7 +101,7 @@
     }
     // The cores already cover the viewport here; make the fully lit state exact,
     // including corner pixels, before the final seed returns to the body.
-    if(b>=.72){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
+    if(b>=1){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
   }
   function draw(ctx,viewport,state,{drawContents,palette=P}={}){
     const {w,h,s}=size(viewport),clock=state.clock||0,b=state.breakProgress||0,p=palette,dark=mix(p.night,'#000000',.89);
@@ -113,7 +114,7 @@
       c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.clearRect(0,0,w,h);c.save();
       if(drawContents)drawContents(c,viewport);else fallbackContents(c,viewport,clock,p);
       c.restore();m.setTransform(1,0,0,1,0,0);m.globalAlpha=1;m.globalCompositeOperation='source-over';m.clearRect(0,0,w,h);
-      revealMask(m,state.reveals,viewport,b);
+      revealMask(m,state.reveals,viewport,state.revealProgress??clamp(b/.36));
       c.globalCompositeOperation='destination-in';c.drawImage(maskCanvas,0,0);c.globalCompositeOperation='source-over';ctx.drawImage(contentCanvas,0,0);
     }
     for(const dot of state.points){
@@ -123,5 +124,5 @@
     }
     ctx.restore();
   }
-  return{Session,draw,total,get background(){return background();}};
+  return{Session,draw,total,breakDuration,get background(){return background();}};
 });

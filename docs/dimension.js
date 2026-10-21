@@ -1,8 +1,8 @@
 /* World-anchored growth and thin XYZ actors share one perspective renderer. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'),require('./motion.js'),require('./factory.js'));
-  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint,root.FlatlandMotion,root.FlatlandFactory);
-})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint,Motion,Factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./character-geometry.js'),require('./palette.js'),require('./restraint.js'),require('./motion.js'),require('./factory.js'),require('./ending-progress.js'),require('./inner-world.js'));
+  else root.FlatlandDimension = factory(root.FlatlandCharacters,root.FlatlandPalette,root.FlatlandRestraint,root.FlatlandMotion,root.FlatlandFactory,root.FlatlandEndingProgress,root.FlatlandInner);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Characters,Palette,Restraint,Motion,Factory,Ending,Inner) {
   'use strict';
   const anchor = Object.freeze({x: 0, y: 0, z: 0});
   const defaultProjection = Object.freeze({x: 0, y: 0, zoom: 1.25, tilt: 0, yaw: 0, focal: 1600, screenY: .57});
@@ -540,11 +540,11 @@
       }
     });
   }
-  const endingAssets={open:null,flexed:null,status:'empty',version:0,layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}};
+  const endingAssets={open:null,flexed:null,brush:null,status:'empty',version:0,layout:{left:[0,0,.5,1],right:[.5,0,.5,1],wristLeft:[.525,.60],wristRight:[.55,.60]}};
   const endingSprites=new Map();
   function setEndingAssets(config={}){
     const version=++endingAssets.version;endingSprites.clear();
-    endingAssets.open=null;endingAssets.flexed=null;endingAssets.status='loading';
+    endingAssets.open=null;endingAssets.flexed=null;endingAssets.brush=null;endingAssets.status='loading';
     if(config.layout)Object.assign(endingAssets.layout,config.layout);
     function load(value,key){
       if(!value)return Promise.resolve(false);
@@ -552,17 +552,14 @@
       if(typeof Image==='undefined')return Promise.resolve(false);
       return new Promise(resolve=>{const image=new Image();image.onload=()=>{if(version===endingAssets.version){endingAssets[key]=image;endingSprites.clear();}resolve(true);};image.onerror=()=>resolve(false);image.src=value;});
     }
-    return Promise.all([load(config.hands||config.open,'open'),load(config.flexedHands||config.flexed,'flexed')]).then(()=>{
+    return Promise.all([load(config.hands||config.open,'open'),load(config.flexedHands||config.flexed,'flexed'),load(config.brushHands||config.brush,'brush')]).then(()=>{
       if(version===endingAssets.version)endingAssets.status=endingAssets.open?'ready':'empty';
-      return{status:endingAssets.status,open:!!endingAssets.open,flexed:!!endingAssets.flexed};
+      return{status:endingAssets.status,open:!!endingAssets.open,flexed:!!endingAssets.flexed,brush:!!endingAssets.brush};
     });
   }
-  function endingPose(time){
-    const t=clamp(time,132,138),leftRaise=ease(t,132.5,134.25),rightRaise=ease(t,132.8,134.55);
-    const leftTurn=ease(t,134.4,135.9),rightTurn=ease(t,134.7,136.15);
-    return{phase:t<132.5?'stopped':t<134.4?'raise':t<136.2?'turn':t<137.5?'flex':'hold',
-      left:{raise:leftRaise,turn:leftTurn,flex:ease(t,136.2,137.15),rotation:mix(-.10,.055,leftTurn)},
-      right:{raise:rightRaise,turn:rightTurn,flex:ease(t,136.5,137.5),rotation:mix(.085,-.045,rightTurn)}};
+  function endingPose(time,state=Ending.snapshotAt(time)){
+    return{...state,left:{raise:state.raise,turn:state.flex,flex:state.flex,grasp:state.grasp,opacity:state.handsOpacity,rotation:mix(-.10,.055,state.flex)},
+      right:{raise:ease(state.raise,.05,1),turn:state.flex,flex:state.flex,grasp:state.grasp,opacity:state.handsOpacity,rotation:mix(.085,-.045,state.flex)}};
   }
   function endingSprite(key,side){
     const image=endingAssets[key];if(!image)return null;
@@ -577,29 +574,51 @@
   function drawEndingHand(ctx,side,pose,w,h){
     if(pose.raise<=0)return;
     const open=endingSprite('open',side);if(!open)return;
-    const flexed=endingSprite('flexed',side);
+    const flexed=endingSprite('flexed',side),brush=endingSprite('brush',side);
     // Each hand rolls briefly toward its edge before changing finger pose; no doubled finger silhouettes.
-    const roll=flexed?Math.sin(Math.PI*pose.flex):0;
-    const texture=flexed&&pose.flex>=.5?flexed:open;
+    const roll=Math.max(flexed?Math.sin(Math.PI*pose.flex):0,brush?Math.sin(Math.PI*pose.grasp):0);
+    const texture=brush&&pose.grasp>=.5?brush:flexed&&pose.flex>=.5?flexed:open;
     const wrist=endingAssets.layout[side==='left'?'wristLeft':'wristRight'],height=h*.78,width=height*texture.width/texture.height;
     const angle=pose.rotation,anchor=[w*(side==='left'?.355:.655),h*mix(1.29,.71,pose.raise)];
     // Separate wrist pivots and pose atlases preserve the fine hand drawing without mesh clip seams.
-    ctx.save();ctx.globalAlpha=ease(pose.raise,0,.15);ctx.imageSmoothingEnabled=true;
+    ctx.save();ctx.globalAlpha=ease(pose.raise,0,.15)*(pose.opacity??1);ctx.imageSmoothingEnabled=true;
     ctx.translate(...anchor);ctx.rotate(angle);
     ctx.transform((1-.075*pose.turn)*(1-.78*roll),pose.turn*height*.027/width,0,1-.025*roll,0,0);
     ctx.drawImage(texture,-wrist[0]*width,-wrist[1]*height,width,height);
     ctx.restore();
   }
-  function endingLight(time,viewport={}){
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760),t=clamp(time-132,0,6),settle=ease(time,132,134.4);
-    return{entityId:'hero-seed',x:w*mix(.70,.52,settle)+Math.sin(t*1.2)*w*.006,y:h*mix(.28,.40,settle)+Math.sin(t*1.7)*h*.008,r:Math.max(3.8,Math.min(w,h)*.008),phase:'pov'};
+  function endingLight(time,viewport={},state=Ending.snapshotAt(time),lightOrigin){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760),t=state.clock,settle=ease(t,0,2.4),drop=state.lightDrop,center=state.seedCenter;
+    const startX=clamp(finite(lightOrigin?.x,.70),0,1),startY=clamp(finite(lightOrigin?.y,.28),0,1),baseRadius=Math.max(3.8,Math.min(w,h)*.008);
+    const x=mix(mix(startX,.52,settle)+Math.sin(t*1.2)*.006,.655,drop),y=mix(mix(startY,.40,settle)+Math.sin(t*1.7)*.008,.55,drop);
+    return{entityId:'hero-seed',x:w*mix(x,.5,center),y:h*mix(y,.48,center),r:mix(finite(lightOrigin?.r,baseRadius/Math.min(w,h))*Math.min(w,h),baseRadius,settle),phase:state.phase};
   }
-  function drawEnding(ctx,time,viewport={}){
-    const w=finite(viewport.w,1280),h=finite(viewport.h,760),pose=endingPose(time);
+  let endingWorldCanvas;
+  function drawEnding(ctx,time,viewport={},options={}){
+    const w=finite(viewport.w,1280),h=finite(viewport.h,760),state=options.state||Ending.snapshotAt(time),pose=endingPose(time,state),light=endingLight(time,{w,h},state,options.lightOrigin);
     ctx.save();ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
     // An unloaded asset leaves the deliberate white stop; no schematic hands are substituted.
     if(endingAssets.open){drawEndingHand(ctx,'left',pose.left,w,h);drawEndingHand(ctx,'right',pose.right,w,h);}
-    const light=endingLight(time,{w,h});paintSeedGlow(ctx,light.x,light.y,light.r);
+    if(state.expansion>0){
+      const drawContents=options.drawContents||(Inner||globalThis.FlatlandInner)?.drawContents;
+      if(drawContents){
+        if(!endingWorldCanvas)endingWorldCanvas=makeCanvas();
+        if(endingWorldCanvas){
+          if(endingWorldCanvas.width!==Math.ceil(w)||endingWorldCanvas.height!==Math.ceil(h)){endingWorldCanvas.width=Math.ceil(w);endingWorldCanvas.height=Math.ceil(h);}
+          const field=endingWorldCanvas.getContext('2d');field.setTransform(1,0,0,1,0,0);field.globalAlpha=1;field.globalCompositeOperation='source-over';field.clearRect(0,0,w,h);
+          drawContents(field,{w,h},options.ambient??state.clock);
+          if(state.expansion<1){
+            const radius=light.r+Math.hypot(w,h)*Math.pow(state.expansion,.9),mask=field.createRadialGradient(light.x,light.y,0,light.x,light.y,radius);
+            mask.addColorStop(0,'#ffffff');mask.addColorStop(.68,'#ffffff');mask.addColorStop(1,'#ffffff00');field.globalCompositeOperation='destination-in';field.fillStyle=mask;field.fillRect(0,0,w,h);field.globalCompositeOperation='source-over';
+          }
+          ctx.drawImage(endingWorldCanvas,0,0,w,h);
+        }
+      }
+    }
+    if(state.expansion<1)paintSeedGlow(ctx,light.x,light.y,light.r,1-state.expansion);
+    if(state.textOpacity>0){
+      ctx.save();ctx.globalAlpha=state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='500 '+Math.max(14,Math.min(28,w*.025))+'px Georgia, serif';ctx.fillStyle=Palette.cream;ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=9;ctx.fillText(state.text,w/2,h/2,w*.88);ctx.restore();
+    }
     ctx.restore();return{...pose,light,assetStatus:endingAssets.status};
   }
   function seedLight(time,entry,guide){
@@ -635,7 +654,7 @@
     const near=guide?[guide.x,guide.y]:[state.raw.x+Math.cos(pathHeading-bridgeAngle)*100,state.raw.y+Math.sin(pathHeading-bridgeAngle)*100];
     // At the held story gate the world current keeps moving, including its one guiding seed.
     const extra=Math.max(0,finite(data.chase?.travel,time-119)-finite(data.chase?.baseTravel,time-119));
-    if(time>=122&&guide?.guideOffset&&extra){const offset=Factory.guideOffset(time+extra,guide.guideHeading);near[0]+=offset[0]-guide.guideOffset[0];near[1]+=offset[1]-guide.guideOffset[1];}
+    if(time>=122&&guide?.guideOffset&&extra){const offset=Factory.guideOffset(time+extra,guide.guideHeading),distance=finite(guide.guideDistanceScale,1);near[0]+=offset[0]*distance-guide.guideOffset[0];near[1]+=offset[1]*distance-guide.guideOffset[1];}
     const lightPoint=project(worldToCity([near[0],near[1],guide?.z||0]));
     if(lightPoint){const settle=ease(chaseArrivalTime(time,data),131,132),end=endingLight(132,{w,h});lightPoint[0]=mix(lightPoint[0],end.x,settle);lightPoint[1]=mix(lightPoint[1],end.y,settle);}
     return lightPoint;

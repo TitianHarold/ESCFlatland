@@ -76,5 +76,12 @@
     }
   }
 
-  return{WorkProgress,ChaseProgress};
+  class PaintPeel{
+    constructor(){this.reset();}
+    reset(){this.ages=Array(5).fill(-1);return this;}
+    click(){const index=this.ages.indexOf(-1);if(index<0)return false;this.ages[index]=0;return true;}
+    update(dt){for(let i=0;i<this.ages.length;i++)if(this.ages[i]>=0)this.ages[i]=Math.min(.6,this.ages[i]+Math.max(0,dt));return this.snapshot();}
+    snapshot(){return this.ages.map(age=>age<0?0:smooth(clamp(age/.6)));}
+  }
+  return{WorkProgress,ChaseProgress,PaintPeel};
 });

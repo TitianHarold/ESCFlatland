@@ -139,17 +139,21 @@
     return path(curves,Math.PI/2);
   }
   const police=[inspector,...guards].map((actor,i)=>{
-    const [x,y]=formation[i],heading=Math.atan2(hy-y,hx-x);
+    const [x,y]=formation[i];
     const approach=approachFrom(entryOriginY);
-    const inside=[door[0],door[1]+35],last=[x-Math.cos(heading)*45,y-Math.sin(heading)*45];
+    const inside=[door[0],door[1]+35];
+    // Every fan curve shares the doorway tangent and sweeps around the inspector's occupied space.
     const curves=i===0?[[inside,[hx,door[1]+110],[x,y-70],[x,y]]]:i===1?[
-      [inside,[650,350],[x,500],[x,hy]],
+      [inside,[inside[0],375],[500,280],[600,500]],
+      [[600,500],[650,610],[x,600],[x,hy]],
       [[x,hy],[x,hy+60],[x,y-20],[x,y]]
     ]:i===2?[
-      [inside,[1100,350],[1100,700],[1050,850]],
-      [[1050,850],[1000,920],[900,930],[x,y]]
+      [inside,[inside[0],375],[1200,280],[1120,500]],
+      [[1120,500],[1080,610],[1100,700],[1050,850]],
+      [[1050,850],[1025,925],[900,930],[x,y]]
     ]:[
-      [inside,[970,350],[x,500],[x,hy]],
+      [inside,[inside[0],375],[1100,280],[1000,500]],
+      [[1000,500],[950,610],[x,600],[x,hy]],
       [[x,hy],[x,hy+60],[x,y-20],[x,y]]
     ];
     const fan=path(curves,Math.PI/2),body=poseOn(actor,fan,fan.length);
@@ -197,6 +201,11 @@
     return Math.min(heroRoute.length,walking(time-firstMove-escortResistance(time).lag,heroCruise));
   }
   function heroSpeed(time){return time>=58?0:(heroDistance(time+.002)-heroDistance(time-.002))/.004;}
+  function cameraTarget(time){
+    if(time<firstMove)return{x:homeCenter.x,y:homeCenter.y-160};
+    const wanted=Math.min(heroRoute.length,walking(time-firstMove,heroCruise)),distance=gatedDistance(heroActor,heroRoute,wanted,time,heroCruise),point=sample(heroRoute,distance);
+    return{x:point.x,y:point.y};
+  }
   function heroBody(time,opening){
     if(time<contactEnd)return {...(opening||Motion.pose(Math.min(time/duration,1))).child};
     if(time<familyEnd){
@@ -326,7 +335,7 @@
       home.kids.forEach(kid=>actors.push(record(kid.id,kid.actor,householdChild(kid,0),[blue,teal,coral,lavender][home.offset%4],true)));
     }
     police.forEach((person,i)=>{if(time>=entryStarts[i])actors.push(record(person.id,person.actor,policeBody(person,time,i)));});
-    return{actors,hero:{...hero,id:'hero',actor:heroActor,body:hero,active:time<58},phase:time<entryStarts[0]?'families':time<takeAway?'arrival':time<58?'escort':'handoff',handoff:time>=58};
+    return{actors,hero:{...hero,id:'hero',actor:heroActor,body:hero,active:time<58},cameraTarget:cameraTarget(time),phase:time<entryStarts[0]?'families':time<takeAway?'arrival':time<58?'escort':'handoff',handoff:time>=58};
   }
   const collisionWorld=new CollisionWorld(CityMap.houseBoundaries),collisionStep=.05,resolvedFrames=[];
   function resolvedAt(time,previous){
@@ -343,5 +352,5 @@
     return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
   }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,escortResistance,escortProximity,guardCoercion,configureEntranceViewport,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),hesitationStarts,heroCruise,entryDuration:entryFinish[0]-entryStarts[0],detainees:[]},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,cameraTarget,escortResistance,escortProximity,guardCoercion,configureEntranceViewport,timing:{duration,contactEnd,familyEnd,homeCenter,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),hesitationStarts,heroCruise,entryDuration:entryFinish[0]-entryStarts[0],detainees:[]},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

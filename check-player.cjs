@@ -94,17 +94,17 @@ for(const offset of[6.51,11.51,13]){
   assert.equal(entry.damage,departedDamage,'Empty fixture cycles cannot keep damaging the departed hero');
   assert.equal(entry.machine.contact,false,'A later empty closure cannot contact the departed hero');
 }
-assert.equal(A.timing.duration,93.65);assert.equal(B.timing.duration,104.7);
-assert.equal(A.duration,93.65);assert.equal(B.duration,104.7);
+assert.equal(A.timing.duration,105.65);assert.equal(B.timing.duration,116.7);
+assert.equal(A.duration,105.65);assert.equal(B.duration,116.7);
 assert(Math.abs(A.timing.playbackAt(98)-A.timing.playbackAt(77)-15.15)<1e-8,'Longer transfers leave time for sustained resistance');
-assert(Math.abs(A.timing.playbackAt(119)-A.timing.playbackAt(104)-13)<1e-8,'The struggle and inner sequence are not stretched');
-assert(Math.abs(A.timing.playbackAt(138)-A.timing.playbackAt(119)-17)<1e-8,'Chase and POV retain their previous speed');
+assert(Math.abs(A.timing.playbackAt(119)-A.timing.playbackAt(104)-15)<1e-8,'The inner closure adds two seconds without slowing the struggle');
+assert(Math.abs(A.timing.playbackAt(132)-A.timing.playbackAt(119)-13)<1e-8,'Chase speed is unchanged');
 assert(A.notes.at(74.1).action.includes('第一、第二、第三、第四组夹具同时回升'),'Notes show concurrent fixture motion, not a single current group');
 assert(B.camera.shots.every(shot=>!/fail|discard|失败|扔出/i.test(shot.id+' '+shot.label)),'B contains no failure/discard shots');
 assert(Math.abs(B.timing.playbackAt(67.4)-B.timing.playbackAt(64)-3)<1e-8,'B holds its opening factory overview for three seconds');
 assert(Math.abs(B.timing.playbackAt(110)-B.timing.playbackAt(104)-4.5)<1e-8,'B automatic fade matches the faster continuous input fade');
 for(const [start,end]of[[76.7,78.5],[81.6,83.2]])assert(Math.abs(B.timing.playbackAt(end)-B.timing.playbackAt(start)-6)<1e-8,'Each inter-station transfer leaves six real seconds for resistance');
-assert(Math.abs(B.timing.playbackAt(119)-B.timing.playbackAt(110)-90/11)<1e-8,'The inner discovery preview keeps its original duration');
+assert(Math.abs(B.timing.playbackAt(119)-B.timing.playbackAt(110)-(90/11+2))<1e-8,'Discovery keeps its original time and gains a two-second closure');
 const overview=B.camera.pose(64);
 for(const raw of[64.5,65.5,66.5,67.3999])for(const key of['x','y','zoom'])assert.equal(B.camera.pose(raw)[key],overview[key],'The full overview stays still before its later dolly');
 for(const raw of[67.4,69.5]){const before=B.camera.pose(raw-.0001),after=B.camera.pose(raw+.0001);assert(Math.hypot(before.x-after.x,before.y-after.y)<1&&Math.abs(before.zoom-after.zoom)<.0001,'The delayed overview dolly rejoins without a camera jump');}
@@ -129,7 +129,7 @@ assert(officeEpisode.playing&&B.timing.sceneAt(officeEpisode.time)>110,'The work
 assert.equal(officeEpisode.target,B.timing.playbackAt(119));
 assert(!JSON.stringify(B.notes.at(102)).includes('闸门'));assert(!JSON.stringify(B.notes.at(102)).includes('矫正所'));
 assert(B.notes.at(102).camera.includes('铺满'));assert.equal(B.factory.sceneTransition(96).cover,1,'The separate factory and office spaces change only under the doorway cover');
-assert(B.notes.at(107).action.includes('逐渐变暗')&&B.notes.at(113).summary.includes('内心'));
+assert(B.notes.at(107).action.includes('变黑')&&B.notes.at(113).summary.includes('内心'));
 for(const variant of[A,B]){
   Factory.setPlaybackClock(variant.timing.playbackAt);
   assert.equal(variant.timing.playbackAt(138),variant.duration);
@@ -155,6 +155,6 @@ const injected=new StoryPlayer({timing:alternateTiming,beats:[alternateTiming.pl
 injected.seek(alternateTiming.playbackAt(119));injected.press();step(injected,1);
 assert(injected.playbackRate>1.79,'Chase input must consult the injected clock rather than the default clock');
 assert.equal(injected.target,alternateTiming.playbackAt(132));
-console.log('Version A/B: real-time offset fixtures, slower 93.65s/104.7s edits, continuous office pullback/inner episode, containment and chase hold passed.');
+console.log('Version A/B: real-time offset fixtures, slower 105.65s/116.7s edits, continuous office pullback/inner episode, containment and chase hold passed.');
 
 } finally {Factory.setPlaybackClock(time=>time);}

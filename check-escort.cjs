@@ -84,4 +84,24 @@ for(const [w,h] of [[1280,760],[1719,1512],[820,980],[390,844],[844,390]]){
   assert.equal(D.configureEntranceViewport({w:w/2,h:h/2,time:20}),viewport,'resizing after entry must not relocate an active actor');
 }
 D.configureEntranceViewport({w:1280,h:760,time:0});
+// Fine samples catch tangent discontinuities that a coarse entry snapshot can miss.
+D.configureEntranceViewport({w:780,h:1260,time:0});
+for(let i=1;i<=3;i++){
+  let previous=null;
+  for(let t=D.timing.guardsEntry[i-1];t<D.timing.guardsSettled[i-1];t+=.005){
+    const entry=actor(D.frame(t),'guard-'+i);
+    if(previous){const turn=Math.atan2(Math.sin(entry.body.angle-previous.angle),Math.cos(entry.body.angle-previous.angle));assert(Math.abs(turn)<.12,'guard-'+i+' must turn continuously through the doorway and between fan curves at '+t);}
+    previous=entry.body;
+  }
+}
+// Natural brief refusals leave the camera dolly continuous; input can add its own slower follow.
+for(const start of D.timing.hesitationStarts){
+  let previous=D.cameraTarget(start),moving=false;
+  for(let t=start+.025;t<Math.min(start+1.1,53.5);t+=.025){
+    const next=D.cameraTarget(t);assert(gap(previous,next)>D.timing.heroCruise*.02,'natural coercion cannot stop the nominal camera route');
+    assert.deepEqual(D.frame(t).cameraTarget,next,'the rendered frame exposes the same camera route');previous=next;moving=true;
+  }
+  assert(moving);
+}
+D.configureEntranceViewport({w:1280,h:760,time:0});
 console.log('PASS escort: seven spontaneous refusals, three staggered real twenty-pixel pokes, short street formation, collision-safe doors, continuous offscreen entrances in five viewports, and exact 58 handoff.');

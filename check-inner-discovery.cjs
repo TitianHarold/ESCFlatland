@@ -10,10 +10,10 @@ const p=idle.points.find(p=>p.visible&&!p.collected);assert(session.tap(p.x,p.y,
 assert.equal(session.snapshot(viewport).collected,1);
 for(let count=1;count<6;count++){const before=session.snapshot(viewport),next=before.points.find(p=>p.visible&&!p.collected);assert(next);assert(session.tap(next.x,next.y,viewport));assert.equal(session.snapshot(viewport).collected,count+1);session.update(.1);}
 assert.equal(session.snapshot(viewport).phase,'break');session.update(1);const held=session.snapshot(viewport);session.update(3,{advance:false});const pause=session.snapshot(viewport);
-assert.equal(pause.breakProgress,held.breakProgress);assert.deepEqual(pause.reveals,held.reveals);assert(pause.clock>held.clock);
-session.update(1);assert.equal(session.snapshot(viewport).phase,'done');assert.equal(session.snapshot(viewport).progress,1);
+assert.equal(pause.breakProgress,held.breakProgress);assert.deepEqual(pause.reveals,held.reveals);assert.equal(pause.clock,held.clock);
+session.update(3);assert.equal(session.snapshot(viewport).phase,'done');assert.equal(session.snapshot(viewport).progress,1);
 assert(session.snapshot(viewport).points.every(p=>p.alpha===0),'markers vanish before the single seed leaves');
-const frozen=new Inner.Session();frozen.update(2,{advance:false});assert(frozen.snapshot(viewport).points.some(p=>p.alpha>0),'ambient point arrival stays visible even while action is paused');
+const frozen=new Inner.Session();frozen.update(.6);const frozenState=frozen.snapshot(viewport);frozen.update(2,{advance:false});assert.deepEqual(frozen.snapshot(viewport),frozenState,'pause preserves the visible light positions and their arrival');
 const resized=new Inner.Session(),mobile={w:360,h:640};resized.update(1);const small=resized.snapshot(mobile).points.find(p=>p.visible);assert(small.hitRadius>=24);assert(resized.tap(small.x+small.hitRadius-1,small.y,mobile));
 const reveal=resized.snapshot(mobile).reveals[0];assert(Math.abs(resized.snapshot(viewport).reveals[0].x/viewport.w-reveal.x/mobile.w)<1e-12,'the discovery stays in the same normalized place after resize');
 for(const box of [viewport,mobile]){
@@ -40,7 +40,7 @@ if(process.env.FLATLAND_CANVAS_MODULE){
   if(output)fs.mkdirSync(output,{recursive:true});
   const capture=(box,wait)=>{const s=new Inner.Session();s.update(wait);for(let i=0;i<6;i++){const dot=s.snapshot(box).points.find(p=>p.visible&&!p.collected);assert(s.tap(dot.x,dot.y,box));s.update(.11);}return s;};
   const pixels=(s,box,b,contents=false)=>{
-    s.breakAge=b*2;const c=createCanvas(box.w,box.h),ctx=c.getContext('2d');
+    s.breakAge=b*Inner.breakDuration;const c=createCanvas(box.w,box.h),ctx=c.getContext('2d');
     Inner.draw(ctx,box,s.snapshot(box),{drawContents:contents?undefined:g=>{g.fillStyle='#ffffff';g.fillRect(0,0,box.w,box.h);}});
     return{canvas:c,data:ctx.getImageData(0,0,box.w,box.h).data};
   };

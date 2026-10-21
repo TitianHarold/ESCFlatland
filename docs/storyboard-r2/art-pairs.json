@@ -2,8 +2,8 @@
   "schemaVersion": "1.1",
   "generator": "built-in image_gen.imagegen plus code-rendered white field and approved hand composites",
   "status": "static_keyframes_not_completed_video",
-  "uniqueImageCount": 14,
-  "pairCount": 8,
+  "uniqueImageCount": 16,
+  "pairCount": 9,
   "missingImages": [],
   "boundary": "007A尾帧也是007B首帧。007B完整末帧应为退开净空，旧持压图只作历史参考。014D末帧引用纯白代码场，015A引用新批准少女双手的代码合成帧并跨配色共用；不复用旧POV。旧几何末帧和原始调用记录保留为资料。",
   "pairs": [
@@ -229,6 +229,24 @@
       "originalPromptFile": "首尾帧美术生成提示词.json",
       "assetBoundary": "Only the newly approved slender adolescent hands rendered at these paths; no previous POV images. Neutral white field is shared across original/F2/F3/F4 without recoloring.",
       "paletteInvariant": true
+    },
+    {
+      "id": "neutral-015C",
+      "shotId": "015C",
+      "palette": "neutral",
+      "title": "第一人称 · 落光后握紧画笔",
+      "startImage": "frames/ending/POV-end-fair-r19.png",
+      "endImage": "frames/ending/POV-brush-r23.png",
+      "firstFrameDescription": "双手半握，同一颗光在手前准备落下，画笔与手部姿态衔接。",
+      "lastFrameDescription": "双手完整握紧，右手握住画笔，黄金光已进入手心并从指缝轻轻发亮。",
+      "fullPrompt": "015C｜第三次点击：光落入手心，握紧画笔｜A · 四组夹具｜自动预览96.350–98.650秒\n\n【剧情】\n同一颗内心之光落入手中，少女握紧画笔，把探索欲握在自己手里。\n\n【完整场景与角色】\n纯白无地标空间，静止第一人称视角看自己的少女双手。手指纤细，肤色偏白中性粉调，淡蓝袖口，少数自然随机散落的蓝绿与珊瑚颜料；左右手解剖和拇指方向正确。此前同一颗黄金光种子延续亮芯与渐变光晕。没有椅子、城市、第三人称少女或额外的低多边形世界。\n\n【画风与颜色】\n清爽二次元手绘线稿、轻纸纹、干净哑光平涂。纤细少女手指，肤色偏白不泛黄、不油亮；自然少量颜料，不刻意每指一色。白场为纯白#FFFFFF。光扩散后为细腻有机连续色带、纸面纹理与弯折薄面的抽象内心。\n\n【动作与时间节奏】\n自动预览本镜对应96.350–98.650秒，约2.300秒；互动停留可以更长。第三次点击后，同一光点沿连续弧线落入手心，手指从半握自然合拢到全握；右手攥紧一支有少量颜料的画笔，另一手也收拢。保留清晰的拇指与握笔关系，不添加调色盘。\n交互节奏：第三次短点击启动落光与全握；落光、握笔动作完成后才进入双手淡出的下一段。\n\n【机位与运镜】\n静止第一人称略向下观察双手，仅有轻微自然视线变化；光落入手中后，镜头不前冲。双手淡出到内心扩散保持同一中心。\n\n【首帧】\n双手半握，同一颗光在手前准备落下，画笔与手部姿态衔接。\n\n【尾帧】\n双手完整握紧，右手握住画笔，黄金光已进入手心并从指缝轻轻发亮。\n\n【连续性与避免】\n同一场景的角色、机器与循环动画使用连续时钟，镜头切换、缩放、平移都不能让动作重启。所有接触依据同一真实轮廓，人物不得穿过墙、门、其他人物或夹面；只在实际接触后传力。保持首尾指定状态，不增加其他故事、额外人物或未要求的3D城市场景。参考画面只约束材质和构图；动作、交互与首尾状态以本段完整文字为准。视频画面不绘制网页按钮、时间码、水印或复制控件。 此镜不显示结尾文字。",
+      "keywords": [
+        "少女双手",
+        "画笔",
+        "光点落手"
+      ],
+      "status": "generated_transparent_hand_asset",
+      "continuityNote": "新增握笔手部姿态，既有六项角色素材与原图保持。此图对约束材质与手部姿态，完整当前分镜词由制作表提供。"
     }
   ]
 }

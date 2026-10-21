@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict');
+const{createCanvas}=require('/Users/harold/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/@napi-rs/canvas');
+global.OffscreenCanvas=class{constructor(w,h){return createCanvas(w,h);}};
+const Ending=require('./docs/ending-progress.js'),Dimension=require('./docs/dimension.js');
+const viewport={w:1280,h:760},canvas=createCanvas(viewport.w,viewport.h),ctx=canvas.getContext('2d');
+const asset=color=>{const c=createCanvas(1200,1000),g=c.getContext('2d');g.fillStyle=color;g.fillRect(0,0,c.width,c.height);return c;};
+const count=color=>{const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let count=0;for(let i=0;i<data.length;i+=4)if(data[i]===color[0]&&data[i+1]===color[1]&&data[i+2]===color[2])count++;return count;};
+const drawContents=(g,v)=>{g.fillStyle='#562e8c';g.fillRect(0,0,v.w,v.h);};
+(async()=>{
+  const loaded=await Dimension.setEndingAssets({hands:asset('#ff0000'),flexedHands:asset('#00ff00'),brushHands:asset('#0000ff')});assert(loaded.open&&loaded.flexed&&loaded.brush);
+  const origin={x:.81,y:.19,r:.012},arrival=Dimension.endingLight(132,viewport,new Ending.Session().snapshot(),origin);
+  assert.equal(arrival.x,viewport.w*origin.x);assert.equal(arrival.y,viewport.h*origin.y);assert.equal(arrival.r,viewport.h*origin.r,'the actual last chase light hands off with the same position and radius');
+  const session=new Ending.Session(),draw=()=>Dimension.drawEnding(ctx,session.snapshot().raw,viewport,{state:session.snapshot(),drawContents});
+  session.click();session.update(1.2);draw();assert(count([255,0,0])>50000,'first discovery renders the open hand atlas');
+  session.click();session.update(1);draw();assert(count([0,255,0])>50000,'second discovery renders the flexed hand atlas');
+  session.click();session.update(1.5);draw();assert(count([0,0,255])>50000,'the third discovery renders the brush grip, after the seed has landed');
+  session.update(.8+1.1);assert.equal(session.snapshot().phase,'seed');draw();assert.equal(count([0,0,255]),0,'both hands have vanished before the seed expands');assert.equal(count([0,255,0]),0);assert.equal(count([255,0,0]),0);
+  const frozen=canvas.toBuffer('image/png');session.update(50,{advance:false});draw();assert(frozen.equals(canvas.toBuffer('image/png')),'pause keeps all ending pixels unchanged');
+  session.update(.7+2.6+2.6);assert(session.snapshot().complete);
+  const texts=[],originalText=ctx.fillText.bind(ctx);ctx.fillText=(...args)=>{texts.push(args[0]);originalText(...args);};draw();assert.deepEqual(texts,[Ending.text]);
+  const corner=Array.from(ctx.getImageData(0,0,1,1).data);assert.deepEqual(corner,[86,46,140,255],'the expanded inner world reaches every corner');
+  Dimension.drawEnding(ctx,138,viewport);assert(count([255,255,255])<canvas.width*canvas.height*.01,'the default final code frame also expands to the actual inner world');
+  console.log(JSON.stringify({pass:true,openHalfGripAtlases:true,pausedPixelsFrozen:true,handsVanishBeforeExpansion:true,fullViewportExpansion:true,exactText:Ending.text}));
+})().catch(error=>{console.error(error);process.exitCode=1;});

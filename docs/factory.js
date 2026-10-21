@@ -14,7 +14,9 @@
   const entrance={x:-3000,y:-2100},discard=world(-2450,390),chaseScale=4.75,chaseEnd={x:discard.x+(-800-discard.x)*chaseScale,y:discard.y-3300*chaseScale};
   const heroActor=C.create('child'),backgroundActors=rows.map((_,row)=>Array.from({length:3},()=>C.create({sides:row+3,radius:45,regular:false})));
   const guards=Array.from({length:3},()=>new C.Character('guard',[[0,-60],[12,48],[-12,48]],0));
-  let playbackClock=time=>time;
+  let playbackClock=time=>time,ambientTime=null,pressReturns=[];
+  const ambientAt=time=>ambientTime===null?time:ambientTime;
+  function setAmbientTime(time){const next=Number.isFinite(time)?time:null;if(next!==ambientTime){ambientTime=next;memoTime=NaN;}if(next===null)pressReturns=[];}
   const heroClock=time=>72+playbackClock(time)-playbackClock(72);
   function setPlaybackClock(map){
     if(typeof map!=='function')throw new Error('Factory playback clock must be a scene-to-seconds function.');
@@ -41,7 +43,7 @@
   }
   function pathPose(actor,path,d){const p=pathPoint(path,d);return hardPose(actor,p.x,p.y,p.heading);}
   const entryStart=local(entrance),entryHeading=CityMap.gate.heading-angle;
-  const entryCurves=[[[entryStart.x,entryStart.y],[entryStart.x+120*Math.cos(entryHeading),entryStart.y+120*Math.sin(entryHeading)],[1020,130],[900,130]]];
+  const entryCurves=[[[entryStart.x,entryStart.y],[entryStart.x+120*Math.cos(entryHeading),entryStart.y+120*Math.sin(entryHeading)],[1220,130],[1100,130]]];
   const entryPath=makePath(entryCurves),entryPortal=CityMap.gate.portal;
   const exitPoint=world(leftWall,390),exitPortal={point:[exitPoint.x,exitPoint.y],heading:angle+Math.PI,halfWidth:110,halfDepth:12,wallSpan:180,opening:t=>between(t,100.9,101.45)};
   const escortCurves=[
@@ -113,7 +115,7 @@
   }
   function baseHeroBody(t){
     if(t<64)return entranceState(t).body;
-    if(t<70)return lanePose(heroActor,900,130);
+    if(t<70)return lanePose(heroActor,lerp(1100,900,clamp((t-64)/6)),130);
     if(t<72)return lanePose(heroActor,lerp(900,480,between(t,70,72)),130);
     if(t<77)return lanePose(heroActor,pressLineX(heroProgram,heroClock(t)),130);
     if(t<80)return lanePose(heroActor,lerp(-730,stations[1],between(t,77,80)),130);
@@ -194,7 +196,7 @@
     const corners=[[view.left,view.top],[view.right,view.top],[view.right,view.bottom],[view.left,view.bottom]].map(([x,y])=>local({x,y}));
     return{left:Math.min(...corners.map(p=>p.x)),right:Math.max(...corners.map(p=>p.x)),top:Math.min(...corners.map(p=>p.y)),bottom:Math.max(...corners.map(p=>p.y))};
   }
-  function backgroundLayout(bounds,laneYs=rows,left=leftWall,right=900){
+  function backgroundLayout(bounds,laneYs=rows,left=leftWall,right=1100){
     const view=localViewport(bounds),visible=(x,y,halfX=170,halfY=160)=>!view||x+halfX>=view.left&&x-halfX<=view.right&&y+halfY>=view.top&&y-halfY<=view.bottom;
     const lines=laneYs.map((y,row)=>({y,row,virtual:false})).filter(line=>!view||line.y+160>=view.top&&line.y-160<=view.bottom);
     const columns=[0],period=right-left+520;
@@ -232,7 +234,7 @@
   function fullFrame(time){
     const t=Number.isFinite(time)?Math.max(0,time):0;if(t===memoTime)return memoFrame;memoTime=t;const actors=[];
     if(t<58||t>=132){const detachedTag=detachedTagState(t);return memoFrame={actors,hero:null,...(detachedTag?{detachedTag}:{})};}
-    if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(cachedBackground(t,row,slot));
+    if(t<104)for(let row=0;row<rows.length;row++)if(row!==2)for(let slot=0;slot<3;slot++)actors.push(cachedBackground(ambientAt(t),row,slot));
     const hero=heroBody(t),state=heroMaterial(t),light=lightState(t,hero),coreVisible=t<104||t>=108.3&&t<116;
     const entry=makeEntry('hero',heroActor,hero,P.blue,state,{station:t>=72&&t<77?0:t>=80&&t<87?1:t>=90&&t<98.6?2:-1,core:coreVisible?1:0,coreVisible,coreScale:1,coreReveal:t<104?1:light?.reveal||0,coreEntityId:'hero-seed',coreGlow:light?.glow||0,restraint:restraintState(t),emotion:t>=64&&t<66?'question':undefined});actors.push(entry);
     if(t>=97.5&&t<104)[180,-180,-360].forEach((offset,i)=>actors.push({id:'factory-guard-'+i,actor:guards[i],body:escortBody(guards[i],Math.max(98.6,t),offset),color:ink,cavity:false,core:0}));
@@ -260,7 +262,37 @@
     const tangent={x:cs*direction,y:sn*direction},maxOffset=phase===null?0:(t>=77?240:t<72?180:110)*Math.sin(Math.PI*phase)**2;
     return{allowed:maxOffset>.001,maxOffset,tangent,direction:tangent,phase};
   }
+  function travelSegment(t){
+    if(t>=58&&t<64)return{start:58,end:64,length:entryPath.length,progress:q=>entryPath.length*between(q,58,64),clearance:0};
+    if(t>=64&&t<70)return{start:64,end:70,length:200,progress:q=>200*clamp((q-64)/6),clearance:0};
+    if(t>=70&&t<72)return{start:70,end:72,length:420,progress:q=>420*between(q,70,72),clearance:0};
+    if(t>=72&&t<77)for(let i=0;i<heroProgram.programs.length;i++){
+      const start=heroProgram.programs[i].clearTime,end=i+1<heroProgram.programs.length?heroProgram.programs[i+1].arrivalTime:heroProgram.start+5;
+      if(heroClock(t)>=start&&heroClock(t)<end){const from=pressStations[i],to=i+1<pressStations.length?pressStations[i+1]:-730;
+        const rawAt=clock=>{let a=72,b=77;for(let n=0;n<32;n++){const m=(a+b)/2;if(heroClock(m)<clock)a=m;else b=m;}return(a+b)/2;};
+        return{start:rawAt(start),end:rawAt(end),length:from-to,progress:q=>from-pressLineX(heroProgram,heroClock(q)),clearance:0};
+      }
+    }
+    if(t>=77&&t<80)return{start:77,end:80,length:450,progress:q=>450*between(q,77,80),clearance:170};
+    if(t>=87&&t<90)return{start:87,end:90,length:450,progress:q=>450*between(q,87,90),clearance:170};
+    return null;
+  }
+  function resistTravel(from,to,distance){
+    if(!(distance>0)||to<=from)return to;const segment=travelSegment(from);if(!segment)return to;
+    const before=segment.progress(from);if(before<segment.clearance)return to;
+    const end=Math.min(to,segment.end),desired=Math.max(segment.clearance,segment.progress(end)-distance);let a=segment.start,b=end;
+    for(let i=0;i<32;i++){const m=(a+b)/2;if(segment.progress(m)<desired)a=m;else b=m;}
+    return(a+b)/2;
+  }
   function withResistance(source,offset,time,effort={}){
+    if(effort.transportResolved){
+      const window=travelSegment(time);if(!source.hero||!window)return{...source,appliedOffset:0};
+      const preload=clamp(effort.preload||0),strength=clamp(effort.effort||0),weak=clamp(effort.weak||0),gait=Math.sin((effort.stride||0)*Math.PI*2),body={...source.hero};
+      const forward={x:Math.cos(body.angle+heroActor.headAxis(body).angle),y:Math.sin(body.angle+heroActor.headAxis(body).angle)},sway=gait*6*strength;
+      body.x-=forward.y*sway+forward.x*weak*7;body.y+=forward.x*sway-forward.y*weak*7;
+      body.axialStretch=(body.axialStretch||0)-.09*preload-.05*strength;body.bend=(body.bend||0)+.1*preload+.045*gait*strength+.035*weak;body.strain=Math.max(body.strain||0,.14*strength);
+      return{...source,hero:body,actors:source.actors.map(entry=>entry.id==='hero'?{...entry,body,resistance:{strength,preload,exhausted:!!effort.exhausted}}:entry),appliedOffset:0,resistance:window};
+    }
     const window=resistanceWindow(time),requested=Number.isFinite(offset)?Math.max(0,offset):0,appliedOffset=Math.min(requested,window.maxOffset),preload=clamp(effort.preload||0),strength=clamp(effort.effort||0);
     if(!source.hero||(!appliedOffset&&(!preload||!window.allowed)))return{...source,appliedOffset:0,resistance:window};
     let actualOffset=appliedOffset;
@@ -332,9 +364,9 @@
     const t=Number.isFinite(time)?time:0;if(t<58||t>=104)return;setup(ctx);
     const layout=backgroundLayout(bounds),{view,lines,columns,period}=layout,detail=bounds?.scale!==undefined?bounds.scale>.4:pressDetail(ctx),far=rows.at(-1)+400;
     ctx.fillStyle=P.factory.floor;
-    if(view)ctx.fillRect(layout.left,view.top-4,layout.right-layout.left,view.bottom-view.top+8);else ctx.fillRect(leftWall,-650,900-leftWall,far+650);
+    if(view)ctx.fillRect(layout.left,view.top-4,layout.right-layout.left,view.bottom-view.top+8);else ctx.fillRect(leftWall,-650,1100-leftWall,far+650);
     for(const {y,row} of lines){
-      belt(ctx,y,layout.left,layout.right,playbackClock(t));
+      belt(ctx,y,layout.left,layout.right,playbackClock(ambientAt(t)));
       for(const column of columns){const offset=column*period;
         for(const x of pressStations)if(layout.visible(x+offset,y))drawPressBase(ctx,x+offset,y,detail);
         for(let station=1;station<3;station++){
@@ -351,9 +383,15 @@
     ctx.restore();if(t<64){receivingBay(ctx);drawPortal(ctx,entryPortal,t);}if(t>=98)drawPortal(ctx,exitPortal,t);
   }
   function pressForRow(t,row,index){
-    if(row===2)return Rules.pressState(heroProgram.programs[index],heroClock(t));
-    for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===0)return Rules.pressState(programs[row][slot].programs[index],item.age);}
-    return Rules.pressState(programs[row][0].programs[index],playbackClock(t)-playbackClock(64)+row*.83,{occupied:false});
+    if(row===2){
+      const program=heroProgram.programs[index],clock=heroClock(t);
+      if(ambientTime===null||clock<program.clearTime)return Rules.pressState(program,clock);
+      // A cleared press finishes its slow retraction even when the child resists farther along the belt.
+      const now=playbackClock(ambientAt(t)),anchor=pressReturns[index]||(pressReturns[index]={clock,ambient:now});
+      return Rules.pressState(program,Math.max(clock,Math.min(program.returnEnd,anchor.clock+Math.max(0,now-anchor.ambient))));
+    }
+    for(let slot=0;slot<3;slot++){const item=cachedBackground(ambientAt(t),row,slot);if(item.station===0)return Rules.pressState(programs[row][slot].programs[index],item.age);}
+    return Rules.pressState(programs[row][0].programs[index],playbackClock(ambientAt(t))-playbackClock(64)+row*.83,{occupied:false});
   }
   function drawOverlay(ctx,time,bounds){
     const t=Number.isFinite(time)?time:0,layout=backgroundLayout(bounds),{view,lines,columns,period}=layout,detail=bounds?.scale!==undefined?bounds.scale>.4:pressDetail(ctx);
@@ -363,7 +401,7 @@
         ctx.save();ctx.translate(offset,y-originalY);const laneY=originalY;
         for(let index=0;index<pressStations.length;index++){
           const x=pressStations[index];if(!layout.visible(x+offset,y))continue;
-          const age=((playbackClock(t)+row*.83-index*.5)%5+5)%5,open=age<.5?1-(age/.5)**3:age<3.5?ease((age-.5)/3):1,gap=36+30*open;
+          const age=((playbackClock(ambientAt(t))+row*.83-index*.5)%5+5)%5,open=age<.5?1-(age/.5)**3:age<3.5?ease((age-.5)/3):1,gap=36+30*open;
           const press=repeat?{upperFace:laneY-gap,lowerFace:laneY+gap,impact:0}:pressForRow(t,row,index);drawPressActuators(ctx,x,laneY,press,detail);
           if(press.impact>0){
           ctx.save();ctx.globalAlpha=press.impact;press.contactPoints.forEach((point,side)=>{
@@ -376,9 +414,9 @@
         }
         const spinVisible=layout.visible(stations[1]+offset,y),scanVisible=layout.visible(stations[2]+offset,y);
         if(!spinVisible&&!scanVisible){ctx.restore();continue;}
-        let spin=null,rotation=t*.14,scan=(t*.2+row)%1;
+        let spin=null,rotation=ambientAt(t)*.14,scan=(ambientAt(t)*.2+row)%1;
         if(!repeat&&row===2){spin=heroSpin(t);rotation=spin.angle;scan=between(t,90,94.5);}
-        else if(!repeat)for(let slot=0;slot<3;slot++){const item=cachedBackground(t,row,slot);if(item.station===1){spin=item.spin;rotation=spin.angle;}if(item.station===2)scan=between(item.age,26,30);}
+        else if(!repeat)for(let slot=0;slot<3;slot++){const item=cachedBackground(ambientAt(t),row,slot);if(item.station===1){spin=item.spin;rotation=spin.angle;}if(item.station===2)scan=between(item.age,26,30);}
         if(spinVisible){ctx.save();ctx.translate(stations[1],laneY);ctx.rotate(rotation);stroke(ctx,[[0,-94],[0,-72]],ink,8);stroke(ctx,[[94,0],[72,0]],ink,8);ctx.restore();
         if(spin&&spin.angularSpeed>0){
           const speed=clamp(spin.angularSpeed/12);ctx.save();ctx.translate(stations[1],laneY);ctx.globalAlpha=.16+.38*speed;ctx.strokeStyle=ink;
@@ -392,6 +430,6 @@
       ctx.restore();if(t<64)drawPortal(ctx,entryPortal,t,true);if(t>=98)drawPortal(ctx,exitPortal,t,true);
     }
   }
-  const anchors=Object.freeze({approach:Object.freeze(world(900,130)),entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,650),zoom:.28}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
-  return{drawBase,drawEntry,frame,drawOverlay,backgroundLayout,guideOffset,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,resistanceWindow,withResistance};
+  const anchors=Object.freeze({approach:Object.freeze(world(900,130)),entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:1100,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,650),zoom:.28}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
+  return{drawBase,drawEntry,frame,drawOverlay,backgroundLayout,overviewPoint:time=>baseHeroBody(Math.max(64,Math.min(70,time))),guideOffset,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,setAmbientTime,resistTravel,resistanceWindow,withResistance};
 });

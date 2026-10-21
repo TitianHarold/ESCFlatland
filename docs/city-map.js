@@ -47,11 +47,6 @@
     [-2420,1250,250,240],[-2360,1680,255,240]
   ].map(([x,y,w,h],i)=>houseAsset({id:'background-'+i,x,y,w,h,doorWidth:Math.min(110,w*.38)}));
   const houseBoundaries=[mainHouse,...homes,...backgroundHomes].map(h=>h.boundary),walls=houseBoundaries.flatMap(h=>h.walls);
-  const west=homes.find(h=>h.id==='west'),northwest=homes.find(h=>h.id==='northwest');
-  west.roadJoin=[-1140,-920];west.accessCurves=[[[...west.door],[-1140,-780],[-1030,-873],west.roadJoin]];
-  northwest.roadJoin=[-2080,-1200];northwest.accessCurves=[[[...northwest.door],[-2080,-1100],[-1980,-1179],northwest.roadJoin]];
-  const joins={north:[-450,-2780],upper:[310,-1640],northeast:[1750,-2530],east:[2175,-1020],'east-solo':[2200,450],south:[690,1220],southwest:[-800,650+150*230/790]};
-  homes.forEach(h=>{if(!h.accessCurves){h.roadJoin=joins[h.id];h.accessCurves=[straight(h.door,h.roadJoin)];}});
   const plaza=[[-750,-520],[-590,-680],[-310,-720],[170,-670],[580,-360],[650,-160],[440,110],[140,230],[-300,220],[-665,10]];
   // Unequal loops keep the existing door joins, without a rectangular street grid.
   const ring=[[-600,-600],[-650,-1640],[310,-1640],[830,-1640],[1450,-1020],[1470,-300],[1500,350],[1480,1000],[1300,1220],[690,1220],[-160,1190],[-290,900],[-800,650+150*230/790],[-620,100],[-600,-600]];
@@ -175,31 +170,64 @@
     return points.filter((_,i)=>keep[i]);
   }
   function routeAccesses(targets){
-    const step=16,x0=-5000,y0=-3900,w=610,h=455,n=w*h,known=new Uint8Array(n);let clearance=44;
+    const step=16,x0=-5000,y0=-3900,w=610,h=455,n=w*h,known=new Uint8Array(n),network=new Uint8Array(n);let clearance=44;
     const obstacles=[...houseBoundaries.map(h=>({polygon:h.polygon,bounds:h.bounds})),...[publicBuilding,publicCourt].map(polygon=>({polygon,bounds:{minX:Math.min(...polygon.map(p=>p[0])),maxX:Math.max(...polygon.map(p=>p[0])),minY:Math.min(...polygon.map(p=>p[1])),maxY:Math.max(...polygon.map(p=>p[1]))}}))];
     const point=i=>[x0+(i%w)*step,y0+Math.floor(i/w)*step];
     const cell=p=>Math.round((p[1]-y0)/step)*w+Math.round((p[0]-x0)/step);
-    function blocked(i){
-      if(i<0||i>=n)return true;if(known[i])return known[i]===2;
-      const p=point(i),padding=clearance;
-      const hit=obstacles.some(o=>{
+    function blockedPoint(p,padding){
+      return obstacles.some(o=>{
         const b=o.bounds;if(p[0]<b.minX-padding||p[0]>b.maxX+padding||p[1]<b.minY-padding||p[1]>b.maxY+padding)return false;
         return inPolygon(p,o.polygon)||o.polygon.some((a,j)=>segmentDistance(p,a,o.polygon[(j+1)%o.polygon.length])<padding);
       });
+    }
+    function blocked(i){
+      if(i<0||i>=n)return true;if(known[i])return known[i]===2;
+      const hit=blockedPoint(point(i),clearance);
       known[i]=hit?2:1;return hit;
     }
-    const goals=[...new Set(targets.map(cell))].filter(i=>!blocked(i));
+    targets.forEach(p=>{const i=cell(p);if(i>=0&&i<n)network[i]=1;});
+    const distanceToStreet=distanceField(network,w,h,1);
+    function clearSegment(a,b,padding){
+      const count=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/8));
+      for(let i=0;i<=count;i++)if(blockedPoint(lerpPoint(a,b,i/count),padding))return false;
+      return true;
+    }
+    function smoothAccess(points,padding){
+      const result=[points[0]];
+      for(let i=1;i<points.length-1;i++){
+        const before=points[i-1],corner=points[i],after=points[i+1],a=Math.hypot(before[0]-corner[0],before[1]-corner[1]),b=Math.hypot(after[0]-corner[0],after[1]-corner[1]);
+        let cut=Math.min(100,a*.42,b*.42),arc;
+        for(let attempt=0;attempt<8;attempt++){
+          const from=lerpPoint(corner,before,cut/a),to=lerpPoint(corner,after,cut/b),count=Math.max(4,Math.ceil(cut/4));
+          arc=Array.from({length:count+1},(_,j)=>{const t=j/count,s=1-t;return[0,1].map(k=>s*s*from[k]+2*s*t*corner[k]+t*t*to[k]);});
+          if(arc.every(p=>!blockedPoint(p,padding)))break;
+          cut*=.5;
+        }
+        result.push(...arc);
+      }
+      result.push(points[points.length-1]);
+      return result.flatMap((p,i)=>{
+        if(!i)return[p];const a=result[i-1],count=Math.max(1,Math.ceil(Math.hypot(p[0]-a[0],p[1]-a[1])/8));
+        return Array.from({length:count},(_,j)=>lerpPoint(a,p,(j+1)/count));
+      });
+    }
     function route(start,padding){
       clearance=padding;known.fill(0);
-      const source=cell(start),goal=goals.filter(i=>!blocked(i)).reduce((best,i)=>{const p=point(i),d=Math.hypot(p[0]-start[0],p[1]-start[1]);return d<best.d?{i,d}:best;},{d:Infinity}).i;
-      if(blocked(source)||goal===undefined)throw new Error('No clear house access start.');
+      const source=cell(start);
+      if(blocked(source))throw new Error('No clear house access start at '+start.join(',')+'.');
       const g=new Float32Array(n).fill(Infinity),parent=new Int32Array(n).fill(-1),closed=new Uint8Array(n),heap=[];
-      const target=point(goal),heuristic=i=>{const p=point(i);return Math.hypot(p[0]-target[0],p[1]-target[1])/step;};
+      // The nearest reachable part of the whole street graph wins, rather than a hand-picked endpoint.
+      const heuristic=i=>Math.sqrt(distanceToStreet[i]);
       function push(i,cost){let k=heap.length;heap.push({i,cost});while(k){const j=(k-1)>>1;if(heap[j].cost<=cost)break;heap[k]=heap[j];k=j;}heap[k]={i,cost};}
       function pop(){const top=heap[0],last=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length){let j=k*2+1;if(j+1<heap.length&&heap[j+1].cost<heap[j].cost)j++;if(heap[j].cost>=last.cost)break;heap[k]=heap[j];k=j;}heap[k]=last;}return top.i;}
       g[source]=0;push(source,heuristic(source));
       while(heap.length){
-        const i=pop();if(closed[i])continue;if(i===goal){const path=[];for(let j=i;j>=0;j=parent[j])path.push(point(j));return simplify(path.reverse(),step*.7);}
+        const i=pop();if(closed[i])continue;if(network[i]){
+          const raw=[];for(let j=i;j>=0;j=parent[j])raw.push(point(j));raw.reverse();
+          const points=[start];
+          for(let at=0;at<raw.length-1;){let end=at+1;while(end+1<raw.length&&clearSegment(raw[at],raw[end+1],padding))end++;points.push(raw[end]);at=end;}
+          return points;
+        }
         closed[i]=1;const x=i%w,y=Math.floor(i/w);
         for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
           if((!dx&&!dy)||x+dx<0||x+dx>=w||y+dy<0||y+dy>=h)continue;
@@ -210,10 +238,20 @@
       throw new Error('House access cannot reach a street.');
     }
     const accesses=[{houseId:'main',points:sampleCurves([escortCurves[0]]),width:210,join:escortCurves[0][3]}];
-    for(const home of homes)accesses.push({houseId:home.id,points:sampleCurves(home.accessCurves),width:Math.min(200,home.doorWidth*.9),join:home.roadJoin});
-    for(const home of backgroundHomes){
-      const normal=home.boundary.door.normal,width=Math.max(54,Math.min(80,home.doorWidth*.75)),start=home.door.map((v,i)=>v-normal[i]*60),points=[home.door,start,...route(start,width/2+6)];
-      accesses.push({houseId:home.id,points,width,join:points[points.length-1]});
+    for(const home of [...homes,...backgroundHomes]){
+      const normal=home.boundary.door.normal,desired=Math.max(76,Math.min(150,home.doorWidth*.9));let entrance;
+      // Fit the door's outward lead to the real gap between neighbouring houses before routing.
+      for(let width=desired;width>=60&&!entrance;width=Math.max(59,width-8)){
+        const padding=width/2+6;
+        for(let outset=Math.ceil((padding+12)/8)*8;outset<=112;outset+=8){
+          const start=home.door.map((v,i)=>v-normal[i]*outset);
+          if(!blockedPoint(start,padding)&&!blockedPoint(point(cell(start)),padding)){entrance={width,padding,start};break;}
+        }
+      }
+      if(!entrance)throw new Error('No clear entrance for '+home.id+'.');
+      const{width,padding,start}=entrance,raw=[home.door,...route(start,padding)];
+      const points=smoothAccess(raw,width/2+4);
+      accesses.push({houseId:home.id,points,width,join:points[points.length-1],generated:true,clearance:width/2+4});
     }
     return accesses;
   }
