@@ -122,8 +122,9 @@
   const door=CityMap.mainDoor,gate=CityMap.gate.point,road=CityMap.escortCurves;
   const hx=main.child.x,hy=main.child.y;
   const formation=[[hx-170,hy],[hx+30,hy+230],[hx+147,hy+85],[hx-85,hy+147]];
-  const entryStarts=[20.55,21.1,21.9,22.7].map(t=>t*ratio),entryEnds=[21.25,21.75,22.55,23.35].map(t=>t*ratio);
-  const entryFinish=[21.85,23,24,24.1].map(t=>t*ratio);
+  // The inspector crosses the threshold alone, checks the child, then lets the guards follow.
+  const entryStarts=[20.55,22.1,22.8,23.3].map(t=>t*ratio),entryEnds=[21.25,22.7,23.4,23.8].map(t=>t*ratio);
+  const entryFinish=[21.85,23.5,24,24.1].map(t=>t*ratio);
   const police=[inspector,...guards].map((actor,i)=>{
     const [x,y]=formation[i],heading=Math.atan2(hy-y,hx-x);
     const approach=path([[[door[0],door[1]-210],[door[0],door[1]-160],[door[0],door[1]+15],[door[0],door[1]+70]]],Math.PI/2);
@@ -144,7 +145,12 @@
   });
   function entrance(person,index,time){
     if(time<=entryEnds[index])return interpolateWalk(person.actor,person.approach,time,entryStarts[index],entryEnds[index]);
-    return interpolateWalk(person.actor,person.fan,time,entryEnds[index],entryFinish[index]);
+    const body=interpolateWalk(person.actor,person.fan,time,entryEnds[index],entryFinish[index]);
+    if(index===0&&time>=entryFinish[0]){
+      const age=time-entryFinish[0],signal=Math.sin(Math.PI*clamp(age/.48));
+      body.angle-=.32*signal; // A brief look back holds the following guards, then attention returns to the child.
+    }
+    return body;
   }
   function gatedDistance(actor,route,distance,time,speed=0){
     const from=Math.max(0,route.length-1400);
@@ -347,6 +353,7 @@
     if(time<58){
       const entry=record('hero',heroActor,hero,blue,true);
       for(const kind of ['father','mother']){const contact=Motion.contactTimes[kind]*duration;curiosity(entry,time,contact);emotion(entry,'question',time-contact-.35,1.5,1.4);}
+      emotion(entry,'exclamation',time-firstMove,.75,1.15);
       actors.push(entry);
     }
     for(const home of households){
@@ -394,5 +401,5 @@
     return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
   }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,timing:{duration,takeAway,firstMove,cruiseStart,detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,timing:{duration,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],guardsEntry:entryStarts.slice(1),detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

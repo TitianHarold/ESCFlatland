@@ -56,3 +56,18 @@ for(const n of [3,4,5,6,7,8,9,10]){
   }
 }
 console.log(JSON.stringify({matchingDieFaces:'3..10',trueOuterFrameContact:true,noHeadPenetration:true}));
+
+// The standard frame is assembled through separate visible edges, not a global fade.
+for(const n of[3,4,5,6,7,8,9,10]){
+  const actor=C.create({sides:n,radius:42,regular:false}),span=5/n;
+  for(let i=0;i<n;i++){
+    const before=Routine.moldAt(71.7+(i+.2)*span,71.7,76.7,actor),hit=Routine.moldAt(71.7+(i+.7)*span,71.7,76.7,actor);
+    assert.equal(before.faces.filter(f=>f.locked).length,i);assert.equal(hit.faces.filter(f=>f.locked).length,i+1);
+    assert(before.faces[i].gap>20);assert.equal(hit.faces[i].gap,0);assert(hit.faces[i].impact>0);
+    for(const face of before.faces)for(const p of[face.from,face.to])assert(Math.abs(p[0])<118&&Math.abs(p[1])<118,'open assembly segments remain in their own conveyor footprint');
+  }
+  assert(Routine.moldAt(76.7,71.7,76.7,actor).complete);assert.equal(Routine.moldAt(76.7,71.7,76.7,actor).fitted,1);
+}
+for(let t=70;t<94;t+=.025){const original=Routine.frame(t),changed=Routine.withResistance(original,1000,t),w=Routine.resistanceWindow(t);assert(changed.appliedOffset<=w.maxOffset+1e-8);assert.equal(changed.actors.find(e=>e.id==='hero').body,changed.hero);if(original.actors.find(e=>e.id==='hero').routine.compacting.force)assert.equal(changed.appliedOffset,0);}
+for(const t of[71.7,78.5,83.2])assert.equal(Routine.withResistance(Routine.frame(t),1000,t).appliedOffset,0,'resistance clears before the machine closes');
+console.log(JSON.stringify({stagedStandardFrame:'3..10 edges',safeResistanceWindows:true}));

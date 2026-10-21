@@ -47,16 +47,17 @@ for(let playback=76.25;playback<=86;playback+=.25){
   const distance=Math.hypot(next.x-last.x,next.y-last.y);
   distances.push(distance);distancePerProgress.push(distance/(progress.q-lastProgress.q));
   speedIncrements.push(progress.qSpeed-lastProgress.qSpeed);
-  assert(progress.qSpeed>lastProgress.qSpeed,'Sprint speed rises continuously rather than pulsing');
+  assert(progress.qSpeed>lastProgress.qSpeed,'Sprint speed rises continuously from rest rather than pulsing');
   if(distances.length>1)assert(distance>distances.at(-2),'Successive equal-time world displacements increase');
   last=next;lastProgress=progress;
   assert(Math.abs(Timing.sceneAt(playback)-122-(playback-76))<1e-9,'Sprint editing time is uniform');
 }
-assert(Math.max(...distancePerProgress)/Math.min(...distancePerProgress)<1.012,'World displacement follows the smooth progress curve along the sampled arc');
-assert(Math.max(...speedIncrements)/Math.min(...speedIncrements)<1.000001,'The acceleration has no step changes between samples');
+assert(Math.max(...distancePerProgress)/Math.min(...distancePerProgress)<1.02,'World displacement follows the smooth progress curve along the sampled arc');
+assert.equal(Motion.chaseProgress(122).qSpeed,0,'The sprint launches from rest');
+for(let raw=122.002;raw<132;raw+=.002)assert(Math.abs(Motion.chaseProgress(raw).qSpeed-Motion.chaseProgress(raw-.002).qSpeed)<.003,'The acceleration has no instantaneous speed jump');
 const oldRouteSpan=Math.hypot(-800-Factory.anchors.discard.x,3300);
 assert(distances.reduce((sum,distance)=>sum+distance,0)>oldRouteSpan*3,'The sprint travels over three times the former route span');
-assert(Factory.frame(122).chase.speed>oldRouteSpan/10*3,'The sprint starts above three times the former cruise speed');
+assert(Factory.frame(122.8).chase.speed>oldRouteSpan/10*3,'The sprint exceeds three times the former cruise speed after its short launch');
 const testAuto=new StoryPlayer({mode:'auto'});testAuto.seek(76);testAuto.setMode('auto');
 for(let i=0;i<50;i++){testAuto.tick(.1);assert.equal(testAuto.playbackRate,1,'Autoplay stays at base speed');}
 assert(Math.abs(testAuto.time-81)<1e-8);
@@ -107,7 +108,7 @@ const workView=B.camera.pose(98),officeView=B.camera.pose(104);
 assert.equal(workView.x,Office.anchors.work.x);assert.equal(workView.y,Office.anchors.work.y);
 assert.equal(officeView.x,Office.anchors.overview.x);assert.equal(officeView.y,Office.anchors.overview.y);
 assert(officeView.zoom<workView.zoom*.3,'The office overview reveals a substantially wider area');
-for(const raw of[98,100,102,104]){
+for(const raw of[98,100,102,104,106,108]){
   const previous=B.camera.pose(raw-.001),next=B.camera.pose(raw+.001);
   assert(Math.hypot(next.x-previous.x,next.y-previous.y)<3&&Math.abs(next.zoom-previous.zoom)<.001,'The office pullback has no position or zoom jump');
 }
@@ -122,7 +123,8 @@ assert.equal(officeEpisode.target,B.timing.playbackAt(119),'Office work, darkeni
 step(officeEpisode,B.timing.playbackAt(110)-officeEpisode.time+.02);
 assert(officeEpisode.playing&&B.timing.sceneAt(officeEpisode.time)>110,'The work-to-inner cut does not stop the action');
 assert.equal(officeEpisode.target,B.timing.playbackAt(119));
-assert(B.notes.at(102).action.includes('按钮')&&B.notes.at(102).action.includes('闸门'));
+assert(!JSON.stringify(B.notes.at(102)).includes('闸门'));assert(!JSON.stringify(B.notes.at(102)).includes('矫正所'));
+assert(B.notes.at(102).camera.includes('铺满'));assert.equal(B.factory.sceneTransition(96).cover,1,'The separate factory and office spaces change only under the doorway cover');
 assert(B.notes.at(107).action.includes('逐渐变暗')&&B.notes.at(113).summary.includes('内心'));
 for(const variant of[A,B]){
   Factory.setPlaybackClock(variant.timing.playbackAt);

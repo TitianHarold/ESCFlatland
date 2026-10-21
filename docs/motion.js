@@ -144,11 +144,17 @@
     const phase = p < .06 ? 'settle' : p < events.father ? 'approach-father' : p < .34 ? 'pause-father' : p < .50 ? 'turn-to-mother' : p < events.mother ? 'approach-mother' : 'pause-mother';
     return {phase, child: guardedChild(p, father, mother, fear), father, mother, reaction: {father: father.fear, mother: mother.fear, child: fear}};
   }
-  // Acceleration is continuous; holding adds speed without introducing a repeating pulse.
+  // Velocity starts at rest, joins the accelerating cruise over .8s, and keeps the same route duration.
   function chaseProgress(time){
-    const u=clamp((time-122)/10);
-    return{q:.65*u+.35*u*u,qSpeed:time<122||time>132?0:(.65+.70*u)/10,effort:0,preload:0};
+    const u=clamp((time-122)/10),rise=.08,loss=.325*rise+.105*rise*rise,total=1-loss;
+    const opening=u<rise?3*(u/rise)**2-2*(u/rise)**3:1;
+    const distance=u<rise?.65*(u**3/rise**2-.5*u**4/rise**3)+.7*(.75*u**4/rise**2-.4*u**5/rise**3):.65*u+.35*u*u-loss;
+    return{q:distance/total,qSpeed:time<122||time>132?0:opening*(.65+.7*u)/(10*total),effort:0,preload:0};
+  }
+  function speedShape(speed){
+    const v=Number.isFinite(speed)?Math.abs(speed):0,response=v*v/(v*v+1800*1800);
+    return{axialStretch:.24*response,strain:.75*response,perspectiveStretch:1+2*response};
   }
   const contacts = Object.freeze(Object.fromEntries(Object.entries(impacts).map(([kind, impact]) => [kind, Object.freeze({time: impact.time, edgeIndex: impact.edgeIndex, point: Object.freeze([...impact.point])})])));
-  return {pose, geometry, duration, chaseProgress, contactTimes: Object.freeze({...events}), contacts};
+  return {pose, geometry, duration, chaseProgress, speedShape, contactTimes: Object.freeze({...events}), contacts};
 });

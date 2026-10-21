@@ -17,11 +17,24 @@
   const mode=params.get('mode')==='auto'?'auto':'interactive';
   const player=new window.FlatlandStoryPlayer({duration,timing,beats:version.beats,mode,playing:mode==='auto'&&!workbench&&!reduced.matches});
   const initialTime=Number(params.get('t'));if(initialTime>0){player.seek(initialTime);player.playing=mode==='auto'&&!workbench&&!reduced.matches;}
+  const encounterAPI=window.FlatlandEncounterInteraction,encounter=new encounterAPI.EncounterController({sceneTime:timing.sceneAt(player.time)}),actions=new window.FlatlandActionInput.Actions();
   const discovery=window.FlatlandInnerDiscovery,inner=new discovery.Session({autoDuration:timing.playbackAt(119)-timing.playbackAt(110)});
-  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,innerActive:false,modalResume:false,inputAt:-Infinity};
+  const state={last:0,ambient:0,open:false,layer:0,w:0,h:0,dpr:1,pointer:null,innerPointer:false,scenePointer:false,innerActive:false,reviewPaused:workbench,modalResume:false,inputAt:-Infinity};
   const cavity=new Path2D('M-49 7 C-57-17-33-44-9-48 C15-57 30-31 47-6 C60 16 35 43 7 45 C-24 51-53 35-49 7Z');
   function sceneTime(){return timing.sceneAt(player.time);}
-  function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factory.frame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function familyPhase(time=sceneTime()){return time<encounterAPI.familyEnd-1e-7;}
+  function view(time=sceneTime()){if(time>=132)return{space:'pov',shotId:'dimension',x:0,y:0,zoom:1,tilt:0,yaw:0,screenY:.5};const v=cameraTrack.pose(time);if(v.follow==='hero'){const hero=factoryFrame(time).hero;if(hero)return{...v,x:hero.x,y:hero.y};}return v;}
+  function workPhase(time=sceneTime()){return version.id==='routine'&&time>=98&&time<110;}
+  function factoryPhase(time=sceneTime()){return time>=64&&time<(version.id==='routine'?94:98);}
+  function inputPhase(){const t=sceneTime();return inInner(t)?'inner':familyPhase(t)?'family':t<district.timing.firstMove?'authority':t<58?'escort':factoryPhase(t)?'factory':workPhase(t)?'work':t>=132?'ending':t>=119?'chase':'transfer';}
+  function homeFrame(time=sceneTime()){return encounter.applyFrame(district.frame(time));}
+  function factoryFrame(time,bounds){
+    const base=factory.frame(time,bounds);
+    if(!factoryPhase(time))return base;
+    const effort=actions.snapshot().factory,frame=factory.withResistance?.(base,effort.offset,time)||base;
+    frame.actors=frame.actors.map(entry=>entry.id==='hero'?{...entry,resistancePulse:effort.pulse}:entry);
+    return frame;
+  }
   function scale(v){return Math.min(state.w/1280,state.h/760)*v.zoom;}
   function screen(ctx){ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.clearRect(0,0,state.w,state.h);}
   function placeWorld(ctx,v){const t=sceneTime(),jolt=version.id==='routine'&&t>=79.25&&t<79.65?factory.compactAt(t).recoil*1.6:0;ctx.setTransform(state.dpr,0,0,state.dpr,0,0);ctx.translate(state.w/2+jolt,state.h/2);ctx.scale(scale(v),scale(v));ctx.translate(-v.x,-v.y);}
@@ -69,6 +82,7 @@
     if(entry.core){top.save();top.globalAlpha=entry.coreReveal??1;top.fillStyle=palette.gold;top.beginPath();top.ellipse(0,0,10*(entry.coreScale??1),10*(entry.coreScale??1),0,0,Math.PI*2);top.fill();top.restore();}
     if(entry.label==='reject'&&entry.restraint?.attached!==false)drawFailureMark(top,entry.restraint);
     factory.drawActorOverlay?.(top,entry);
+    if(entry.resistancePulse){top.save();top.globalAlpha=entry.resistancePulse*.65;top.strokeStyle=palette.gold;top.lineWidth=2.5;top.stroke(outline);top.restore();}
     top.restore();
     if(entry.emotion){
       window.FlatlandEmotions.draw(top,entry.emotion,b.x+15,b.y-(actor.kind==='mother'?120:95),entry.emotionElapsed??.3,entry.emotionDuration??1.2);
@@ -83,9 +97,10 @@
   const heroMaterial=document.createElement('canvas');heroMaterial.width=heroMaterial.height=256;
   const heroMaterialContext=heroMaterial.getContext('2d');
   function journeyData(time){
-    const base=factory.frame(Math.min(time,131.999999)),rate=player.playbackRate,boost=clamp((rate-1)/.8);
-    const original=base.actors.find(a=>a.id==='hero'),sprinting=time>=122&&time<132;
-    const body=original&&sprinting?{...original.body,speed:original.body.speed*rate,axialStretch:original.body.axialStretch+.12*boost,strain:clamp(original.body.strain+.2*boost),effort:boost}:original?.body;
+    const base=factoryFrame(Math.min(time,131.999999)),rate=player.playbackRate,boost=clamp((rate-1)/.8);
+    const original=base.actors.find(a=>a.id==='hero'),sprinting=time>=119&&time<132;
+    const speed=(original?.body.speed||base.chase?.speed||0)*rate,shape=motion.speedShape(speed);
+    const body=original&&sprinting?{...original.body,speed,axialStretch:shape.axialStretch,strain:shape.strain,effort:boost}:original?.body;
     const entry=original?{...original,body}:undefined;
     const sample=sprinting?{...base,hero:body,chase:{...base.chase,speed:body.speed,inputRate:rate,effort:boost},actors:base.actors.map(a=>a.id==='hero'?entry:a)}:base;
     const darkness=window.FlatlandInner.darkness(time);
@@ -98,7 +113,7 @@
       heroMaterialContext.setTransform(1,0,0,1,0,0);heroMaterialContext.globalAlpha=darkness;heroMaterialContext.fillStyle=palette.night;heroMaterialContext.fillRect(0,0,256,256);heroMaterialContext.globalAlpha=1;
       ctx.setTransform(1,0,0,1,0,0);ctx.globalCompositeOperation='destination-over';ctx.drawImage(heroMaterial,0,0);ctx.globalCompositeOperation='source-over';
     }
-    return{...sample,entry,heroTexture,textureExtent,darkness,detachedTag:factory.frame(time).detachedTag};
+    return{...sample,entry,heroTexture,textureExtent,darkness,detachedTag:factoryFrame(time).detachedTag};
   }
   function drawLight(light){
     if(!light)return;const glow=clamp(light.glow||0),r=light.r||10;
@@ -134,7 +149,8 @@
   function draw(time,v){
     if(time>=132){screen(low);low.fillStyle='#ffffff';low.fillRect(0,0,state.w,state.h);screen(top);dimension.drawEnding(top,time,{w:state.w,h:state.h,dpr:state.dpr});return;}
     if(inInner(time)){drawInner();return;}
-    world(low,v);window.FlatlandPossibility.draw(low,state.ambient);
+    if(version.id==='routine'&&time>=96&&time<110){screen(low);low.fillStyle=palette.paper;low.fillRect(0,0,state.w,state.h);}
+    else{world(low,v);window.FlatlandPossibility.draw(low,state.ambient);}
     if(time>=119){
       screen(top);const data=journeyData(time),viewport={w:state.w,h:state.h,dpr:state.dpr};
       if(time<138)dimension.drawJourney(top,time,v,viewport,state.ambient,data);
@@ -143,16 +159,17 @@
     }
     world(top,v);const s=scale(v),viewport={w:state.w,h:state.h};
     top.fillStyle=time>=61?palette.outside.background:palette.blue;top.fillRect(v.x-state.w/s/2-1,v.y-state.h/s/2-1,state.w/s+2,state.h/s+2);
-    const bounds={minX:v.x-state.w/s/2,maxX:v.x+state.w/s/2,minY:v.y-state.h/s/2,maxY:v.y+state.h/s/2};
-    const plant=factory.frame(time,bounds),heading=plant.hero?plant.hero.angle+characters.actors.child.headAxis(plant.hero).angle:0;
+    const bounds={minX:v.x-state.w/s/2,maxX:v.x+state.w/s/2,minY:v.y-state.h/s/2,maxY:v.y+state.h/s/2,scale:s};
+    const plant=factoryFrame(time,bounds),heading=plant.hero?plant.hero.angle+characters.actors.child.headAxis(plant.hero).angle:0;
     if(time<61){
       district.drawBase(top,time);
-      const home=district.frame(time);home.actors.forEach(drawActor);
+      const home=homeFrame(time);home.actors.forEach(drawActor);
       if(time>=58)plant.actors.filter(actor=>actor.id==='hero').forEach(drawActor);
       window.FlatlandCityMap.drawGate(top,time,palette);
     }else if(version.id==='routine'){
       factory.drawBase(top,time,bounds);plant.actors.forEach(drawActor);drawLight(plant.light);factory.drawOverlay(top,time,bounds);
-      if(plant.outsideDarkness){screenOverlay();top.save();top.globalAlpha=plant.outsideDarkness;top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
+      const dark=workPhase(time)&&player.mode==='interactive'?Math.max(plant.outsideDarkness,actions.snapshot().work.darkness):plant.outsideDarkness;
+      if(dark){screenOverlay();top.save();top.globalAlpha=dark;top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
     }else if(time<104){
       if(time>=102.8){screenOverlay();window.FlatlandInner.drawOuter(top,time,viewport,heading,plant.chase?{...plant.chase,scale:s}:undefined);placeWorld(top,v);}
       top.save();top.globalAlpha=1-clamp((time-102.8)/1.2);factory.drawBase(top,time,bounds);top.restore();
@@ -165,16 +182,27 @@
     // Passing the dark doorway is an edit between two independent scene spaces.
     const doorCover=time<61?clamp((time-60.65)/.35):1-clamp((time-61)/.45);
     if(time>60.65&&time<61.45){screenOverlay();top.globalAlpha=doorCover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.globalAlpha=1;}
+    const transition=factory.sceneTransition?.(time);if(transition?.cover){screenOverlay();top.save();top.globalAlpha=transition.cover;top.fillStyle=palette.industrial;top.fillRect(0,0,state.w,state.h);top.restore();}
     if(version.id==='rhythm'&&time>=108.8&&time<110){screenOverlay();top.save();const q=clamp((time-108.8)/1.2);top.globalAlpha=q*q*(3-2*q);top.fillStyle=discovery.background;top.fillRect(0,0,state.w,state.h);top.restore();}
   }
   function screenOverlay(){top.setTransform(state.dpr,0,0,state.dpr,0,0);}
   const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  function actionNotes(time,base){
+    if(player.mode!=='interactive'||inInner(time))return base;
+    const e=encounter.snapshot(),a=actions.snapshot();
+    if(familyPhase(time))return{summary:'孩子在家观察走动。点击父亲、母亲，分别寻路靠近；接触后父母本能躲开，孩子转为疑惑。',action:e.familyWaiting?'孩子缓慢走动，转动头尖观察周围。':e.familyTarget==='father'?'孩子沿屋内空隙靠近父亲，尖角接触后父亲缩退。':'孩子转向母亲，沿可通行区域靠近，母亲接触后躲开。',camera:base.camera};
+    if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
+    if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
+    if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'孩子向输送的反方向用力，尝试向后退；输送带与机器继续运行。'};
+    if(workPhase(time)&&a.work.rate>1.1)return{...base,action:'主角与周围所有工位的工作循环一起加快，密集重复的动作持续，画面更快变暗。'};
+    return base;
+  }
   function interfaceState(v,time=sceneTime()){
     const shot=inInner(time)?cameraTrack.shots.find(s=>s.id==='inner'):cameraTrack.shotAt(time),index=cameraTrack.shots.indexOf(shot),displayTime=innerDisplayTime();
     stage.dataset.phase=shot.id;stage.dataset.sceneTime=(inInner(time)?110+9*innerState().progress:time).toFixed(2);stage.dataset.time=displayTime.toFixed(2);stage.dataset.layer=state.open?'possibility':'windows';stage.dataset.mode=player.mode;stage.dataset.playing=String(player.playing);stage.dataset.version=version.id;
     if(!workbench){const link=document.querySelector('.workbench-link');if(link)link.href='./workbench.html?version='+version.id+'&mode='+player.mode+'&t='+displayTime.toFixed(2);return;}
     const snapshot=inInner(time)?innerState():null;
-    const notes=snapshot?{summary:'黑暗中有微弱光点缓慢闪动。点亮的局部留下流动色带，逐渐积累，最后破开迷雾。',action:snapshot.phase==='break'||snapshot.done?'已发现的色域连成光缝，暗层向两侧分开；同一颗光种子飞向前方。':snapshot.collected?'已经点亮的局部持续翻卷，其余微光仍在暗处闪动。':'暗层缓慢运动，偶尔有小点亮起，尚未照亮色带。',camera:'保持内心全景；破雾后窗口向光点收拢，连续接入右上方追逐。'}:version.notes.at(time);
+    const notes=snapshot?{summary:'黑暗中有微弱光点缓慢闪动。点亮的局部留下流动色带，逐渐积累，最后破开迷雾。',action:snapshot.phase==='break'||snapshot.done?'已发现的色域连成光缝，暗层向两侧分开；同一颗光种子飞向前方。':snapshot.collected?'已经点亮的局部持续翻卷，其余微光仍在暗处闪动。':'暗层缓慢运动，偶尔有小点亮起，尚未照亮色带。',camera:'保持内心全景；破雾后窗口向光点收拢，连续接入右上方追逐。'}:actionNotes(time,version.notes.at(time));
     for(const [name,text] of Object.entries(notes)){const panel=$('shot-'+name);if(panel&&panel.textContent!==text)panel.textContent=text;}
     const caption=shot.label.split(' · ')[1];if($('caption').textContent!==caption)$('caption').textContent=caption;$('phase-number').textContent=`${String(index+1).padStart(2,'0')} / ${cameraTrack.shots.length}`;
     $('chapter').value=shot.id;$('progress').value=Math.round(displayTime*100);$('progress').style.setProperty('--p',`${displayTime/duration*100}%`);
@@ -199,22 +227,35 @@
     const time=sceneTime();state.innerActive=inInner(time);
     if(state.innerActive){inner.reset();if(reconstruct)inner.seek(clamp((time-110)/9));}
   }
+  function resumeFlow(){state.reviewPaused=false;player.target=timing.playbackAt(110);player.playing=true;}
   function tickStory(dt){
-    const time=sceneTime();
-    if(inInner(time)){
+    const time=sceneTime(),rawRate=(timing.sceneAt(Math.min(duration,player.time+.01))-time)/.01;
+    if(player.mode==='interactive'&&(familyPhase(time)||time<=encounterAPI.familyEnd+1e-7&&!encounter.snapshot().familyDone)){
+      encounter.tick(dt,{automatic:false});const family=encounter.snapshot();
+      player.time=timing.playbackAt(family.sceneTime);player.playing=!family.familyWaiting;
+      if(family.familyDone)resumeFlow();
+    }else if(inInner(time)){
       if(!state.innerActive)syncInner();
       inner.update(dt,{automatic:player.mode==='auto'&&player.playing,advance:player.playing});
       const done=innerState().done;
       if(done&&player.mode==='interactive'&&player.playing){
-        // The visible portal has already reached the chase's initial pose.
         player.time=timing.playbackAt(119);player.target=timing.playbackAt(132);state.innerActive=false;
       }else player.tick(dt,player.mode==='interactive'?player.time:done?Infinity:timing.playbackAt(119)-1e-7);
     }else{
-      state.innerActive=false;player.tick(dt,time<110?timing.playbackAt(110):Infinity);
-      if(inInner())syncInner();
+      state.innerActive=false;
+      if(player.mode==='interactive'&&!familyPhase(time)&&time<110&&!state.reviewPaused)resumeFlow();
+      actions.update(dt,{phase:workPhase(time)?'work':factoryPhase(time)?'factory':'',time,rawRate,advance:player.playing});
+      factory.setWorkTime?.(workPhase(time)?actions.snapshot().work.time:null);
+      if(workPhase(time)&&player.mode==='interactive'&&actions.snapshot().work.darkness>.995){player.time=timing.playbackAt(110);syncInner();}
+      else player.tick(dt,time<110?timing.playbackAt(110):Infinity);
+      if(inInner()&&!state.innerActive)syncInner();
+      encounter.tick(dt,{automatic:player.mode==='auto',sceneTime:sceneTime()});
     }
   }
-  function seek(time){player.seek(time);syncInner(true);state.pointer=null;state.innerPointer=false;}
+  function seek(time){
+    player.seek(time);encounter.seek(sceneTime());actions.seek(sceneTime());factory.setWorkTime?.(null);
+    syncInner(true);state.pointer=null;state.innerPointer=false;state.scenePointer=false;state.reviewPaused=true;
+  }
   function resumeInner(){player.target=Math.max(player.target,timing.playbackAt(119));player.playing=true;}
   function touchInner(x,y){
     if(['break','done'].includes(innerState().phase)){resumeInner();return true;}
@@ -222,15 +263,45 @@
     if(!player.playing)resumeInner();
     return true;
   }
+  function localTap(point){
+    const time=sceneTime();
+    if(inInner(time)){touchInner(point.x,point.y);return;}
+    if(familyPhase(time)){
+      const target=parentAt(point);if(target)encounter.activate(target);return;
+    }
+    if(time<58){encounter.activate(time<district.timing.firstMove?'authority':'escort');resumeFlow();return;}
+    if(factoryPhase(time)){actions.resist();resumeFlow();return;}
+    if(workPhase(time)){actions.work();resumeFlow();return;}
+    if(time>=132){player.tap();return;}
+    if(time<110)resumeFlow();
+  }
   function togglePlay(){
     state.inputAt=performance.now();
-    if(inInner()&&player.mode==='interactive'){
+    if(player.mode==='auto'){player.tap();return;}
+    if(inInner()){
       const point=innerState().points.find(p=>p.visible&&!p.collected);
-      if(point)touchInner(point.x,point.y);
-      else resumeInner();
-    }else player.tap();
+      if(point)touchInner(point.x,point.y);else resumeInner();
+    }else if(familyPhase())encounter.activate(encounter.snapshot().familyTarget);
+    else localTap({x:state.w/2,y:state.h/2});
   }
-  function setMode(mode){if(inInner())player.time=innerDisplayTime();player.setMode(mode);}
+  function setMode(mode){
+    if(inInner())player.time=innerDisplayTime();
+    player.setMode(mode);state.reviewPaused=false;
+    encounter.tick(0,{automatic:mode==='auto',sceneTime:sceneTime()});
+    if(mode==='interactive'&&!familyPhase()&&sceneTime()<110)resumeFlow();
+  }
+  function parentAt(point){
+    const v=view(),s=scale(v),p={x:v.x+(point.x-state.w/2)/s,y:v.y+(point.y-state.h/2)/s},home=homeFrame();
+    const accepted=encounter.snapshot().familyTarget;
+    const parent=home.actors.find(entry=>entry.id===accepted);if(!parent)return null;
+    const polygon=parent.actor.outline(parent.body);let inside=false,distance=Infinity;
+    for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+      const a=polygon[i],b=polygon[j],dx=b[0]-a[0],dy=b[1]-a[1],q=clamp(((p.x-a[0])*dx+(p.y-a[1])*dy)/(dx*dx+dy*dy));
+      distance=Math.min(distance,Math.hypot(p.x-a[0]-dx*q,p.y-a[1]-dy*q));
+      if((a[1]>p.y)!==(b[1]>p.y)&&p.x<(b[0]-a[0])*(p.y-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+    }
+    return inside||distance<Math.max(12,22/s)?accepted:null;
+  }
   if(workbench){
     $('progress').max=String(duration*100);
     $('story-version').value=version.id;
@@ -253,19 +324,20 @@
   stage.addEventListener('keydown',e=>{if([' ','Enter'].includes(e.key)){e.preventDefault();if(!e.repeat)togglePlay();}if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();seek(innerDisplayTime()+(e.key==='ArrowRight'?1:-1));}});
   stage.addEventListener('pointerdown',e=>{
     if(e.button!==0||state.pointer!==null)return;
-    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer)player.press();
+    state.pointer=e.pointerId;state.innerPointer=inInner()&&player.mode==='interactive';state.scenePointer=player.mode==='interactive'&&!inInner()&&(sceneTime()<119||sceneTime()>=132)?inputPhase():false;state.inputAt=performance.now();stage.focus({preventScroll:true});stage.setPointerCapture(e.pointerId);if(!state.innerPointer&&!state.scenePointer)player.press();
   });
   function pointerPoint(e){const box=stage.getBoundingClientRect();return{x:(e.clientX-box.left)*state.w/box.width,y:(e.clientY-box.top)*state.h/box.height};}
   function release(e,cancelled=false){
     if(state.pointer!==e.pointerId)return;state.pointer=null;
     if(state.innerPointer){state.innerPointer=false;if(!cancelled&&inInner()){const p=pointerPoint(e);touchInner(p.x,p.y);}return;}
+    if(state.scenePointer){const phase=state.scenePointer;state.scenePointer=false;if(!cancelled&&phase===inputPhase())localTap(pointerPoint(e));return;}
     player.release(cancelled);
   }
-  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e);stage.style.cursor=player.mode==='interactive'&&inInner()&&innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius)?'pointer':'default';});
+  stage.addEventListener('pointermove',e=>{const p=pointerPoint(e),target=player.mode==='interactive'&&(inInner()?innerState().points.some(dot=>dot.visible&&!dot.collected&&Math.hypot(dot.x-p.x,dot.y-p.y)<=dot.hitRadius):familyPhase()?parentAt(p):false);stage.style.cursor=target?'pointer':'default';});
   stage.addEventListener('pointerup',e=>release(e));
   stage.addEventListener('pointercancel',e=>release(e,true));
   stage.addEventListener('contextmenu',e=>e.preventDefault());
-  document.addEventListener('visibilitychange',()=>{state.last=0;if(document.hidden){if(player.pressed)player.release(true);state.pointer=null;state.innerPointer=false;}});
+  document.addEventListener('visibilitychange',()=>{state.last=0;if(document.hidden){if(player.pressed)player.release(true);state.pointer=null;state.innerPointer=false;state.scenePointer=false;}});
   const dialog=$('reference-dialog');let loadedReferences=false;
   on('references','click',async()=>{
     state.modalResume=player.playing;player.playing=false;dialog.showModal();if(loadedReferences)return;
@@ -282,5 +354,5 @@
   on('close-references','click',()=>dialog.close());
   dialog?.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
   dialog?.addEventListener('close',()=>{player.playing=state.modalResume;state.modalResume=false;});
-  new ResizeObserver(resize).observe(stage);resize();syncInner(true);requestAnimationFrame(frame);
+  new ResizeObserver(resize).observe(stage);resize();actions.seek(sceneTime());syncInner(true);if(!workbench&&player.mode==='interactive'&&!familyPhase()&&sceneTime()<110)resumeFlow();requestAnimationFrame(frame);
 })();

@@ -121,7 +121,7 @@
     if(t<122)return probingBody(t);
     if(t>=132){const p=chasePoint(132),body=hardPose(heroActor,p.x,p.y,p.heading);body.speed=0;body.effort=0;body.bounce=0;body.strain=0;body.axialStretch=0;return body;}
     const p=chasePoint(t),body=hardPose(heroActor,p.x,p.y,p.heading);
-    body.speed=p.speed;body.axialStretch=.14+.17*clamp((p.speed-1900)/2400);body.strain=clamp(p.speed/3000);body.bend=0;body.bounce=0;body.effort=0;
+    Object.assign(body,Motion.speedShape(p.speed));body.speed=p.speed;body.bend=0;body.bounce=0;body.effort=0;
     body.angle=p.heading-heroActor.headAxis(body).angle;return body;
   }
   const tagReleaseTime=127.25;
@@ -215,6 +215,27 @@
     const result=fullFrame(time),view=viewportBounds(bounds);if(!view)return result;
     // View filtering never enters the time cache or removes the hero and escort guards.
     return{...result,actors:result.actors.filter(entry=>entry.row===undefined||entry.body.x>=view.left-80&&entry.body.x<=view.right+80&&entry.body.y>=view.top-80&&entry.body.y<=view.bottom+80)};
+  }
+  function resistanceWindow(time){
+    const t=Number.isFinite(time)?time:0,clock=heroClock(t);
+    let phase=null,direction=Math.sign(480-900);
+    if(t>=70&&t<72)phase=(t-70)/2;
+    else if(t>=72&&t<77){
+      for(let i=0;i<heroProgram.programs.length;i++){
+        const start=heroProgram.programs[i].clearTime,end=i+1<heroProgram.programs.length?heroProgram.programs[i+1].arrivalTime:heroProgram.start+5;
+        if(clock>start&&clock<end){phase=(clock-start)/(end-start);break;}
+      }
+    }else if(t>=77&&t<80){phase=(t-77)/3;direction=Math.sign(stations[1]-(-730));}
+    else if(t>=87&&t<90){phase=(t-87)/3;direction=Math.sign(stations[2]-stations[1]);}
+    const tangent={x:cs*direction,y:sn*direction},maxOffset=phase===null?0:110*Math.sin(Math.PI*phase)**2;
+    return{allowed:maxOffset>.001,maxOffset,tangent,direction:tangent,phase};
+  }
+  function withResistance(source,offset,time){
+    const window=resistanceWindow(time),requested=Number.isFinite(offset)?Math.max(0,offset):0,appliedOffset=Math.min(requested,window.maxOffset);
+    if(!source.hero||!appliedOffset)return{...source,appliedOffset:0,resistance:window};
+    const body={...source.hero,x:source.hero.x-window.tangent.x*appliedOffset,y:source.hero.y-window.tangent.y*appliedOffset};
+    const actors=source.actors.map(entry=>entry.id==='hero'?{...entry,body}:entry);
+    return{...source,hero:body,actors,appliedOffset,resistance:window};
   }
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}
   function stroke(ctx,points,color,width=1){ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
@@ -331,5 +352,5 @@
     }
   }
   const anchors=Object.freeze({entrance:Object.freeze({...entrance}),factoryCenter:Object.freeze({...origin}),sampleStages:Object.freeze({m1:Object.freeze(world(stations[0],-130)),m2:Object.freeze(world(stations[1],-130)),m3:Object.freeze(world(stations[2],-130))}),heroStages:Object.freeze({m1:Object.freeze(world(stations[0],130)),m2:Object.freeze(world(stations[1],130)),m3:Object.freeze(world(stations[2],130))}),pressStations:Object.freeze(pressStations.map(x=>Object.freeze(world(x,130)))),heroPress:Object.freeze(world(480,130)),exit:Object.freeze({...exitPoint}),discard:Object.freeze({...discard}),chaseEnd:Object.freeze({...chaseEnd}),chaseCorner:Object.freeze({x:chasePoint(125.5).x,y:chasePoint(125.5).y}),chaseTurnEnd:Object.freeze({x:chasePoint(128.75).x,y:chasePoint(128.75).y}),throwStart:Object.freeze({...world(-2100,390)}),chaseBounds:Object.freeze({minX:discard.x,maxX:chaseEnd.x,minY:chaseEnd.y,maxY:discard.y}),floorBounds:Object.freeze({left:leftWall,right:900,top:-650,bottom:rows.at(-1)+400}),overview:Object.freeze({...world(-550,560),zoom:.22}),localRotation:angle,lanes:Object.freeze([...rows]),stationX:Object.freeze([...stations])});
-  return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock};
+  return{drawBase,drawEntry,frame,drawOverlay,anchors,portals:{entry:entryPortal,exit:exitPortal},pressProgram:heroProgram,setPlaybackClock,resistanceWindow,withResistance};
 });

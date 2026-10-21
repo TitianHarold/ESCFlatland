@@ -344,8 +344,10 @@
   function pathPoint(q){const d=clamp(q,0,1)*pathLengths[32];let i=1;while(i<32&&d>pathLengths[i])i++;return curvePoint((i-1+(d-pathLengths[i-1])/(pathLengths[i]-pathLengths[i-1]))/32);}
   function journeyPose(time,data={}){
     const t=clamp(time,119,138),progress=Motion.chaseProgress(Math.min(t,132)).q,sample=pathPoint(progress);
-    const raw=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,strain:progress}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,strain:0,axialStretch:0,bend:0,speed:0,effort:0,bounce:0};
-    const speed=finite(data.chase?.speed,raw.speed||0),sprintStretch=t>=122&&t<132?1.3+1.45*clamp(speed/4500,0,1)+.3*clamp(data.chase?.effort||0,0,1):1;
+    const source=t<132?(data.hero||data.entry?.body||{...sample,angle:sample.heading-headAngle,sx:1,sy:1,speed:pathLengths[32]*Motion.chaseProgress(t).qSpeed}):{x:journeyEnd.x,y:journeyEnd.y,angle:endHeading-headAngle,sx:1,sy:1,bend:0,speed:0,effort:0,bounce:0};
+    const speed=finite(data.chase?.speed,source.speed||0),shape=Motion.speedShape(speed),raw={...source,...shape,speed};
+    // localSegments already applies the body response; only add the remaining perspective stretch.
+    const sprintStretch=shape.perspectiveStretch/((1+.04*shape.strain)*(1+shape.axialStretch));
     return{raw,center:worldToCity([raw.x,raw.y,0]),angle:(raw.angle||0)+bridgeAngle,size:1,sprintStretch,growth:ease(Math.min(t,132),125,134),coast:0,phase:t<132?'chase':'pov'};
   }
   const journeyObjects=[],journeyObjectCount=120;

@@ -9,7 +9,7 @@
   const clamp=n=>Math.max(0,Math.min(1,n)),lerp=(a,b,u)=>a+(b-a)*u,ease=n=>{const u=clamp(n);return u*u*(3-2*u);},between=(t,a,b)=>ease((t-a)/(b-a));
   const world=(x,y)=>({x:origin.x+x*cs-y*sn,y:origin.y+x*sn+y*cs});
   const local=p=>({x:(p.x-origin.x)*cs+(p.y-origin.y)*sn,y:-(p.x-origin.x)*sn+(p.y-origin.y)*cs});
-  const discard=Base.anchors.discard,workCenter=Office.cells.find(cell=>cell.main);
+  const discard=Base.anchors.discard,workCenter=Office.cellAt(0,0);
   const heroActor=C.create('child'),lanes=[-390,-130,130,390,650,910,1170,1430],stations=[480,-170,-890];
   const ordinary=lanes.map((_,i)=>[C.create({sides:i+3,radius:42,regular:false}),C.create({sides:i+3,radius:42,regular:false})]);
   function pose(actor,x,y,rotation=0){const p=world(x,y),b={x:p.x,y:p.y,angle:0,sx:1,sy:1,bend:0,strain:0,bounce:0,edgeBends:actor.vertices.map(()=>0),edgeStretch:actor.vertices.map(()=>1)};b.angle=angle-Math.PI+rotation-actor.headAxis(b).angle;return b;}
@@ -27,7 +27,13 @@
   function rounded(ctx,x,y,w,h,r,fill){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else ctx.rect(x,y,w,h);ctx.fillStyle=fill;ctx.fill();}
   function setup(ctx){ctx.save();ctx.translate(origin.x,origin.y);ctx.rotate(angle);}
   function shellPolygon(actor){return vertices(actor);}
-  function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),fitted=between(t,71.7,76.7),release=Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,vertices:shellPolygon(actor),radius:71};}
+  function moldAt(t,start=71.7,end=76.7,actor=heroActor){
+    const points=shellPolygon(actor),span=(end-start)/points.length;
+    const faces=points.map((a,i)=>{const b=points[(i+1)%points.length],length=Math.hypot(b[0]-a[0],b[1]-a[1]),normal=[(b[1]-a[1])/length,-(b[0]-a[0])/length],age=(t-start)/span-i,approach=between(age,0,.64),locked=age>=.64,lock=between(age,.64,.82),gap=36*(1-approach),kick=locked&&age<.86?Math.sin((age-.64)/.22*Math.PI*4)*(1-(age-.64)/.22)*1.8:0;
+      return{index:i,normal,age,approach,locked,lock,gap,from:[a[0]+normal[0]*(gap+kick),a[1]+normal[1]*(gap+kick)],to:[b[0]+normal[0]*(gap+kick),b[1]+normal[1]*(gap+kick)],point:[(a[0]+b[0])/2,(a[1]+b[1])/2],impact:locked&&age<.82?1-(age-.64)/.18:0};});
+    return{faces,vertices:points,fitted:faces.reduce((sum,face)=>sum+face.lock,0)/points.length,complete:t>=end};
+  }
+  function shellState(t,actor){const n=actor.vertices.length,paint=paintAt(t,n,83.2,94,actor),mold=moldAt(t,71.7,76.7,actor),release=Array.from({length:n},(_,i)=>between(t,123.5+i*.58,124.15+i*.58));return{fitted:mold.fitted,mold,compacted:between(t,79.25,79.65),paint:paint.side.map((v,i)=>v*(1-release[i])),release,vertices:shellPolygon(actor),radius:71};}
   function compactAt(t,start=78.5,end=81.6,actor=heroActor,body=pose(heroActor,-170,130)){
     const relative=body.angle-angle,c=Math.cos(relative),s=Math.sin(relative),centerline=shellPolygon(actor).map(([x,y])=>[x*c-y*s,x*s+y*c]);
     // The frame is drawn with a 12px stroke. Its outer support planes, not its
@@ -42,19 +48,18 @@
     return{faces,shell,centerline,clearance,thickness,gap:(lowerFace-upperFace)/2,upperFace,lowerFace,upperSupport,lowerSupport,contact,force:contact?1:0,phase,impact,recoil,contactTime,slamStart,holdEnd};
   }
   function bezier(points,u){const v=1-u,[a,b,c,d]=points;return{x:v*v*v*a[0]+3*v*v*u*b[0]+3*v*u*u*c[0]+u*u*u*d[0],y:v*v*v*a[1]+3*v*v*u*b[1]+3*v*u*u*c[1]+u*u*u*d[1],heading:Math.atan2(3*v*v*(b[1]-a[1])+6*v*u*(c[1]-b[1])+3*u*u*(d[1]-c[1]),3*v*v*(b[0]-a[0])+6*v*u*(c[0]-b[0])+3*u*u*(d[0]-c[0]))};}
-  const workApproach=Office.entryCurves.approach,workEntry=Office.entryCurves.entry;
+  const workEntry=Office.entryCurves.entry;
   function routePoint(t){
     if(t<96){const u=between(t,94,96),initial=-Math.PI+paintAt(94,5).angle,turn=Math.atan2(Math.sin(Math.PI-initial),Math.cos(Math.PI-initial));return{x:lerp(-890,-1750,u),y:130,heading:initial+turn*between(t,94,94.4)};}
-    if(t<97)return bezier(workApproach,between(t,96,97));
-    if(t<98)return bezier(workEntry,between(t,97,98));
-    return Office.heroPoint(Math.min(t,108));
+    if(t<98)return bezier(workEntry,between(t,96,98));
+    return Office.heroPoint(t);
   }
   function routineEntry(id,actor,body,color,t,extra={}){return{id,actor,body,color,cavity:true,damage:0,blacken:0,windowOpen:1,compression:0,residual:0,core:0,label:undefined,result:undefined,restraint:undefined,routine:{time:t,...shellState(t,actor)},...extra};}
   function heroAt(t){
     if(t<64){const source=Base.frame(t).actors.find(e=>e.id==='hero');return source?routineEntry('hero',heroActor,{...source.body},P.blue,t):null;}
     let b;if(t<70)b=pose(heroActor,900,130);else if(t<71.7)b=pose(heroActor,lerp(900,480,between(t,70,71.7)),130);else if(t<77)b=pose(heroActor,480,130);else if(t<78.5)b=pose(heroActor,lerp(480,-170,between(t,77,78.5)),130);else if(t<82)b=pose(heroActor,-170,130);else if(t<83.2)b=pose(heroActor,lerp(-170,-890,between(t,82,83.2)),130);else if(t<94)b=pose(heroActor,-890,130,paintAt(t,5).angle);else if(t<110){const p=routePoint(t);b=pose(heroActor,p.x,p.y);b.angle=p.heading+angle-heroActor.headAxis({...b,angle:0}).angle;}else if(t<119)b={...Base.frame(119).hero};
     else{const source=Base.frame(t).actors.find(e=>e.id==='hero');if(!source)return null;b={...source.body,edgeBends:source.body.edgeBends?.map(()=>0)};}
-    return routineEntry('hero',heroActor,b,P.blue,t,{routine:{time:t,...shellState(t,heroActor),seed:true,compacting:compactAt(t,78.5,81.6,heroActor,b),work:t>=94&&t<110,job:t>=98&&t<108?routePoint(t).job||0:0}});
+    return routineEntry('hero',heroActor,b,P.blue,t,{routine:{time:t,...shellState(t,heroActor),seed:true,compacting:compactAt(t,78.5,81.6,heroActor,b),work:t>=96&&t<110,job:t>=98&&t<110?routePoint(t).job||0:0}});
   }
   function worker(t,row,slot){const age=((t-64+row*.7+slot*18)%36+36)%36,actor=ordinary[row][slot],mapped=age<5?70+age/5*1.7:age<9?71.7+(age-5)/4*5.3:age<13?77+(age-9)/4*5:age<24?82+(age-13)/11*12:94;let x;
     if(age<5)x=lerp(900,480,age/5);else if(age<9)x=480;else if(age<10.5)x=lerp(480,-170,(age-9)/1.5);else if(age<13)x=-170;else if(age<14)x=lerp(-170,-890,age-13);else if(age<24)x=-890;else x=lerp(-890,-1750,(age-24)/12);
@@ -66,20 +71,24 @@
     return{...guide,reveal,inside:t<116,glow:.1+.45*reveal,entityId:'hero-seed',phase:t<113.2?'enclosed':t<116?'slit':'emerge'};
   }
   function frame(t,bounds){
-    if(t<58||t>=132)return{actors:[],hero:null};const e=heroAt(t),actors=t>=94&&t<110?Office.actors(t,bounds):[];
-    if(t<94)for(let r=0;r<lanes.length;r++)if(r!==2)for(let slot=0;slot<2;slot++)actors.push(worker(t,r,slot));if(e)actors.push(e);
-    const base=t>=119?Base.frame(t):null,result={actors,hero:e?.body||null,light:e?lightAt(t):undefined,burst:base?.burst||0,chase:base?.chase,routine:true,office:t>=94&&t<110,inner:t>=110&&t<119,outsideDarkness:between(t,104,110)};
+    if(t<58||t>=132)return{actors:[],hero:null};const e=heroAt(t),actors=t>=96&&t<110?Office.actors(t,bounds):[];
+    if(t<96)for(let r=0;r<lanes.length;r++)if(r!==2)for(let slot=0;slot<2;slot++)actors.push(worker(t,r,slot));if(e)actors.push(e);
+    const base=t>=119?Base.frame(t):null,result={actors,hero:e?.body||null,light:e?lightAt(t):undefined,burst:base?.burst||0,chase:base?.chase,routine:true,office:t>=96&&t<110,inner:t>=110&&t<119,outsideDarkness:between(t,104,110)};
     if(bounds){const l=bounds.minX??bounds.left,r=bounds.maxX??bounds.right,top=bounds.minY??bounds.top,bottom=bounds.maxY??bounds.bottom;result.actors=actors.filter(a=>a.id==='hero'||a.body.x>l-90&&a.body.x<r+90&&a.body.y>top-90&&a.body.y<bottom+90);}return result;
   }
   function belt(ctx,y,t){rounded(ctx,-1750,y-78,2650,156,10,P.conveyor);const shift=t*48%72;for(let x=-1750-shift;x<900;x+=72)line(ctx,[[x,y-65],[x,y+65]],P.factory.roller,1.6);}
   function machine(ctx,x,y,kind,sides){rounded(ctx,x-154,y-124,308,248,18,P.metal);rounded(ctx,x-142,y-114,284,228,13,P.blue);rounded(ctx,x-120,y-91,240,182,10,P.paper);
-    if(kind===0){const actor=sides===5?heroActor:ordinary[Math.max(0,sides-3)][0],body=pose(actor,x,y),rotation=body.angle-angle,c=Math.cos(rotation),s=Math.sin(rotation),points=vertices(actor,82).map(([a,b])=>[a*c-b*s,a*s+b*c]);ctx.save();ctx.translate(x,y);poly(ctx,points,P.industrial);poly(ctx,points.map(([a,b])=>[a*.88,b*.88]),P.paper);ctx.restore();}
+    if(kind===0){const actor=sides===5?heroActor:ordinary[Math.max(0,sides-3)][0],body=pose(actor,x,y),rotation=body.angle-angle,c=Math.cos(rotation),s=Math.sin(rotation),points=vertices(actor,82).map(([a,b])=>[a*c-b*s,a*s+b*c]);ctx.save();ctx.translate(x,y);poly(ctx,points,P.quiet);poly(ctx,points.map(([a,b])=>[a*.97,b*.97]),P.paper);ctx.restore();}
     if(kind===2){ctx.beginPath();ctx.arc(x,y,100,0,Math.PI*2);ctx.strokeStyle=P.ink;ctx.lineWidth=7;ctx.stroke();rounded(ctx,x-13,y-124,26,31,5,P.industrial);}
   }
   function drawFactory(ctx,t){setup(ctx);rounded(ctx,-1785,-650,2685,2360,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j,r+3);}line(ctx,[[-1785,-650],[-1785,43]],P.outside.wall,22);line(ctx,[[-1785,217],[-1785,1710]],P.outside.wall,22);ctx.restore();}
-  function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=94)Office.draw(ctx,t,bounds);if(t<97)drawFactory(ctx,t);}
+  function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=96)Office.draw(ctx,t,bounds);else drawFactory(ctx,t);}
   function drawEntry(ctx,t,bounds){if(t<64)Base.drawEntry(ctx,t,bounds);else drawBase(ctx,t,bounds);}
-  function drawOverlay(ctx,t,bounds){if(t>=94){Office.drawSignals(ctx,t,bounds);return;}if(t<64)return;setup(ctx);for(let r=0;r<lanes.length;r++){
+  function drawOverlay(ctx,t,bounds){if(t>=96||t<64)return;setup(ctx);for(let r=0;r<lanes.length;r++){
+    const molding=r===2?(t>=71.7&&t<77?heroAt(t):null):[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x-480)<1),moldActor=molding?.actor||(r===2?heroActor:ordinary[r][0]),moldBody=molding?.body||pose(moldActor,480,lanes[r]),mold=moldAt(molding?.routine.time??71.7,71.7,76.7,moldActor);
+    ctx.save();ctx.translate(480,lanes[r]);ctx.rotate(moldBody.angle-angle);
+    for(const face of mold.faces)if(!face.locked){line(ctx,[face.from,face.to],P.metal,12);line(ctx,[face.from,face.to],P.industrial,2.5);}
+    ctx.restore();
     const y=lanes[r],entry=r===2&&t>=78.5&&t<82?heroAt(t):r===2?null:[worker(t,r,0),worker(t,r,1)].find(e=>Math.abs(local(e.body).x+170)<1),actor=entry?.actor||(r===2?heroActor:ordinary[r][0]),press=compactAt(entry?.routine.time??0,78.5,81.6,actor,entry?.body||pose(actor,-170,y));const x=-170;
     ctx.save();ctx.translate(x,y);for(const face of press.faces){
       poly(ctx,face.polygon,P.industrial);poly(ctx,face.pad,P.coral);
@@ -96,12 +105,18 @@
   function drawActorOverlay(ctx,entry){const s=entry.routine;if(!s)return;const n=entry.actor.vertices.length,points=s.vertices;
     // Paint is a cumulative spatial mask. The unpainted parts still reveal the live inner window.
     ctx.save();poly(ctx,points);ctx.clip();if(s.paint.every(v=>v>=.999999))poly(ctx,points,P.black);else for(let i=0;i<n;i++){const coverage=s.paint[i];if(!coverage)continue;const a=points[i],b=points[(i+1)%n];ctx.save();ctx.globalAlpha=coverage;poly(ctx,[[0,0],a,b],P.black);ctx.restore();}ctx.restore();
-    if(s.fitted){for(let i=0;i<n;i++){const visible=s.fitted*(1-s.release[i]);if(visible<=0)continue;const a=points[i],b=points[(i+1)%n];ctx.save();ctx.globalAlpha=visible;line(ctx,[a,b],P.metal,12);line(ctx,[a,b],P.industrial,2.5);ctx.restore();}}
+    if(s.fitted){for(let i=0;i<n;i++){const face=s.mold.faces[i];if(!face.locked)continue;const visible=1-s.release[i];if(visible<=0)continue;const a=s.time<76.7?face.from:points[i],b=s.time<76.7?face.to:points[(i+1)%n];ctx.save();ctx.globalAlpha=visible;line(ctx,[a,b],P.metal,12);line(ctx,[a,b],P.industrial,2.5);
+      if(face.lock>0){ctx.beginPath();ctx.arc(a[0],a[1],4.1,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();}
+      if(face.impact>0){const [nx,ny]=face.normal,tx=-ny,ty=nx;ctx.globalAlpha=visible*face.impact;for(const side of[-1,1])line(ctx,[[face.point[0]+nx*5+tx*side*4,face.point[1]+ny*5+ty*side*4],[face.point[0]+nx*18+tx*side*12,face.point[1]+ny*18+ty*side*12]],P.gold,2.8);}
+      ctx.restore();}}
     // Each strip leaves independently and stays behind, rather than reforming into a badge.
     if(s.time>=123.5&&s.time<130.4){const heading=entry.body.angle+entry.actor.headAxis(entry.body).angle,relative=heading-entry.body.angle;for(let i=0;i<n;i++){const age=s.time-(123.5+i*.58);if(age<=0||age>3.2)continue;const a=points[i],b=points[(i+1)%n],drift=210*age+55*age*age,spread=(i-(n-1)/2)*28*age;ctx.save();ctx.globalAlpha=1-clamp(age/3.2);ctx.translate(-Math.cos(relative)*drift-Math.sin(relative)*spread,-Math.sin(relative)*drift+Math.cos(relative)*spread);ctx.rotate((i%2?1:-1)*age*.55);line(ctx,[a,b],P.metal,12);line(ctx,[a,b],P.industrial,2.5);ctx.restore();}}
     if(s.seed){const awakening=s.time>=108?between(s.time,108,119):0,painted=s.paint.reduce((a,b)=>a+b,0)/n;ctx.save();ctx.beginPath();ctx.arc(-7,7,painted>.2?3.7+awakening*2:6,0,Math.PI*2);ctx.fillStyle=P.gold;ctx.fill();if(awakening){ctx.globalAlpha=.25*awakening;ctx.beginPath();ctx.arc(-7,7,11,0,Math.PI*2);ctx.fill();}ctx.restore();}
   }
   const anchor=(x,y,zoom)=>Object.freeze({...world(x,y),zoom});
-  const anchors=Object.freeze({...Base.anchors,overview:anchor(-30,560,.22),approach:anchor(900,130,1.5),mold:anchor(480,130,1.5),compact:anchor(-170,130,1.5),paint:anchor(-890,130,1.5),work:Office.anchors.work,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(480,130),m2:world(-170,130),m3:world(-890,130)}),exit:world(-1785,130),workCenter:world(workCenter.x,workCenter.y)});
-  return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt};
+  const anchors=Object.freeze({...Base.anchors,overview:anchor(-30,560,.22),approach:anchor(900,130,1.5),mold:anchor(480,130,1.5),compact:anchor(-170,130,1.5),paint:anchor(-890,130,1.5),work:Office.anchors.work,officeEntry:Office.anchors.entry,awaken:Object.freeze({...discard,zoom:1.2}),discard,heroStages:Object.freeze({m1:world(480,130),m2:world(-170,130),m3:world(-890,130)}),exit:world(-1785,130),workCenter:world(workCenter.x,workCenter.y)});
+  function sceneTransition(t){return{cover:t<95.65||t>=96.35?0:t<96?between(t,95.65,96):1-between(t,96,96.35),phase:t<96?'factory':'office'};}
+  function resistanceWindow(t){const segment=[[70,71.7,900,480],[77,78.5,480,-170],[82,83.2,-170,-890]].find(([a,b])=>t>=a&&t<b);if(!segment)return{active:false,maxOffset:0};const[a,b,from,to]=segment,u=between(t,a,b),x=lerp(from,to,u),travel=from-x,maxOffset=Math.max(0,Math.min(120,travel-170))*between(t,a+.12,a+.38)*(1-between(t,b-.35,b));return{active:maxOffset>0,maxOffset};}
+  function withResistance(data,offset,t){const window=resistanceWindow(t),appliedOffset=Math.max(0,Math.min(window.maxOffset,Number(offset)||0));if(!data.hero||!appliedOffset)return{...data,appliedOffset};const dx=appliedOffset*cs,dy=appliedOffset*sn,actors=data.actors.map(e=>e.id==='hero'?{...e,body:{...e.body,x:e.body.x+dx,y:e.body.y+dy}}:e),hero=actors.find(e=>e.id==='hero')?.body||data.hero;return{...data,actors,hero,appliedOffset};}
+  return{frame,drawBase,drawEntry,drawOverlay,drawActorOverlay,anchors,paintAt,compactAt,moldAt,sceneTransition,resistanceWindow,withResistance,setWorkTime:Office.setWorkTime};
 });

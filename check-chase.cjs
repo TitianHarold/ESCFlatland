@@ -7,10 +7,11 @@ const oldAverage=length/4.75/10;
 let previous=0;
 for(let t=122;t<131.99;t+=.05){
   const data=Factory.frame(t),b=Factory.frame(t+.01).hero,a=data.hero,speed=data.chase.speed;
-  assert(speed>previous,'sprint speed increases continuously');previous=speed;
-  assert(speed>oldAverage*3,'even the initial sprint exceeds three times the previous cruise');
-  assert(b.x>a.x&&b.y<a.y,'both diagonal coordinates move together');
-  assert(Dimension.journeyPose(t,data).sprintStretch>1.9,'perspective geometry visibly stretches along its own forward axis');
+  assert(speed>=previous,'sprint speed increases continuously');previous=speed;
+  if(t>=122.8)assert(speed>oldAverage*3,'after the smooth .8-second launch the sprint exceeds three times the former cruise');
+  if(t>122.001)assert(b.x>a.x&&b.y<a.y,'both diagonal coordinates move together');
+  const pose=Dimension.journeyPose(t,data),shape=Motion.speedShape(speed);
+  assert(Math.abs(pose.sprintStretch*(1+.04*pose.raw.strain)*(1+pose.raw.axialStretch)-shape.perspectiveStretch)<1e-12,'the projected total applies the one speed response exactly once');
   const light=data.light;assert(Math.hypot(light.x-a.x,light.y-a.y)<=142,'light lead is a world distance, never a fraction of the longer route');
 }
 assert.equal(Motion.chaseProgress(122).q,0);assert.equal(Motion.chaseProgress(132).q,1);
@@ -31,4 +32,4 @@ for(const index of[30,60,90]){
   assert(duration<(2300+950)/oldAverage/3,'one-object residence is more than three times shorter than the former cruise');dwell.push(duration);
 }
 assert(dwell[2]<dwell[0],'references pass faster later in the same uninterrupted sprint');
-console.log(JSON.stringify({pass:true,distanceMultiplier:4.75,initialSpeedMultiplier:Factory.frame(122).chase.speed/oldAverage,finalSpeedMultiplier:Factory.frame(131.99).chase.speed/oldAverage,dwellSeconds:dwell,lightAt119:point.slice(0,2),whiteStop:132}));
+console.log(JSON.stringify({pass:true,distanceMultiplier:4.75,launchSpeedMultiplier:Factory.frame(122.8).chase.speed/oldAverage,finalSpeedMultiplier:Factory.frame(131.99).chase.speed/oldAverage,dwellSeconds:dwell,lightAt119:point.slice(0,2),whiteStop:132}));

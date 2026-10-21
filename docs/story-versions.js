@@ -61,9 +61,10 @@
         else if(time<77)v=move(time,70,71.7,point(b.approach,stage.m1),point(b.mold,stage.m1),b.mold?.zoom||1.5);
         else if(time<82)v=move(time,77,78.5,point(b.mold,stage.m1),point(b.compact,stage.m2),b.compact?.zoom||1.5);
         else if(time<94)v=move(time,82,83.2,point(b.compact,stage.m2),point(b.paint,stage.m3),b.paint?.zoom||1.5);
-        else if(time<98)v=move(time,94,98,point(b.paint,stage.m3),work,b.paint?.zoom||1.5,work.zoom||.75);
-        else if(time<104)v=move(time,98,104,work,officeOverview,work.zoom||.75,officeOverview.zoom||.13);
-        else if(time<110)v=fixed([officeOverview],officeOverview.zoom||.13);
+        else if(time<96)v=move(time,94,96,point(b.paint,stage.m3),point(b.exit),b.paint?.zoom||1.5,1.2);
+        else if(time<98)v=move(time,96,98,point(b.officeEntry,work),work,b.officeEntry?.zoom||1.2,work.zoom||.75);
+        else if(time<104)v=move(time,98,104,work,officeOverview,work.zoom||.75,officeOverview.zoom||.035);
+        else if(time<110)v=fixed([officeOverview],officeOverview.zoom||.035);
         else v=fixed([discard],1.5);
       }
       // The overview move crosses the shot boundary without changing the factory clock.
@@ -102,11 +103,11 @@
   function routineNotes(time){
     if(time<64)return StoryNotes.at(time);
     if(time<70)return{summary:'居民沿专线排队，依次经过套模、压实和喷涂工位。',action:'传送带、工位和已经成形的居民同时运动。',camera:'固定工厂全景，显示三道工序的排列。'};
-    if(time<77)return{summary:'主角进入与自身边数匹配的多边形模腔。五边形主角对应五边模腔，各边模块沿轮廓合拢。',action:time<71.7?'主角沿传送带接近五边形套模工位。':'五条边对应的模腔模块沿边合拢，外层逐渐贴合主角轮廓。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
+    if(time<77)return{summary:'主角进入五边套模工位。五段标准边框逐段靠近，接缝扣合，顶角依次锁住。',action:time<71.7?'主角沿传送带接近张开的五边套模工位。':'五段边框依次沿各自法向靠近并扣紧，接触处短促震颤，逐步组成完整的标准外框。',camera:'沿传送带移近套模工位，随后保持俯视中景。'};
     if(time<82)return{summary:'主角进入压实工位。五边成型压块缓慢张开蓄力，随后猛然夹紧外框，接触后短促左右震颤并顶住压实。',action:time<78.5?'五边形主角沿传送带移入五边排列的成型压块之间。':time<79.15?'五块成型压块缓慢张开蓄力。':time<79.25?'压块突然加速，沿各边法向撞紧外框。':time<79.65?'夹面锁住外框，支架短促左右震颤并保持压力。':'成型压块沿各边法向缓慢退开，保留离站净空。',camera:'沿带平移至压实工位，接触瞬间短促水平震动，主角持续留在画面中。'};
     if(time<94)return{summary:'主角进入喷涂工位，五边形逐边被涂黑。',action:time<83.2?'主角沿传送带进入喷涂工位。':'每转过一条边，停稳并向这条边喷黑；覆盖逐次累积，最后只留下内心的小黄点。',camera:'沿带移至喷涂工位后固定，五边轮廓完整可见。'};
-    if(time<110)return{summary:'主角进入办公室，许多重复的办公室向四周展开。居民按下按钮，远处矫正所的闸门随之开合，随后办公外景渐黑。',action:time<98?'主角离开喷涂工位，沿连接通道进入自己的办公室。':time<104?'居民沿各自的闭合路线工作；按钮被压下时，矫正所闸门同步打开，松开后合拢。':'办公室里的动作继续，画面逐渐变暗。',camera:time<98?'从喷涂工位连续移向主角的办公室。':time<104?'由主角所在的办公室平滑拉远，逐渐展现重复办公单元与闸门。':'保持办公室全景，直至外景完全变暗。'};
-    if(time<119)return{summary:'画面从办公室进入主角内心。纠缠的暗线包住色带，金色光从缝隙中显现并飞向前方。',action:time<112?'内心窗口逐渐展开，办公室隐入暗处。':time<113.2?'暗色线网包裹翻卷的色带，中心有一小点金色微光。':time<116?'一道暖金光缝逐渐张开，切开包裹色带的暗线。':'同一团金色光从翻卷色层中飞出，移向主角前方。',camera:'内心视野占满画面，固定取景看色带、暗线与光的变化。'};
+    if(time<110)return{summary:'主角进入办公室。镜头拉远，等距排列的办公单元持续铺满视野；居民重复操作按钮与传递文件，办公外景逐渐变暗。',action:time<96?'主角离开喷涂工位，走向工厂出口。':time<98?'镜头经过门口遮挡，主角从办公室入口走进工作路线。':time<104?'主角与周围居民沿各自的闭合路线反复工作；点击使整个工作循环一起加快。':'所有工位继续循环，画面逐渐变暗；连续点击会加快工作与变暗。',camera:time<96?'从喷涂工位平移到工厂出口。':time<98?'经过门口遮挡切入办公室，平滑移向主角工位。':time<104?'从主角工位持续拉远，固定世界坐标的办公格网从画外进入，始终铺满视野。':'保持密集办公全景，直至外景完全变暗。'};
+    if(time<119)return{summary:'办公外景完全隐入黑暗，进入主角内心。微弱小点偶尔闪现，点击后照亮局部，发现逐渐积累，最后破开迷雾。',action:'暗层持续缓慢运动；每次发现留下流动色带，积累完成后光种子移向前方。',camera:'保持内心全景，破雾后连续进入追逐。'};
     if(time<132)return{summary:'光先在近处绕行，主角随后向右上追光。外层逐渐剥离，内在颜色重新露出。',action:time<122?'光在近处绕行，主角转向观察。':'主角沿同一曲线持续向右上行进，外层逐渐剥离；沿途小图形逐渐变成大型弯曲曲面。',camera:'近处邀请后跟随主角，视角逐渐下降，光保持在右上方。'};
     return StoryNotes.at(time);
   }
