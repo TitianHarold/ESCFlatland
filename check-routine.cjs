@@ -97,11 +97,12 @@ for(const t of[71.7,78.5,79.25,79.5,83.2]){const original=Routine.frame(t),chang
 for(const t of[67.4,71.7,76.7,78.5,81.6,83.2])assert(Math.abs(localX(hero(t-1e-6).body)-localX(hero(t).body))<.001,'extended transfers remain continuous at '+t);
 console.log(JSON.stringify({actualReverseTravel:reverseEvidence,contactTimingUnchanged:true}));
 
-// Read the renderer's actual strokes: pressing permanently blackens the whole frame.
+// Read the rendered strip fills and detached strokes, including gradual blackening.
 const palette=require('./docs/palette.js');
-function frameStrokes(t){const strokes=[],ctx={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},clip(){},fill(){},arc(){},translate(){},rotate(){},stroke(){strokes.push({color:this.strokeStyle,width:this.lineWidth});}};Routine.drawActorOverlay(ctx,hero(t));return strokes;}
-const beforeCompact=frameStrokes(79.1);assert(beforeCompact.some(s=>s.color===palette.metal&&s.width===12));assert(beforeCompact.some(s=>s.color===palette.industrial&&s.width===2.5));
-for(const t of[79.65,80,94,124.5]){const strokes=frameStrokes(t);assert(strokes.length);assert(strokes.every(s=>s.color===palette.black),'the pressed frame and its detached strips remain entirely black at '+t);}
+function frameMarks(t){let points=0;const marks=[],ctx={globalAlpha:1,save(){},restore(){},beginPath(){points=0;},moveTo(){points++;},lineTo(){points++;},closePath(){},clip(){},fill(){if(points===4)marks.push({color:this.fillStyle,alpha:this.globalAlpha});},arc(){},translate(){},rotate(){},stroke(){if(points===2&&[12,2.5].includes(this.lineWidth))marks.push({color:this.strokeStyle,alpha:this.globalAlpha});}};Routine.drawActorOverlay(ctx,hero(t));return marks;}
+const beforeCompact=frameMarks(79.1);assert(beforeCompact.some(s=>s.color===palette.metal));assert(beforeCompact.some(s=>s.color===palette.industrial));assert(beforeCompact.every(s=>s.color!==palette.black));
+let previousBlack=0;for(const t of[79.3,79.4,79.5,79.6]){const black=frameMarks(t).filter(s=>s.color===palette.black);assert.equal(black.length,5,'all five frame strips blacken together under pressure');assert(black.every(s=>s.alpha>previousBlack&&s.alpha<1),'frame material darkens continuously during the loaded hold');previousBlack=black[0].alpha;}
+for(const t of[79.65,80,94,124.5]){const marks=frameMarks(t);assert(marks.length);assert(marks.every(s=>s.color===palette.black),'the pressed frame and its detached strips remain entirely black at '+t);}
 console.log(JSON.stringify({frameMaterial:'gray with black center before compact; solid black after compact and during release'}));
 
 // Longer travel is a shared physical route, not extra background behind a fixed actor.

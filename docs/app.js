@@ -235,7 +235,7 @@
     if(familyPhase(time))return{summary:'点击地面，孩子从当前位置走过去；点击父亲或母亲，孩子寻路靠近并尝试接触。双方回应结束后，孩子受挫退回房间中心，停留片刻。',action:e.familyTarget==='return'?'孩子收紧边线，退回房间中心，停留片刻。':e.familyWaiting?'孩子轻轻摇晃、缓慢试探周围，父母保持沉稳的小幅动作；接触后的符号保留到下一次点击。':e.familyTarget==='ground'?'孩子走向点击的位置，绕开父母与墙壁。':e.familyTarget==='father'?'孩子寻路靠近父亲；接触后父亲缩退，孩子头顶变成叹号。':'孩子寻路靠近母亲；接触后母亲躲开，孩子头顶变成叹号。',camera:base.camera};
     if(time<district.timing.firstMove)return{summary:'执政官先进入并打量孩子，示意士兵缓一步跟进。',action:e.effects.shiver>0?'孩子左右颤抖；执政官的观察与士兵进门继续。':'执政官转向孩子观察，士兵稍后从入口跟进。',camera:base.camera};
     if(time<58)return{summary:'执政官走在前方，孩子居中，三名士兵在后方半包围押送。',action:e.effects.resistance>0?'孩子试图停步，执政官回头；后方士兵催促。':e.effects.lag>.1?'士兵尖角触及孩子，孩子露出害怕符号，随后继续前进。':'队伍沿道路前行，孩子被催促着跟上。',camera:base.camera};
-    if(state.correction?.node&&state.correction.level>.08)return{...base,action:state.correction.node==='mold'?'孩子短暂收紧后加速冲向边缘；对应边突然扣下，撞击把他顶回并挤压震动。':state.correction.node==='compact'?(state.correction.releaseAge<.31?'五段边条猛合回锁定位置，身体被挤紧并短促震动。':state.correction.expansion>.01?'身体膨胀，五段固定长度的边条各自外移，角部接缝被撑开。':'孩子围绕稳定中心左右扭动，尝试挣脱夹具。'):state.correction.paintStage==='spray'?'机器已强制归正，喷嘴只向对齐的一面喷黑。':'点击拖住当前转位，长按逆时针扭回一点；机器随后夺回控制，归正后再喷黑。'};
+    if(state.correction?.node&&(state.correction.level>.08||state.correction.node==='compact'&&state.correction.releaseAge<1.2))return{...base,action:state.correction.node==='mold'?'孩子短暂收紧后加速冲向边缘；对应边突然扣下，撞击把他顶回并挤压震动。':state.correction.node==='compact'?(state.correction.releaseAge<.11?'夹具突然反压，五根边条猛合回锁定位置。':state.correction.releaseAge<.55?'身体被重新夹紧，支架短促震颤后持续保压。':state.correction.releaseAge<1.2?'完成锁紧保压后，夹具缓慢退开，准备离站。':state.correction.expansion>.01?'身体膨胀，五段固定长度的边条各自外移，角部接缝被撑开。':'孩子围绕稳定中心左右扭动，尝试挣脱夹具。'):state.correction.paintStage==='spray'?'机器已强制归正，喷嘴只向对齐的一面喷黑。':'点击拖住当前转位，长按逆时针扭回一点；机器随后夺回控制，归正后再喷黑。'};
     if(factoryPhase(time)&&a.factory.pulse>.08)return{...base,action:a.factory.exhausted?'孩子反抗后失力，重新被传送带带向工位。':'长按让孩子收紧、左右向后挣扎，圆环随持续用力而消耗；输送带与机器继续运行。'};
     if(workPhase(time)){const progress=workProgress.snapshot();return{...base,action:progress.phase==='fade'?'画面持续、平滑地变黑；更密集的点击会加快变黑，工位继续循环。':progress.phase==='wide'?'镜头已到最远，密集工位保持循环，画面自动连续变黑。':'点击让所有工位的循环加快，镜头进一步拉远；等待时继续当前的机械循环。'};}
     if(chasePhase(time))return{...base,action:player.pressed?'持续长按，主角与周围图形一起加速拉伸；蓄力末段身体逐渐拉散为沿右上方向流动的细长彩色形体。':'主角低速追光，周围图形继续掠过；松开的圆环逐渐退空。'};
@@ -307,7 +307,7 @@
   }
   function tickStory(dt){
     if(state.reviewPaused)return;
-    const time=sceneTime(),rawRate=(timing.sceneAt(Math.min(duration,player.time+.01))-time)/.01;
+    let time=sceneTime();
     if(player.pressed&&chasePhase(time))state.pressAge+=dt;
     if(time>=58&&time<(version.id==='routine'?96:104)){
       state.factoryAmbient=timing.sceneAt(timing.playbackAt(Math.max(state.factoryAmbient,time))+dt);
@@ -315,7 +315,11 @@
     }else factory.setAmbientTime?.(null);
     const reactionWasActive=!!state.correction?.processPaused;
     updateCorrection(dt);
-    const pauseProcess=player.mode==='interactive'&&(reactionWasActive||state.correction?.processPaused);
+    if(player.mode==='interactive'&&state.correction?.finishAt){
+      player.time=timing.playbackAt(state.correction.finishAt);time=sceneTime();updateCorrection(0);
+    }
+    const rawRate=(timing.sceneAt(Math.min(duration,player.time+.01))-time)/.01;
+    const pauseProcess=player.mode==='interactive'&&!!state.correction?.node&&(reactionWasActive||state.correction.processPaused);
     if(player.mode==='interactive'&&chasePhase(time)){if(chaseProgress.snapshot().finishing)peel.finish();peel.update(dt);factory.setPeelState?.(peel.snapshot());}
     else factory.setPeelState?.(null);
     if(player.mode==='interactive'&&(familyPhase(time)||time<=encounterAPI.familyEnd+1e-7&&!encounter.snapshot().familyDone)){

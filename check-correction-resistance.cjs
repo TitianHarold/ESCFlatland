@@ -16,24 +16,34 @@ for(const[name,start,center,index]of[['mold',67.4,71.7,0],['compact',76.7,78.5,1
 }
 
 // Every click tries a different side: contract, accelerate, then hit and recoil.
-reset();const moldTime=71.72,input=new F.NodeResistance(),base=hero(moldTime).body,edges=[];let maxEscape=0;
-for(let attempt=0;attempt<10;attempt++){
-  assert(input.press(moldTime,{x:attempt%2?1e5:-1e5,y:0}));edges.push(input.snapshot(moldTime).edge);assert(input.snapshot(moldTime).processPaused);
+reset();const moldTime=71.72,input=new F.NodeResistance(),base=hero(moldTime).body,edges=[],escapeDistances=[];let maxEscape=0;
+for(let attempt=0;attempt<5;attempt++){
+  const before=hero(moldTime),edge=attempt%5,face=before.routine.mold.faces[edge],normal=face.normal;
+  const bodySupport=Math.max(...before.actor.outline({x:0,y:0,angle:0}).map(([x,y])=>x*normal[0]+y*normal[1]));
+  const freeDistance=Math.max(0,Math.min(46,face.point[0]*normal[0]+face.point[1]*normal[1]+face.gap-6-bodySupport));
+  const locked=before.routine.mold.faces.filter(f=>f.locked);
+  assert(input.press(moldTime,{x:attempt%2?1e5:-1e5,y:0}));F.setNodeResistance(input.snapshot(moldTime));edges.push(input.snapshot(moldTime).edge);assert(input.snapshot(moldTime).processPaused);
   const samples=[];let previous=hero(moldTime).body;
   for(let i=0;i<65;i++){
     const state=input.update(.01,{time:moldTime,held:false});F.setNodeResistance(state);const entry=hero(moldTime),body=entry.body;
     assert(distance(previous,body)<15,'contact is a rapid stroke, never a position jump');assert.equal(body.angle,base.angle);samples.push({state,body});previous=body;
     maxEscape=Math.max(maxEscape,distance(body,base));
+    assert(distance(body,base)<=freeDistance+.001,'escape stays inside the currently available space');
+    for(const fixed of locked){const kept=entry.routine.mold.faces[fixed.index];assert(kept.locked,'a new attempt never unlocks a fitted edge');assert.equal(kept.gap,fixed.gap,'a fitted strip does not reopen to make room for escape');}
   }
   assert(samples[2].state.anticipation>.8&&samples[2].body.sx<.93,'the child visibly coils before escape');
-  const early=distance(samples[9].body,samples[10].body),late=distance(samples[21].body,samples[22].body);assert(late>early*12,'escape accelerates rather than a smooth uniform glide');
-  assert(distance(samples[23].body,base)>41);assert(distance(samples[27].body,base)>45);
+  const peak=Math.max(...samples.map(sample=>distance(sample.body,base)));escapeDistances.push(Number(peak.toFixed(3)));
+  if(freeDistance>.01){const early=distance(samples[9].body,samples[10].body),late=distance(samples[21].body,samples[22].body);assert(late>early*12,'escape accelerates rather than a smooth uniform glide');assert(distance(samples[23].body,base)>freeDistance*.90);assert(peak>freeDistance*.98);assert(distance(samples[30].body,samples[29].body)>freeDistance*.17,'the bar visibly knocks the child back');assert(distance(samples[34].body,base)>freeDistance*.10,'the child overshoots backwards instead of a soft return');}
   assert(samples[27].state.closing>.65&&samples[27].state.closing<.8);assert(samples[28].state.impact>.9);
-  assert(distance(samples[30].body,samples[29].body)>8,'the bar visibly knocks the child back');assert(samples[28].body.sx<.92,'impact compresses the silhouette');
-  assert(distance(samples[34].body,base)>5,'the child overshoots backwards instead of a soft return');
+  assert(samples[28].body.sx<.92,'impact compresses the silhouette even when a locked side leaves no escape distance');
   assert(distance(samples.at(-1).body,base)<.08);assert.equal(samples.at(-1).state.processPaused,false);assert(hero(moldTime).routine.mold.faces[attempt%5].locked);
 }
-assert.deepEqual(edges,[0,1,2,3,4,0,1,2,3,4]);
+assert.deepEqual(edges,[0,1,2,3,4]);
+assert(escapeDistances.every(distance=>distance>30),'the first attempts retain visibly accelerating escape');
+assert.equal(input.snapshot(moldTime).finishAt,76.7,'the fifth finished collision immediately requests mold departure');
+const completedMold=hero(moldTime),completedMask=completedMold.routine.mold.faces;
+for(let i=0;i<10;i++){assert.equal(input.press(moldTime),false,'a finished mold hands input back to transport instead of starting another escape');F.setNodeResistance(input.snapshot(moldTime));assert.deepEqual(hero(moldTime).routine.mold.faces,completedMask,'presses after completion preserve all five attached edges');}
+reset();const retryTime=73.3,retry=new F.NodeResistance(),retryFace=hero(retryTime).routine.mold.faces[0];assert(retryFace.locked);assert(!hero(retryTime).routine.mold.faces.every(face=>face.locked));retry.press(retryTime);for(let i=0;i<65;i++){const state=retry.update(.01,{time:retryTime,held:false});F.setNodeResistance(state);const face=hero(retryTime).routine.mold.faces[0];assert(face.locked);assert.equal(face.gap,0,'a fitted edge stays shut even while the unfinished station still accepts attempts');assert(Math.hypot(...state.offset)<14,'an attempt against an already fitted edge uses only the remaining interior space');}
 reset();const heldMold=new F.NodeResistance();heldMold.press(moldTime);assert.equal(step(heldMold,moldTime,.8,{held:true}).processPaused,false,'holding cannot keep the completed mold reaction paused');
 const paused=input.snapshot(moldTime);input.update(.5,{time:moldTime,advance:false,held:true});assert.deepEqual(input.snapshot(moldTime),paused);
 
@@ -53,19 +63,19 @@ for(let i=0;i<5;i++){
   const next=newPress.bars[(i+1)%5];cornerGap=Math.max(cornerGap,Math.hypot(bar.to[0]-next.from[0],bar.to[1]-next.from[1]));
 }
 assert(cornerGap>9,'separate rigid strips expose visible gaps at the corners');
-// Exercise the actual actor-scaled stroke renderer, not only its unscaled geometry.
+// Read the actual filled strips after the actor transform, including their miter ends.
 function frameSegments(entry){
   const matrix=[1,0,0,1,0,0],stack=[],segments=[];let path=[];
   const point=(x,y)=>[matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]],ctx={
     save(){stack.push([...matrix]);},restore(){matrix.splice(0,6,...stack.pop());},scale(x,y){matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},rotate(a){const c=Math.cos(a),s=Math.sin(a),[a0,b,c0,d]=matrix;matrix[0]=a0*c+c0*s;matrix[1]=b*c+d*s;matrix[2]=c0*c-a0*s;matrix[3]=d*c-b*s;},translate(x,y){matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;},
-    beginPath(){path=[];},moveTo(x,y){path.push(point(x,y));},lineTo(x,y){path.push(point(x,y));},closePath(){},clip(){},fill(){},arc(){},stroke(){if(this.lineWidth===12&&path.length===2)segments.push({from:path[0],to:path[1],width:Math.hypot(matrix[0],matrix[1])*this.lineWidth});}
+    beginPath(){path=[];},moveTo(x,y){path.push(point(x,y));},lineTo(x,y){path.push(point(x,y));},closePath(){},clip(){},fill(){if(path.length!==4)return;const from=path[0].map((v,i)=>(v+path[3][i])/2),to=path[1].map((v,i)=>(v+path[2][i])/2),length=Math.hypot(to[0]-from[0],to[1]-from[1]),normal=[(to[1]-from[1])/length,-(to[0]-from[0])/length],width=Math.abs((path[0][0]-path[3][0])*normal[0]+(path[0][1]-path[3][1])*normal[1]);if(Math.abs(width-12)<1e-8&&!segments.some(s=>distance({x:s.from[0],y:s.from[1]},{x:from[0],y:from[1]})<1e-8))segments.push({from,to,width});},arc(){},stroke(){}
   };
   ctx.rotate(entry.body.angle);ctx.scale(entry.body.sx,entry.body.sy);F.drawActorOverlay(ctx,entry);return segments;
 }
-const rendered=frameSegments(expanded);assert.equal(rendered.length,5);for(let i=0;i<5;i++){assert(Math.abs(segmentLength(rendered[i])-segmentLength(newPress.bars[i]))<1e-8);assert(Math.abs(rendered[i].width-12)<1e-8,'rendering must undo body scaling for the rigid strips');}
+const rendered=frameSegments(expanded);assert.equal(rendered.length,5);for(let i=0;i<5;i++){assert(Math.abs(segmentLength(rendered[i])-segmentLength(newPress.bars[i]))<1e-8);assert(Math.abs(rendered[i].width-12)<1e-8,'rendering must undo body scaling for the rigid strips');const angle=expanded.body.angle-expanding.twist,c=Math.cos(angle),s=Math.sin(angle),bar=newPress.bars[i];for(const key of['from','to'])assert(Math.hypot(rendered[i][key][0]-bar[key][0]*c+bar[key][1]*s,rendered[i][key][1]-bar[key][0]*s-bar[key][1]*c)<1e-8,'the actual filled strip follows only its rigid normal translation');}
 hold.release();const struck=step(hold,compactTime,.12),crushed=hero(compactTime);assert.equal(struck.expansion,0);assert(struck.impact>.8);assert(struck.processPaused);assert(crushed.body.sx<1);assert(crushed.routine.compacting.impact>.8);
 for(let i=0;i<5;i++)assert.deepEqual(crushed.routine.compacting.bars[i],oldPress.bars[i],'release snaps each strip back to its original lock');
-hold.press(compactTime);const expandedAgain=step(hold,compactTime,.9,{held:true});assert(expandedAgain.expansion>.3,'a fresh press after the slam can push the rigid strips open again');
+const reactionAge=hold.snapshot(compactTime).releaseAge;assert(hold.press(compactTime),'the station consumes clicks while its counterpressure finishes');assert.equal(hold.snapshot(compactTime).releaseAge,reactionAge,'pressing cannot restart counterpressure');const lockedAgain=step(hold,compactTime,.9,{held:true});assert.equal(lockedAgain.expansion,0,'pressing during the completed lock cannot reopen the shell');const withdrawn=step(hold,compactTime,.3,{held:true});assert.equal(withdrawn.expansion,0);assert.equal(withdrawn.finishAt,81.6,'the machine completes its own withdrawal despite new resistance presses');assert(hero(compactTime).routine.compacting.faces.every(face=>Math.abs(face.gap-24)<1e-8),'the completed withdrawal matches the next transport segment');
 reset();const interrupted=new F.NodeResistance();interrupted.press(compactTime);step(interrupted,compactTime,.9,{held:true});interrupted.release();step(interrupted,compactTime,.04);interrupted.press(compactTime);step(interrupted,compactTime,.03,{held:true});interrupted.release();const settled=step(interrupted,compactTime,.12);assert.equal(settled.expansion,0,'a short click during the slam cannot leave the strips suspended');
 reset();const exhausted=new F.NodeResistance();exhausted.press(compactTime);let full;for(let i=0;i<300;i++){full=step(exhausted,compactTime,.01,{held:true});if(full.exhausted)break;}assert(full.exhausted);assert.equal(full.effortProgress,full.capacity);assert(full.expansion>0,'sample the exhausting slam while it is still returning');
 for(let i=0;i<14;i++){exhausted.press(compactTime);full=step(exhausted,compactTime,.01,{held:true});exhausted.release();}assert.equal(full.expansion,0,'exhausted repeat presses cannot stop the clamp returning');
@@ -97,4 +107,4 @@ reset();for(const[time,count]of[[71.7,0],[76.69,0],[76.7,1],[81.59,1],[81.6,2],[
   const progress=F.nodeProgress(time);assert.equal(progress.completedNodes,count);assert.equal(progress.redFraction,0);assert.equal(progress.capacity,1);
   const r=new F.NodeResistance();r.press(time);const state=step(r,time,.4,{held:true});assert(state.effortProgress<=1);assert.equal(state.redFraction,0);reset();
 }
-console.log(JSON.stringify({pass:true,arrivals,clickedFaces:edges,maxEscape,shortClickTwist:true,rigidStripsSeparate:true,cornerGap:Number(cornerGap.toFixed(2)),heldPaintCounterclockwise:true,releaseAndFullRingSlam:true,stationTakeover:true,localProcessPause:true,paintSequence:['resist-turn','force-align','spray'],redFractions:[0]}));
+console.log(JSON.stringify({pass:true,arrivals,clickedFaces:edges,maxEscape,escapeDistances,shortClickTwist:true,rigidStripsSeparate:true,cornerGap:Number(cornerGap.toFixed(2)),heldPaintCounterclockwise:true,releaseAndFullRingSlam:true,stationTakeover:true,localProcessPause:true,paintSequence:['resist-turn','force-align','spray'],redFractions:[0]}));

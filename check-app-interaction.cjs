@@ -51,13 +51,21 @@ for(const version of ['routine','rhythm']){
  if(version==='routine'){
   T.seekRaw(70.68);press();step(.05);assert.equal(snap().correction.node,'mold','touching the platform takes over even during a continuous hold');assert(snap().correction.held);assert.equal(snap().actions.factory.velocity,0,'old conveyor resistance stops at node entry');assert(snap().correction.effortProgress>0,'partly filled effort survives the behavior switch');release();
  }
- if(version==='routine'){T.seekRaw(72);const base=pos(T.plant().hero),point=T.point(base.x+100,base.y);press(point.x,point.y);step(.25);const dash=distance(base,T.plant().hero);assert(dash>35,'a mold click accelerates the actual child out toward the edge');step(.15);assert(distance(base,T.plant().hero)<dash*.2,'the sudden edge collision has already knocked the child back');release();step(.5);T.draw();assert.equal(T.node('stage').dataset.correctionNode,'mold');assert.equal(T.node('stage').dataset.fatigue,'0.000');}
+ if(version==='routine'){T.seekRaw(72);const base=pos(T.plant().hero),point=T.point(base.x+100,base.y);press(point.x,point.y);step(.25);const dash=distance(base,T.plant().hero);assert(dash>20,'a mold click accelerates the actual child into the remaining open space');step(.15);assert(distance(base,T.plant().hero)<dash*.2,'the sudden edge collision has already knocked the child back');release();step(.5);T.draw();assert.equal(T.node('stage').dataset.correctionNode,'mold');assert.equal(T.node('stage').dataset.fatigue,'0.000');}
  if(version==='routine'){
   for(const [raw,seconds]of [[72,.25],[79.5,.8],[83.5,.8]]){
    T.seekRaw(raw);const ambient=snap().background;press();assert(snap().correction.processPaused,'the press owns the process immediately');step(seconds);assert.equal(snap().raw,raw,'the active station does not advance during its reaction');assert(snap().background>ambient,'background production keeps its own clock');
-   release();const releasedRaw=snap().raw;step(.15);assert.equal(snap().raw,releasedRaw,'return and settling finish before process time resumes');step(.65);assert(snap().raw>releasedRaw,'the same station resumes without another click');
+   release();const releasedRaw=snap().raw;step(.15);assert.equal(snap().raw,releasedRaw,'return and settling finish before process time resumes');step(raw===79.5?1.2:.65);assert(snap().raw>releasedRaw,'the station continues or departs after its reaction without another click');if(raw===79.5)assert(snap().raw>=81.6,'compaction completes with retreating dies and a conveyor handoff');
    T.seekRaw(raw);T.node('play').dispatch('click',{});step(.5);assert(snap().raw>raw,'station interaction is optional');
   }
+ }
+ if(version==='routine'){
+  T.seekRaw(71.72);let crossed=false;
+  for(let attempt=0;attempt<5;attempt++){
+   click(10,10);
+   for(let i=0;i<72;i++){const before=pos(T.plant().hero),raw=snap().raw;T.step(.01);if(raw<76.7&&snap().raw>=76.7){assert(distance(before,T.plant().hero)<4,'the completed frame enters the conveyor without teleporting');crossed=true;}}
+  }
+  assert(crossed&&snap().raw>=76.7,'five fitted edges finish the station after the last impact settles');assert.equal(snap().correction.node,null);step(1.1);const before=snap().raw;press();step(.7);assert(snap().actions.factory.effort>.5,'holding after fitting uses conveyor resistance');assert.equal(snap().correction.node,null,'the finished station cannot recapture escape input');assert(snap().raw<before+.08,'backward effort visibly opposes the moving conveyor');release();
  }
  T.seekRaw(60);press();step(.35);T.draw();assert.equal(T.node('effort-indicator').dataset.visible,'true');assert(snap().actions.factory.offset>0);
  assert(distance(T.view(),{x:T.plant().hero.x,y:T.plant().hero.y-160})<400,'gate tracking keeps the actual child inside its soft region');release();
