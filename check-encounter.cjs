@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {EncounterController,familyEnd}=require('./docs/encounter-interaction.js');
-const District=require('./docs/district.js'),C=require('./docs/character-geometry.js');
+const District=require('./docs/district.js'),C=require('./docs/character-geometry.js'),Versions=require('./docs/story-versions.js'),Camera=require('./docs/camera.js');
 const actor=(frame,id)=>frame.actors.find(entry=>entry.id===id);
 function noOverlap(frame){
   const entries=frame.actors.filter(entry=>/^(hero|father|mother|inspector|guard-[123])$/.test(entry.id));
@@ -24,15 +24,26 @@ for(const target of ['father','mother']){
 }
 assert(controller.snapshot().familyDone);assert.equal(controller.sceneTime,familyEnd);
 const arrival=District.frame(14.5);assert(actor(arrival,'inspector'));assert(!actor(arrival,'guard-1'),'the inspector must enter before the guards');
+const timing=District.timing,settled=actor(District.frame(timing.inspectorSettled+.01),'inspector').body;
+for(let t=timing.inspectorSettled+.02;t<timing.guardsEntry[0];t+=.1){
+  frame=District.frame(t);noOverlap(frame);assert(!frame.actors.some(entry=>/^guard-/.test(entry.id)),'all guards remain outside the scene during the observation beat');
+  const body=actor(frame,'inspector').body;assert(Math.hypot(body.x-settled.x,body.y-settled.y)<.001,'the inspector stands still while observing and signaling');
+  assert.deepEqual([Camera.pose(t).x,Camera.pose(t).y,Camera.pose(t).zoom],[800,500,1.4],'the camera holds the family view during the observation beat');
+}
+for(const version of ['rhythm','routine']){
+  const edit=Versions.get(version).timing;
+  assert(edit.playbackAt(timing.guardsEntry[0])-edit.playbackAt(timing.inspectorSettled)>1.2,'the compressed edit retains a full visible breath before soldiers enter');
+  for(let i=1;i<timing.guardsEntry.length;i++)assert(edit.playbackAt(timing.guardsEntry[i])-edit.playbackAt(timing.guardsEntry[i-1])>.45,'guards enter in individually readable beats');
+}
 controller.seek(14.5);frame=controller.applyFrame(arrival);const originalX=frame.hero.x;assert(controller.activate('authority'));
 controller.tick(1/60,{sceneTime:14.52});frame=controller.applyFrame(District.frame(14.52));assert.notEqual(frame.hero.x,originalX,'authority clicks make the child shiver');noOverlap(frame);
-controller.seek(16.5);frame=controller.applyFrame(District.frame(16.5));let maxLag=0,closestGuard=Infinity;
+const escortStart=timing.firstMove+.05;controller.seek(escortStart);frame=controller.applyFrame(District.frame(escortStart));let maxLag=0,closestGuard=Infinity;
 for(let i=1;i<600;i++){
-  const raw=16.5+i/30*2.2;if(raw>=58)break;
+  const raw=escortStart+i/30*2.2;if(raw>=58)break;
   if(i===30||i===35||i===40)assert(controller.activate('escort'));
   controller.tick(1/30,{sceneTime:raw});frame=controller.applyFrame(District.frame(raw));noOverlap(frame);
   const child=actor(frame,'hero'),canonical=District.frame(raw).hero;maxLag=Math.max(maxLag,Math.hypot(child.body.x-canonical.x,child.body.y-canonical.y));
-  if(raw>19&&raw<26)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))closestGuard=Math.min(closestGuard,C.distance(child.actor.outline(child.body),guard.actor.outline(guard.body)));
+  if(raw>escortStart+2.5&&raw<escortStart+10)for(const guard of frame.actors.filter(entry=>/^guard-/.test(entry.id)))closestGuard=Math.min(closestGuard,C.distance(child.actor.outline(child.body),guard.actor.outline(guard.body)));
 }
 assert(maxLag>60,'clicking must visibly resist instead of merely delaying the story clock');assert(closestGuard<.1,'a guard must make real contact while urging the child onward');
 assert.equal(controller.snapshot().effects.lag,0,'resistance must end before the factory handoff');

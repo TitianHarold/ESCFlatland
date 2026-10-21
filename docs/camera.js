@@ -10,6 +10,7 @@
   const medium=factoryPoint(-120,130),exitView=factoryPoint(-1200,260),discard=factoryPoint(-2200,390);
   const factoryMedium=time=>frame(time,medium.x,medium.y,.6);
   const chaseScreenHeading=-Math.PI/5,bridgeYaw=1.0664437894592371;
+  const departureFrames=[frame(15,800,500,1.4),frame(22.3,800,500,1.4),frame(31,100,-50,.9),frame(42,-800,-550,.34)];
   const shots=[
     {id:'family',label:'001 · 家庭',start:0,end:15,frames:[frame(0,800,500,1.4),frame(15,800,500,1.4)]},
     {id:'district',label:'002 · 包围后带走 · 拉远',start:15,end:24,frames:[frame(15,800,500,1.4),frame(24,100,-50,.9)]},
@@ -35,6 +36,14 @@
     const view={space:shot.space||'flat',shotId:shot.id};
     if(shot.follow)view.follow=shot.follow;
     for(const key of ['x','y','zoom','tilt','yaw'])view[key]=a[key]+(b[key]-a[key])*q;
+    // An independent camera preset holds the doorway view, then rejoins the
+    // original wide shot. Character and collision clocks keep running through it.
+    if(time>=15&&time<42){
+      let from=departureFrames[0],to=from;
+      for(const next of departureFrames){if(next.time<=time)from=next;else{to=next;break;}to=from;}
+      let u=to.time===from.time?0:clamp((time-from.time)/(to.time-from.time),0,1);u=u*u*(3-2*u);
+      for(const key of ['x','y','zoom'])view[key]=from[key]+(to[key]-from[key])*u;
+    }
     // One continuous dolly crosses the overview/press edit without restarting its easing at 70s.
     if(time>=68.3&&time<=70.8){
       let u=clamp((time-68.3)/2.5,0,1);u=u*u*(3-2*u);

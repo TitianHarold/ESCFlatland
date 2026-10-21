@@ -30,8 +30,10 @@ for(const t of[24,31,42,55]){
     for(const other of frame.actors)if(other.id!==id)assert(!C.penetrates(outline,other.actor.outline(other.body)),id+' intersects '+other.id+' at '+t);
     if(id.startsWith('guard-')){
       assert(forward(entry)<-20,id+' must remain behind the child at '+t);
-      assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
+      // The longer observation beat deliberately postpones departure; the first
+      // snapshot is now still inside the home, with the same collision rules.
+      if(t>=31)assert(Math.max(...outline.map(p=>p[1]))<CityMap.mainDoor[1],id+' must have cleared the home doorway at '+t);
     }
   }
 }
-console.log('PASS escort: one real poke, continuous child departure, inspector ahead, three guards behind and outside, no wall/actor penetration at 24/31/42/55.');
+console.log('PASS escort: one real poke, continuous departure, inspector ahead, three guards behind, doorway cleared by 31, no wall/actor penetration at 24/31/42/55.');

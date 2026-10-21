@@ -1,7 +1,7 @@
 (function(root,factory){
-  if(typeof module==='object'&&module.exports)module.exports=factory();
-  else root.FlatlandStoryNotes=factory();
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./district.js').timing);
+  else root.FlatlandStoryNotes=factory(root.FlatlandDistrict.timing);
+})(typeof globalThis!=='undefined'?globalThis:this,function(encounter){
   'use strict';
   // Boundaries follow camera.shots; these are shot notes, not spoken narration.
   const shots=[
@@ -19,16 +19,18 @@
       [13.3808,'尖角触及母亲；母亲缩紧并向右下短退，出现「!」。孩子停住。'],
       [13.7,'孩子停在母亲附近，旁侧出现「?」；母亲保持短退后的位置。'],
       [21.25*2/3,'检察官从门口高速冲入；母亲向右下退避，孩子停住并出现「?」。'],
-      [21.5*2/3,'检察官结束高速冲入，转为稳重打量。三角兵分批跟进入内。'],
-      [15,'父母开始向两侧让位；检察官打量孩子，三名三角兵走向包围位置。']
+      [encounter.inspectorSettled,'检察官独自站定，缓慢打量孩子；三角兵仍留在门外。'],
+      [15,'检察官继续观察，父母让向两侧；士兵留在画外候命。']
     ],camera:'预设固定正交俯视，父母与孩子同框；检察官从门口进入同一画面。'},
-    {end:24,summary:'七边形检察官在前方引路。孩子留在原处不愿走，后方三角兵短促戳一下，随后立即押走；三名士兵在孩子身后半包围，镜头同时缓慢拉远。',action:[
-      [23.5*2/3,'街区逐渐展开；父母继续让位，三名三角兵分别抵达孩子侧面与后侧。'],
-      [24.1*2/3,'包围合拢，检察官先行；孩子不愿走，后方三角兵短促逼近。'],
-      [24.1*2/3+.38,'尖角真实接触，孩子转向出口开始行进；戳完不再额外停等。'],
-      [20.4,'检察官在前方带路，孩子持续走向门口；三角兵从后方依次收进共用通道。'],
-      [24,'队伍依次通过门洞，出门后恢复孩子后方的半包围；镜头拉远时行进不间断。']
-    ],camera:'保持正交，包围后缓慢拉远并沿离家方向移取景；角色继续原有动作。'},
+    {end:24,summary:'检察官独自站定并打量孩子，留出停顿后回望门口。三名士兵随后依次进入，在孩子后方形成半包围；戳一下催促后开始押走。',action:[
+      [encounter.signalStart,'检察官观察后转向门口示意，士兵仍在门外等候。'],
+      [encounter.guardsEntry[0],'第一名三角兵进入，其余两名仍候在门外。'],
+      [encounter.guardsEntry[1],'第二名三角兵跟进，与前兵保持间隔。'],
+      [encounter.guardsEntry[2],'第三名三角兵最后进入，三兵沿屋内通道分开就位。'],
+      [encounter.takeAway,'包围合拢，检察官先行；孩子不愿走，后方三角兵短促逼近。'],
+      [encounter.firstMove,'尖角真实接触，孩子转向出口开始行进；戳完不再额外停等。'],
+      [24,'检察官在前方带路，孩子持续走向门口；三角兵从后方依次收进共用通道。']
+    ],camera:'检察官观察和士兵依次入场时保持家庭机位；包围合拢后缓慢拉远，角色继续原有动作。'},
     {end:42,summary:'主角队伍沿道路向左上移动。西侧执政队从画外沿街进入，再分别进屋，在孩子前后就位，催赶孩子出门。',action:[
       [27.1066,'主角与三角兵沿道路前行；其他孩子仍留在各自家中。'],
       [36.4566,'西侧执政官与两名三角兵先后从画外沿街道进入，再沿门前通路入屋。'],

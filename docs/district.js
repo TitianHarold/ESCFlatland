@@ -122,9 +122,10 @@
   const door=CityMap.mainDoor,gate=CityMap.gate.point,road=CityMap.escortCurves;
   const hx=main.child.x,hy=main.child.y;
   const formation=[[hx-170,hy],[hx+30,hy+230],[hx+147,hy+85],[hx-85,hy+147]];
-  // The inspector crosses the threshold alone, checks the child, then lets the guards follow.
-  const entryStarts=[20.55,22.1,22.8,23.3].map(t=>t*ratio),entryEnds=[21.25,22.7,23.4,23.8].map(t=>t*ratio);
-  const entryFinish=[21.85,23.5,24,24.1].map(t=>t*ratio);
+  // Leave a full visible beat after the inspector settles. These are scene-clock
+  // seconds: the 90/79-second edits compress this stretch to about 0.45 playback seconds per second.
+  const entryStarts=[20.55*ratio,17.3,18.35,19.4],entryEnds=[21.25*ratio,17.7,18.75,19.8];
+  const entryFinish=[21.85*ratio,21.2,21.75,22.3],signalStart=16.75,signalEnd=entryStarts[1];
   const police=[inspector,...guards].map((actor,i)=>{
     const [x,y]=formation[i],heading=Math.atan2(hy-y,hx-x);
     const approach=path([[[door[0],door[1]-210],[door[0],door[1]-160],[door[0],door[1]+15],[door[0],door[1]+70]]],Math.PI/2);
@@ -147,8 +148,10 @@
     if(time<=entryEnds[index])return interpolateWalk(person.actor,person.approach,time,entryStarts[index],entryEnds[index]);
     const body=interpolateWalk(person.actor,person.fan,time,entryEnds[index],entryFinish[index]);
     if(index===0&&time>=entryFinish[0]){
-      const age=time-entryFinish[0],signal=Math.sin(Math.PI*clamp(age/.48));
-      body.angle-=.32*signal; // A brief look back holds the following guards, then attention returns to the child.
+      // Stand still and inspect first; only the later glance toward the doorway releases the guards.
+      const age=time-entryFinish[0],inspect=.08*Math.sin(age*2.1)*Math.sin(Math.PI*clamp(age/(signalStart-entryFinish[0])));
+      const signal=Math.sin(Math.PI*clamp((time-signalStart)/(signalEnd-signalStart)));
+      body.angle+=inspect-.6*signal;
     }
     return body;
   }
@@ -159,7 +162,7 @@
   }
   function joinAt(actor,body,point,heading,bend=65){return connection(actor,body,point,heading,bend).segments.map(segment=>segment.points);}
   const heroCurves=[[[hx,hy],[hx+(door[0]-hx)/3,hy+(door[1]-hy)/3],[hx+(door[0]-hx)*2/3,hy+(door[1]-hy)*2/3],door],...road];
-  const takeAway=24.1*ratio,firstMove=takeAway+.38,cruiseStart=firstMove;
+  const takeAway=entryFinish[3],firstMove=takeAway+.38,cruiseStart=firstMove;
   const heroRoute=path(heroCurves),heroCruise=heroRoute.length/(58-cruiseStart-.25),heroDoorDistance=heroRoute.segments[0].length;
   function heroDistance(time){
     return Math.min(heroRoute.length,walking(time-firstMove,heroCruise));
@@ -401,5 +404,5 @@
     return Math.abs(time-index*collisionStep)<1e-7?resolvedFrames[index]:resolvedAt(time,resolvedFrames[index]);
   }
   function drawBase(ctx,time){CityMap.drawBase(ctx,time,Palette);}
-  return{drawBase,frame,timing:{duration,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],guardsEntry:entryStarts.slice(1),detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
+  return{drawBase,frame,timing:{duration,takeAway,firstMove,cruiseStart,inspectorEntry:entryStarts[0],inspectorSettled:entryFinish[0],signalStart,signalEnd,guardsEntry:entryStarts.slice(1),guardsSettled:entryFinish.slice(1),detainees:detainees.map(item=>({id:item.kid.id,leave:item.start,join:item.joinTime,teamEntry:item.team?.enterStart??item.freezeAt,frozenAt:item.freezeAt}))},homes:homes.map(home=>({id:home.id,x:home.x,y:home.y,width:home.w,height:home.h})),handoff:{time:58,x:gate[0],y:gate[1],actor:heroActor}};
 });

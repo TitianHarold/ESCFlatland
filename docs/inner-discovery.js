@@ -10,7 +10,7 @@
   const background=()=>mix(P.night,'#000000',.89);
   const sites=Object.freeze([[.37,.57],[.62,.38],[.30,.32],[.70,.65],[.49,.72],[.53,.24]].map(Object.freeze));
   function size(viewport){return{w:Math.max(1,viewport?.w||1),h:Math.max(1,viewport?.h||1),s:Math.max(.55,Math.min(viewport?.w/1280||1,viewport?.h/760||1))};}
-  function point(id,clock,viewport){const {w,h,s}=size(viewport),p=sites[id];return{x:w*p[0]+Math.sin(clock*.42+id*1.73)*8*s,y:h*p[1]+Math.cos(clock*.35+id*2.17)*7*s};}
+  function point(id,clock,viewport){const {w,h,s}=size(viewport),p=sites[id],phase=id*1.73,rx=Math.min(w*.065,58*s),ry=Math.min(h*.06,48*s);return{x:w*p[0]+rx*(.74*Math.sin(clock*.95+phase)+.26*Math.sin(clock*1.71+phase*.7)),y:h*p[1]+ry*(.72*Math.cos(clock*.81+phase*1.25)+.28*Math.sin(clock*1.47+phase))};}
   class Session{
     constructor({autoDuration=8}={}){this.autoDuration=Math.max(3,Number.isFinite(autoDuration)?autoDuration:8);this.reset();}
     reset(){this.clock=0;this.actionClock=0;this.autoElapsed=0;this.found=[];this.breakAge=0;return this;}
@@ -59,7 +59,8 @@
         const found=this.found.find(item=>item.id===id),p=found?{x:found.u*w,y:found.v*h}:point(id,this.clock,viewport);
         const visible=!!found||(count<total&&id>=pair&&id<pair+2),pulse=.55+.45*Math.sin(this.clock*1.55+id*2.1)**2;
         const unlockedAt=pair?Math.max(...this.found.filter(item=>item.id<pair).map(item=>item.clock)):0,arrival=smooth((this.clock-unlockedAt)/.45);
-        return{id,...p,r:(1.8+.6*pulse)*s,hitRadius:Math.max(24,30*s),alpha:visible?(found?.12:(.22+.48*pulse)*arrival)*(1-smooth(b/.4)):0,collected:!!found,visible};
+        const trail=found?[]:Array.from({length:7},(_,i)=>point(id,this.clock-(6-i)*.09,viewport));
+        return{id,...p,trail,r:Math.max(2.8,(3.2+.8*pulse)*s),hitRadius:Math.max(28,34*s),alpha:visible?(found?.12:(.68+.32*pulse)*arrival)*(1-smooth(b/.4)):0,collected:!!found,visible};
       });
       const reveals=this.found.map(found=>{const age=Math.max(0,this.actionClock-found.at),strength=smooth(age/.6);return{id:found.id,x:found.u*w,y:found.v*h,age,strength,radius:(138+found.id%3*17)*s};});
       return{points,reveals,collected:count,progress:count<total?collectProgress*count/total:collectProgress+(1-collectProgress)*b,
@@ -99,7 +100,11 @@
       c.globalCompositeOperation='destination-in';c.drawImage(maskCanvas,0,0);c.globalCompositeOperation='source-over';ctx.drawImage(contentCanvas,0,0);
       if(b>0&&b<.9){const reach=Math.hypot(w,h)*1.2,half=reach*.55*Math.pow(smooth(b),2.2);ctx.save();ctx.translate(w*.51,h*.49);ctx.rotate(-.55);ctx.strokeStyle=p.gold;ctx.globalAlpha=Math.sin(Math.PI*clamp(b/.9))*.42;for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(-reach,side*half);ctx.bezierCurveTo(-reach*.28,side*half+6*s,reach*.28,side*half-10*s,reach,side*half);ctx.lineWidth=2.2*s;ctx.stroke();}ctx.restore();}
     }
-    for(const dot of state.points){if(!dot.visible||dot.alpha<=0)continue;ctx.globalAlpha=dot.alpha;const glow=ctx.createRadialGradient(dot.x,dot.y,0,dot.x,dot.y,dot.r*5);glow.addColorStop(0,p.gold+'70');glow.addColorStop(1,p.gold+'00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r*5,0,TAU);ctx.fill();ctx.fillStyle=p.gold;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r,0,TAU);ctx.fill();}
+    for(const dot of state.points){
+      if(!dot.visible||dot.alpha<=0)continue;
+      if(dot.trail?.length){ctx.strokeStyle=p.gold;ctx.lineCap='round';for(let i=1;i<dot.trail.length;i++){const a=dot.trail[i-1],b=dot.trail[i];ctx.globalAlpha=dot.alpha*.28*i/dot.trail.length;ctx.lineWidth=Math.max(1,1.7*s)*i/dot.trail.length;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
+      ctx.globalAlpha=dot.alpha;const radius=dot.r*7,glow=ctx.createRadialGradient(dot.x,dot.y,0,dot.x,dot.y,radius);glow.addColorStop(0,p.gold+'dd');glow.addColorStop(.22,p.gold+'72');glow.addColorStop(1,p.gold+'00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(dot.x,dot.y,radius,0,TAU);ctx.fill();ctx.fillStyle=p.gold;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r,0,TAU);ctx.fill();ctx.fillStyle=p.cream;ctx.beginPath();ctx.arc(dot.x,dot.y,dot.r*.52,0,TAU);ctx.fill();
+    }
     ctx.restore();
   }
   return{Session,draw,total,get background(){return background();}};

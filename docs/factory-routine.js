@@ -77,11 +77,10 @@
     if(bounds){const l=bounds.minX??bounds.left,r=bounds.maxX??bounds.right,top=bounds.minY??bounds.top,bottom=bounds.maxY??bounds.bottom;result.actors=actors.filter(a=>a.id==='hero'||a.body.x>l-90&&a.body.x<r+90&&a.body.y>top-90&&a.body.y<bottom+90);}return result;
   }
   function belt(ctx,y,t){rounded(ctx,-1750,y-78,2650,156,10,P.conveyor);const shift=t*48%72;for(let x=-1750-shift;x<900;x+=72)line(ctx,[[x,y-65],[x,y+65]],P.factory.roller,1.6);}
-  function machine(ctx,x,y,kind,sides){rounded(ctx,x-154,y-124,308,248,18,P.metal);rounded(ctx,x-142,y-114,284,228,13,P.blue);rounded(ctx,x-120,y-91,240,182,10,P.paper);
-    if(kind===0){const actor=sides===5?heroActor:ordinary[Math.max(0,sides-3)][0],body=pose(actor,x,y),rotation=body.angle-angle,c=Math.cos(rotation),s=Math.sin(rotation),points=vertices(actor,82).map(([a,b])=>[a*c-b*s,a*s+b*c]);ctx.save();ctx.translate(x,y);poly(ctx,points,P.quiet);poly(ctx,points.map(([a,b])=>[a*.97,b*.97]),P.paper);ctx.restore();}
+  function machine(ctx,x,y,kind){rounded(ctx,x-154,y-124,308,248,18,P.metal);rounded(ctx,x-142,y-114,284,228,13,P.blue);rounded(ctx,x-120,y-91,240,182,10,P.paper);
     if(kind===2){ctx.beginPath();ctx.arc(x,y,100,0,Math.PI*2);ctx.strokeStyle=P.ink;ctx.lineWidth=7;ctx.stroke();rounded(ctx,x-13,y-124,26,31,5,P.industrial);}
   }
-  function drawFactory(ctx,t){setup(ctx);rounded(ctx,-1785,-650,2685,2360,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j,r+3);}line(ctx,[[-1785,-650],[-1785,43]],P.outside.wall,22);line(ctx,[[-1785,217],[-1785,1710]],P.outside.wall,22);ctx.restore();}
+  function drawFactory(ctx,t){setup(ctx);rounded(ctx,-1785,-650,2685,2360,28,P.factory.floor);for(let r=0;r<lanes.length;r++){belt(ctx,lanes[r],t);for(let j=0;j<3;j++)machine(ctx,stations[j],lanes[r],j);}line(ctx,[[-1785,-650],[-1785,43]],P.outside.wall,22);line(ctx,[[-1785,217],[-1785,1710]],P.outside.wall,22);ctx.restore();}
   function drawBase(ctx,t,bounds){if(t<58||t>=110)return;if(t<64)Base.drawEntry(ctx,t);if(t>=96)Office.draw(ctx,t,bounds);else drawFactory(ctx,t);}
   function drawEntry(ctx,t,bounds){if(t<64)Base.drawEntry(ctx,t,bounds);else drawBase(ctx,t,bounds);}
   function drawOverlay(ctx,t,bounds){if(t>=96||t<64)return;setup(ctx);for(let r=0;r<lanes.length;r++){
